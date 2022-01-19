@@ -84,7 +84,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 
 def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:str=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
 	"""
-	TF Footprinting with wellington
+	TF Footprinting with wellington.
 	
 	Parameters
 	------------

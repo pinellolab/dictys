@@ -7,10 +7,6 @@ def selects_rna(fi_reads:str,fi_table:str,fo_reads:str,col:str,val:str)->None:
 	"""
 	Select samples/cells based on external table from RNA data.
 	
-	Test 1.
-	
-	Test 2.
-	
 	Parameters
 	----------
 	fi_reads:
