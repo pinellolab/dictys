@@ -10,27 +10,28 @@ import numpy as np
 ################################################################
 
 def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:str,qcut:float=0.05,nth:int=1,nmax:int=0)->None:
-	"""Peak calling using macs2, based on bam files for each cell in a given folder.
+	"""
+	Peak calling using macs2, based on bam files for each cell in a given folder.
 	
 	Parameters
 	------------
-	fi_names:		str
+	fi_names:
 		Path of input file containing one sample/cell name per line for macs2 peak calling
-	fi_bam:			str
+	fi_bam:
 		Path of input folder that contains each cell's bam file by name in *fi_names*
-	fo_bam:			str
+	fo_bam:
 		Path of output bam file for select samples/cells
-	fo_bai:			str
+	fo_bai:
 		Path of output bai file for select samples/cells
-	fo_bed:			str
+	fo_bed:
 		Path of output bed file of peaks
-	genome_size:	str
+	genome_size:
 		Genome size input of macs2. Use shortcuts hs or mm for human or mouse.
-	qcut:			float
+	qcut:
 		Qvalue cutoff for macs2
-	nth:			int
+	nth:
 		Number of threads
-	nmax:			int
+	nmax:
 		Maximum number of peaks to retain, ordered by macs2 score. Use 0 for no limit.
 		
 	"""
@@ -82,25 +83,26 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 ################################################################
 
 def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:str=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
-	"""TF Footprinting with wellington
+	"""
+	TF Footprinting with wellington
 	
 	Parameters
 	------------
-	fi_bam:			str
+	fi_bam:
 		Path of input bam file of all reads
-	fi_bai:			str
+	fi_bai:
 		Path of input bai file of all reads
-	fi_bed:			str
+	fi_bed:
 		Path of input bed file of peaks
-	fo_bed:			str
+	fo_bed:
 		Path of output bed file of footprints
-	fi_blacklist:	str
+	fi_blacklist:
 		Path of input bed file of blacklisted genome regions to be removed
-	cut:			float
+	cut:		
 		Cutoff for wellington score
-	nth:			int
+	nth:		
 		Number of threads
-	npeakmax:		int
+	npeakmax:	
 		Maximum number of footprints to retain, ordered by wellington score. Use 0 for no limit.
 		
 	"""
@@ -193,23 +195,24 @@ def _motif_postproc(dret,fo_bed,fo_wellington,fo_homer):
 	dh.to_csv(fo_homer,header=True,index=True)
 
 def homer(fi_bed:str,fi_motif:str,fo_bed:str,fo_wellington:str,fo_homer:str,genome:str,nth:int=1)->None:
-	"""Motif scan with homer.
+	"""
+	Motif scan with homer.
 	
 	Parameters
 	------------
-	fi_bed:			str
+	fi_bed:	
 		Path of input bed file of regions
-	fi_motif:		str
+	fi_motif:
 		Path of input motif PWM file in homer format
-	fo_bed:			str
+	fo_bed:	
 		Path of output bed file of detected motifs
-	fo_wellington:	str
+	fo_wellington:
 		Path of output tsv file of wellington scores in shape (region,motif)
-	fo_homer:		str
+	fo_homer:
 		Path of output tsv file of homer scores in shape (region,motif)
-	genome:			str
+	genome:	
 		Reference genome for homer (e.g. hg19, mm10)
-	nth:			int
+	nth:	
 		Number of threads
 
 	"""

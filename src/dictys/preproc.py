@@ -4,19 +4,24 @@
 """
 
 def selects_rna(fi_reads:str,fi_table:str,fo_reads:str,col:str,val:str)->None:
-	"""Select samples/cells based on external table from RNA data.
+	"""
+	Select samples/cells based on external table from RNA data.
+	
+	Test 1.
+	
+	Test 2.
 	
 	Parameters
-	------------
-	fi_reads:		str
+	----------
+	fi_reads:
 		Path of input tsv file of read count matrix
-	fi_table:		str
+	fi_table:
 		Path of input tsv file of table for selection criterion. Front column must be sample/cell name.
-	fo_reads:		str
+	fo_reads:
 		Path of output tsv file of read count matrix after selection
-	col:			str
+	col:
 		Name of column for selection
-	val:			str
+	val:
 		Value of column for selection
 
 	"""
@@ -33,17 +38,18 @@ def selects_rna(fi_reads:str,fi_table:str,fo_reads:str,col:str,val:str)->None:
 	d.loc[ind].to_csv(fo_reads,index=True,header=True,sep='\t',compress='gzip')
 	
 def selects_atac(fi_table:str,fo_list:str,col:str,val:str)->None:
-	"""Select samples/cells based on external table from chromatin accessibility data.
+	"""
+	Select samples/cells based on external table from chromatin accessibility data.
 	
 	Parameters
 	------------
-	fi_table:		str
+	fi_table:
 		Path of input tsv file of table for selection criterion. Front column must be sample/cell name.
-	fo_list:		str
+	fo_list:
 		Path of output text file of selected cell names, one per line
-	col:			str
+	col:
 		Name of column for selection
-	val:			str
+	val:
 		Value of column for selection
 
 	"""
@@ -60,27 +66,28 @@ def selects_atac(fi_table:str,fo_list:str,col:str,val:str)->None:
 		f.write(ind)
 	
 def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float, n_cell:int, nt_cell:int, ntp_cell:float)->None:
-	"""Quality control by bounding read counts.
+	"""
+	Quality control by bounding read counts.
 
 	Quality control is perform separately on genes based on their cell statisics and on cells based on their gene statistics, iteratively until dataset remains unchanged. A gene or cell is removed if any of the QC criteria is violated at any time in the iteration. All QC parameters can be set to 0 to disable QC filtering for that criterion.
 
 	Parameters
 	-----------
-	fi_reads:	str
+	fi_reads:
 		Path of input tsv file of read count matrix
-	fo_reads:	str
+	fo_reads:
 		Path of output tsv file of read count matrix after QC
-	n_gene:		int
+	n_gene:
 		Lower bound on total read counts for gene QC
-	nc_gene:	int
+	nc_gene:
 		Lower bound on number of expressed cells for gene QC
-	ncp_gene:	float
+	ncp_gene:
 		Lower bound on proportion of expressed cells for gene QC
-	n_cell:		int
+	n_cell:
 		Lower bound on total read counts for cell QC
-	nt_cell:	int
+	nt_cell:
 		Lower bound on number of expressed genes for cell QC
-	ntp_cell:	float
+	ntp_cell:
 		Lower bound on proportion of expressed genes for cell QC
 
 	"""
