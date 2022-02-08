@@ -5,74 +5,152 @@
 Visualization panels of networks
 """
 
-class panel_base:
-	def __init__(self,ax,d,pts):
-		"""Base class to visualize single panel for dynamic network
-		ax:	Axis
-		d:	Dataset object
-		pts:Points of path to visualize network"""
+from dictys.net import stat
+
+class base:
+	def __init__(self,ax,pts):
+		"""
+		Base class to visualize single panel for dynamic network
+
+		Parameters
+		----------
+		ax:		matplotlib.pyplot.axes
+			Axes to draw on
+		pts:	dictys.traj.point
+			Points of path to visualize network
+		"""
 		self.ax=ax
-		self.d=d
 		self.pts=pts
 	def init(self):
-		"""Draws initial canvas that doesn't change.
+		"""
+		Draws initial canvas that doesn't change.
 		Prepares artists with empty drawing for future update at each frame.
 		Cannot use certain stat funtions due to unavailable point.
+
+		Returns
+		----------
+		list
+			List of artists that may be redrawn afterwards.
 		"""
 		raise NotImplementedError
 	def draw(self,t):
 		"""Draws the changing part of given frame at given trajectory location.
-		Returns list of artists that were drawn/changed.
+
+		Parameters
+		----------
+		t:	int
+			Frame index to draw.
+
+		Returns
+		----------
+		list
+			List of artists that are redrawn.
 		"""
 		raise NotImplementedError
 
-class panel_statscatter_tf(panel_base):
-	def __init__(self,ax,d,pts,statx,staty,namet=None,g_ann=[],lims=None,scatterka=dict(),
-				staty2=None,scatterka2=dict(),**ka):
-		"""Draw scatter plots from two stats of TFs.
-		statx,
-		staty:		Stat instances on X and Y axes 
-		namet:		TFs to show as a list of gene names. Defaults to all.
-		g_ann:		TFs to annotate on scatter plot as list of gene names or {gene name:annotation text}. Use 'all' for all TFs.
-		lims:		Limits of X and Y axes in [[xmin,xmax],[ymin,ymax]]. Defaults to min and max values on nodes with 2% expansion on each side.
-		scatterka:	Keyword arguments for ax.scatter.
-		staty2,
-		scatterka2:	Respective parameters to draw a second y stat. Defaults to staty2=None to disable second y axis (on right side).
-		ka:			Keyword arguments passed to parent class.
+class overlay(base):
+	def __init__(self,ax,pts,panels):
+		"""
+		Overlay class that draws several panel classes in the same panel.
+
+		Parameters
+		----------
+		ax:		matplotlib.pyplot.axes
+			Axes to draw on
+		pts:	dictys.traj.point
+			Points of path to visualize network
+		panesl:	list of dictys.panel.base
+			Panel objects to draw on the same panel
+		"""
+		assert len(panels)>=1
+		assert all([isinstance(x,base) for x in panels])
+		self.panels=panels
+		super().__init__(ax,pts)
+	def init(self):
+		import itertools
+		objs=[x.init() for x in self.panels]
+		return list(itertools.chain.from_iterable(objs))
+	def draw(self,t,**ka):
+		import itertools
+		objs=[x.draw(t,**ka) for x in self.panels]
+		return list(itertools.chain.from_iterable(objs))
+
+class statscatter(base):
+	def __init__(self,ax,pts,statx,staty,names=None,annotate=[],lim=None,scatterka=dict(),statka=dict(),
+				staty2=None,scatterka2=dict()):
+		"""
+		Draw scatter plots from two stats.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statx:		dictys.net.stat.base
+			Stat instance for X axis. Must be one-dimensional.
+		staty:		dictys.net.stat.base
+			Stat instance for Y axis. Must be one-dimensional.
+		names:		list of str or None
+			Names to show. Defaults to all.
+		annotate:	list of str or {str:str}
+			Names to annotate on scatter plot. Use 'all' for all names. Use dict to rename annotation as {name:annotation}.
+		lim:
+			Limits of X and Y axes in [[xmin,xmax],[ymin,ymax]]. Defaults to min and max values on nodes with 2% expansion on each side.
+		scatterka:	dict
+			Keyword arguments for ax.scatter.
+		statka:		dict
+			Keyword arguments for ax.scatter whose values are stats. Keys must be settable in matplotlib.collections.PathCollection.set.
+		staty2:		dictys.net.stat.base or None
+			Stat instance for a second Y axis on right side. Must be one-dimensional. Defaults to staty2=None to disable.
+		scatterka2:	dict
+			Keyword arguments for ax.scatter for second Y.
 		"""
 		import numpy as np
-		super().__init__(ax,d,pts,**ka)
-		#TF names and annotations
+		from functools import reduce
+		from operator import and_
+		super().__init__(ax,pts)
+		if not all([isinstance(x,stat.base) for x in statka.values()]):
+			raise TypeError('All values of statka must be a stat.')
+		if any([x is not None and len(x.names)!=1 for x in [statx,staty,staty2]]):
+			raise ValueError('Stat locations must be 1-dimensional.')
+		if any([len(x.names)<1 for x in statka.values()]):
+			raise ValueError('Stat parameters must be at least 1-dimensional.')
+		#Dot names and annotations
 		t1=set(statx.names[0])&set(staty.names[0])
 		if staty2 is not None:
 			t1&=set(staty2.names[0])
-		if namet is None:
-			namet=sorted(list(t1))
+		if len(statka)>0:
+			t1&=reduce(and_,[set(x.names[0]) for x in statka.values()])
+		if names is None:
+			names=sorted(list(t1))
 		else:
-			assert len(namet)>0
-			t2=np.nonzero([x not in t1 for x in namet])[0]
+			assert len(names)>0
+			t2=np.nonzero([x not in t1 for x in names])[0]
 			if len(t2)>0:
-				raise ValueError('Genes in namet not found in stats: '+','.join([namet[x] for x in t2]))
-		if g_ann=='all':
-			g_ann=list(t1)
-		self.namet=namet
-		self.nametdict=dict(zip(self.namet,range(len(self.namet))))
-		#Genes to annotate. Defaults to none
-		t1=np.nonzero([x not in self.nametdict for x in g_ann])[0]
+				raise ValueError('Not found in at least one of the stats: '+','.join([names[x] for x in t2]))
+		assert len(names)>0
+		if annotate=='all':
+			annotate=list(t1)
+		self.names=names
+		self.namesdict=dict(zip(self.names,range(len(self.names))))
+		#Dots to annotate. Defaults to none
+		t1=np.nonzero([x not in self.namesdict for x in annotate])[0]
 		if len(t1)>0:
-			raise ValueError('TF(s) not found: {}'.format(','.join([g_ann[x] for x in t1])))
-		if type(g_ann) is dict:
-			self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
+			raise ValueError('TF(s) not found: {}'.format(','.join([annotate[x] for x in t1])))
+		if type(annotate) is dict:
+			self.annotate={self.namesdict[x]:y for x,y in annotate.items()}
 		else:
-			self.g_ann={self.nametdict[x]:x for x in g_ann}
+			self.annotate={self.namesdict[x]:x for x in annotate}
 		#Search stat functions
 		self.stats=[statx,staty]
 		if staty2 is not None:
 			#Second Y
 			self.stats.append(staty2)
-		assert all([isinstance(x,stat_base) for x in self.stats])
+		assert all([isinstance(x,stat.base) for x in self.stats])
 		self.scatterka=scatterka
-		self.lims=lims
+		self.statka=statka
+		self.lim=lim
 		if staty2 is not None:
 			#Second Y
 			self.ny=2
@@ -80,495 +158,634 @@ class panel_statscatter_tf(panel_base):
 		else:
 			self.ny=1
 	def init(self):
+		import numpy as np
 		#Prepare limits
-		if self.lims is None:
-			self.lims=[None]*(self.ny+1)
+		if self.lim is None:
+			self.lim=[None]*(self.ny+1)
 		for xi in range(self.ny+1):
-			if self.lims[xi] is not None:
+			if self.lim[xi] is not None:
 				continue
-			self.lims[xi]=self.stats[xi].default_lims(pts=self.pts,names=[self.namet])
-		assert len(self.lims)==self.ny+1 and all([len(x)==2 for x in self.lims])
-		#Draw initial panel
-		ans=[]
+			self.lim[xi]=self.stats[xi].default_lims(pts=self.pts,names=[self.names])
+		assert len(self.lim)==self.ny+1 and all([len(x)==2 for x in self.lim])
+		for xi in range(len(self.lim)):
+			if np.isnan(self.lim[xi]).any() or self.lim[xi][0]==self.lim[xi][1]:
+				self.lim[xi]=[0,1]
 		self.objs=[]
+		#Draw initial panel
 		self.objs.append(self.ax.scatter([],[],**self.scatterka))
-		self.objs+=[self.ax.text(self.lims[0][0],self.lims[1][0],'') for x in self.g_ann]
-		self.ax.set_xlim(self.lims[0])
-		self.ax.set_ylim(self.lims[1])
+		self.objs+=[self.ax.text(self.lim[0][0],self.lim[1][0],'') for x in self.annotate]
+		self.ax.set_xlim(self.lim[0])
+		self.ax.set_ylim(self.lim[1])
 		self.ax.set_xlabel(self.stats[0].label)
 		self.ax.set_ylabel(self.stats[1].label)
 		if self.ny>1:
 			#Second Y
 			self.ax2=self.ax.twinx()
 			self.objs.append(self.ax2.scatter([],[],**self.scatterka2))
-			self.objs+=[self.ax2.text(self.lims[0][0],self.lims[2][0],'') for x in self.g_ann]
-			self.ax2.set_ylim(self.lims[2])
+			self.objs+=[self.ax2.text(self.lim[0][0],self.lim[2][0],'') for x in self.annotate]
+			self.ax2.set_ylim(self.lim[2])
 			self.ax2.set_ylabel(self.stats[2].label)
 		else:
 			if self.ax.spines['right'].get_visible():
 				self.ax.tick_params(right=True,which='both')
 		if self.ax.spines['top'].get_visible():
 			self.ax.tick_params(top=True,which='both')
+		ans=self.draw(0,force=True)
 		return ans
-	def get_data(self,pts):
-		#n_stat,n_t,n_pts for data and isshow
+	def get_data(self,pts,force=False):
+		"""
+		Computes data needed for drawing.
+
+		Parameters
+		----------
+		pts:		dictys.traj.point
+			Points to get data for
+		force:		bool
+			Whether to force getting data even if the stats are constant over time.
+
+		Returns
+		----------
+		data:		numpy.ndarray(shape=(n_stat,n_scatter,len(pts))) or None
+			Data for scatter locations. Only None if all stats are constant over time.
+		param:		{str:numpy.ndarray(shape=(n_scatter,len(pts)))}
+			Data for parameters. Only non-constant stats are included.
+		"""
 		#Compute values at point from nodes
 		import numpy as np
-		data0=[self.stats[x].compute_points(pts) for x in range(self.ny+1)]
-		assert all([data0[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1)])
-		data=[data0[x][[self.stats[x].ndict[0][y] for y in self.namet]] for x in range(self.ny+1)]
-		assert all([x.shape==data[0].shape for x in data[1:]])
-		data=np.array(data)
+		if force or not all([hasattr(x,'isconst') and x.isconst for x in self.stats]):
+			data=[self.stats[x].compute(pts) for x in range(self.ny+1)]
+			assert all([data[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1)])
+			data=[data[x][[self.stats[x].ndict[0][y] for y in self.names]] for x in range(self.ny+1)]
+			assert all([x.shape==data[0].shape for x in data[1:]])
+			data=np.array(data)
+		else:
+			data=None
 
-		#Compute isshow from data
-		isshow=[self.stats[x].compute_show(pts,data0[x]) for x in range(self.ny+1)]
-		assert all([isshow[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1)])
-		isshow=[isshow[x][[self.stats[x].ndict[0][y] for y in self.namet]] for x in range(self.ny+1)]
-		assert all([x.shape==isshow[0].shape for x in isshow[1:]])
-		isshow=np.array(isshow)
-		isshow[1:]&=isshow[0]
-		return [data,isshow]
-	def draw(self,t):
+		#Compute stat based parameters
+		param={x:y.compute(pts) for x,y in self.statka.items() if force or not (hasattr(y,'isconst') and y.isconst)}
+		assert all([param[x].shape==tuple([len(y) for y in self.statka[x].names]+[pts.npt]) for x in param])
+		param={x:param[x][[self.statka[x].ndict[0][y] for y in self.names]] for x in param}
+		if data is not None:
+			assert all([x.shape[0]==data[0].shape[0] for x in param.values()])
+		return [data,param]
+	def draw(self,t,force=False):
+		"""Draws the changing part of given frame at given trajectory location.
+
+		Parameters
+		----------
+		t:		int
+			Frame index to draw.
+		force:	bool
+			Whether to force redraw even if nothing changed.
+
+		Returns
+		----------
+		list
+			List of artists that are redrawn.
+		"""
 		import numpy as np
 		import itertools
 		objs=[]
 		pts=self.pts[[t]]
-		data,isshow=[x[:,:,0] for x in self.get_data(pts)]
-
+		data,param=self.get_data(pts,force=force)
+		param={x:np.take(y,0,axis=-1) for x,y in param.items()}
+		if data is not None:
+			data=data[:,:,0]
+			isshow=np.isfinite(data)
+			isshow=isshow[1:]&isshow[0]
+		
 		#Update scatter
 		for xi in range(self.ny):
-			self.objs[xi*(len(self.g_ann)+1)].set_offsets(data[[0,1+xi]].T)
+			if data is not None:
+				self.objs[xi*(len(self.annotate)+1)].set_offsets(data[[0,1+xi]].T)
+				# self.objs[xi*(len(self.annotate)+1)].set_alpha(isshow[xi].astype(float))
+			self.objs[xi*(len(self.annotate)+1)].set(**param)
+			if data is not None or len(param)>0:
+				objs.append(self.objs[xi*(len(self.annotate)+1)])
 		#Update annotation
-		t1=list(self.g_ann)
-		for xi,xj in itertools.product(range(self.ny),range(len(t1))):
-			if isshow[xi][t1[xj]]:
-				self.objs[(1+len(self.g_ann))*xi+1+xj].set_text(self.g_ann[t1[xj]])
-				self.objs[(1+len(self.g_ann))*xi+1+xj].set_position(data[[0,1+xi],t1[xj]])
-			else:
-				self.objs[(1+len(self.g_ann))*xi+1+xj].set_text('')
-		objs=list(self.objs)
+		if data is not None:
+			t1=list(self.annotate)
+			for xi,xj in itertools.product(range(self.ny),range(len(t1))):
+				if isshow[xi][t1[xj]]:
+					self.objs[(1+len(self.annotate))*xi+1+xj].set_text(self.annotate[t1[xj]])
+					self.objs[(1+len(self.annotate))*xi+1+xj].set_position(data[[0,1+xi],t1[xj]])
+				else:
+					self.objs[(1+len(self.annotate))*xi+1+xj].set_text('')
+				objs.append(self.objs[(1+len(self.annotate))*xi+1+xj])
 		return objs
 
-class panel_statplot_tf(panel_statscatter_tf):
-	def __init__(self,*a,g_ann=[],plotka=dict(),plotka2=dict(),**ka):
-		"""Draw curve plots for two stats of TFs.
-		Takes same parameters as panel_statscatter_tf."""
-		super().__init__(*a,**ka)
+class statplot_static(statscatter):
+	def __init__(self,ax,pts,statx,staty,colors,annotate=[],plotka=dict(),plotka2=dict(),**ka):
+		"""
+		Draw constant line plots from two stats. This is a static plot and no redraw takes place.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statx:		dictys.net.stat.base
+			Stat instance for X axis. Must be one-dimensional. Each entry is a line to draw.
+		staty:		dictys.net.stat.base
+			Stat instance for Y axis. Must be one-dimensional. Each entry is a line to draw.
+		colors:		list
+			List of colors for each line in matplotlib format.
+		annotate:	list of str or {str:str}
+			Names to annotate on scatter plot. Use 'all' for all names. Use dict to rename annotation as {name:annotation}.
+		plotka:	dict
+			Keyword arguments for ax.plot.
+		plotka2:	dict
+			Keyword arguments for ax.plot for second Y.
+		ka:			dict
+			Keyword arguments in the same format as in dictys.plot.panel.statscatter.
+		"""
+		super().__init__(ax,pts,statx,staty,**ka)
 		self.plotka=plotka
 		self.plotka2=plotka2
+		self.colors=colors
 	def init(self):
 		import numpy as np
 		#Prepare limits
-		if self.lims is None:
-			self.lims=[None]*(self.ny+1)
+		if self.lim is None:
+			self.lim=[None]*(self.ny+1)
 		for xi in range(self.ny+1):
-			if self.lims[xi] is not None:
+			if self.lim[xi] is not None:
 				continue
-			self.lims[xi]=self.stats[xi].default_lims(pts=self.pts,names=[self.namet])
-		assert len(self.lims)==self.ny+1 and all([len(x)==2 for x in self.lims])		
+			self.lim[xi]=self.stats[xi].default_lims(pts=self.pts,names=[self.names])
+		assert len(self.lim)==self.ny+1 and all([len(x)==2 for x in self.lim])		
 		#Prepare curve data
-		objs=[]
-		self.objs=[]
-		data,isshow=self.get_data(self.pts)
+		ans=[]
+		data,param=self.get_data(self.pts,force=True)
+		isshow=np.isfinite(data)
+		isshow=isshow[1:]&isshow[0]
 		#Draw curves as initial panel and prepare pointers
-		for xi in np.nonzero(isshow[1].any(axis=1))[0]:
-			t1=np.nonzero(isshow[1,xi])[0]
+		for xi in np.nonzero(isshow[0].any(axis=1))[0]:
+			t1=np.nonzero(isshow[0,xi])[0]
 			#Hide with masked array
 			t2=np.ma.array(data[1,xi])
-			t2[~isshow[1,xi]]=np.ma.masked
-			self.ax.plot(data[0,xi],t2,**self.plotka)
-			self.ax.text(data[0,xi,t1[-1]],data[1,xi,t1[-1]],self.namet[xi])
-			self.objs.append(self.ax.scatter([],[],**self.scatterka))
+			t2[~isshow[0,xi]]=np.ma.masked
+			ans.append(self.ax.plot(data[0,xi],t2,c=self.colors[xi],**self.plotka))
+			ans.append(self.ax.text(data[0,xi,t1[-1]],data[1,xi,t1[-1]],self.names[xi]))
 		self.ax.set_xlabel(self.stats[0].label)
 		self.ax.set_ylabel(self.stats[1].label)
 		if self.ny>1:
 			#Draw second Y
 			self.ax2=self.ax.twinx()
-			for xi in np.nonzero(isshow[2].any(axis=1))[0]:
-				t1=np.nonzero(isshow[2,xi])[0]
+			for xi in np.nonzero(isshow[1].any(axis=1))[0]:
+				t1=np.nonzero(isshow[1,xi])[0]
 				t2=np.ma.array(data[2,xi])
-				t2[~isshow[2,xi]]=np.ma.masked
-				self.ax2.plot(data[0,xi],t2,**self.plotka2)
-				self.ax2.text(data[0,xi,t1[-1]],data[2,xi,t1[-1]],self.namet[xi])
-				self.objs.append(self.ax2.scatter([],[],**self.scatterka2))
+				t2[~isshow[1,xi]]=np.ma.masked
+				ans.append(self.ax2.plot(data[0,xi],t2,c=self.colors[xi],**self.plotka2))
+				ans.append(self.ax2.text(data[0,xi,t1[-1]],data[2,xi,t1[-1]],self.names[xi]))
 			self.ax2.set_ylabel(self.stats[2].label)
 		else:
 			if self.ax.spines['right'].get_visible():
 				self.ax.tick_params(right=True,which='both')
 		if self.ax.spines['top'].get_visible():
 			self.ax.tick_params(top=True,which='both')
-		return objs
-	def draw(self,t):
+		return []
+	def draw(self,*a,**ka):
+		return []
+
+class statplot(overlay):
+	def __init__(self,ax,pts,statx,staty,names,cmap='tab10',pointer=True,plotka=dict(),pointerka={'s':20,'zorder':99}):
+		"""
+		Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statx:		dictys.net.stat.base
+			Stat instance for X axis. Must be one-dimensional.
+		staty:		dictys.net.stat.base
+			Stat instance for Y axis. Must be one-dimensional.
+		names:		list of str or None
+			Names to show. Defaults to all.
+		cmap:		str or numpy.ndarray(shape=(len(names),3 or 4))
+			Colormap in matplotlib format for different names
+		pointer:	bool
+			Whether to show the current scatter plot as pointers
+		plotka:	dict
+			Keyword arguments for ax.plot.
+		pointerka:	dict
+			Keyword arguments for ax.scatter for pointers.
+		"""
 		import numpy as np
-		import itertools
-		objs=[]
-		pts=self.pts[[t]]
-		data,isshow=[x[:,:,0] for x in self.get_data(pts)]
-		#Update scatter
-		for xi in range(self.ny):
-			for xj in np.nonzero(isshow[xi+1])[0]:
-				self.objs[xi*len(self.namet)+xj].set_offsets(data[[0,1+xi],[xj]].T)
-				self.objs[xi*len(self.namet)+xj].set_alpha(1)
-			for xj in np.nonzero(~isshow[xi+1])[0]:
-				self.objs[xi*len(self.namet)+xj].set_alpha(0)
+		from dictys.plot import get_cmap
+		#Determine colors for cell types
+		if isinstance(cmap,str):
+			cmap=get_cmap(cmap,len(names))
+		cmap=np.array(cmap)
+		panels=[]
+		#Plot
+		panels.append(statplot_static(ax,pts,statx,staty,cmap,names=names,plotka=plotka))
+		if pointer:
+			#Color stat
+			statc=stat.const(cmap,[names,list('RGBA')])
+			panels.append(statscatter(ax,pts,statx,staty,names=names,scatterka=pointerka,statka={'color':statc}))
+		return super().__init__(ax,pts,panels[::-1])
+
+class cellscatter_scatter(statscatter):
+	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka=dict(),**ka):
+		"""
+		Draw scatter plots of cells.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statx:		dictys.net.stat.base
+			Stat instance for X axis with shape=(n_cell)
+		staty:		dictys.net.stat.base
+			Stat instance for Y axis with shape=(n_cell)
+		statw:		dictys.net.stat.base
+			Stat instance for cell weights with shape=(n_cell)
+		cmap:		str or numpy.ndarray(shape=(len(names),3 or 4))
+			Colormap in matplotlib format for different names
+		alphas:		(float,float)
+			Alpha/transparency for cell weight=0 and 1 respectively.
+		legend_loc:	(float,float)
+			Relative location of cell type legend
+		legend_ka:	dict
+			Keyword arguments for drawing cell type legend with dictys.plot.colorlegend
+		ka:			dict
+			Keyword arguments scatterka for drawing cells with dictys.plot.panel.statscatter
+		"""
+		import numpy as np
+		from dictys.plot import get_cmap
+		#Determine colors for cell types
+		if 'c' in d.prop and 'type' in d.prop['c']:
+			ctype=d.prop['c']['type']
+		else:
+			ctype=['Unknown']*d.cn
+		ctypelist=sorted(list(set(ctype)))
+		nctype=len(ctypelist)
+		if isinstance(cmap,dict):
+			assert all([x in cmap for x in ctypelist])
+		elif nctype>1:
+			cmap=dict(zip(ctypelist,get_cmap(cmap,nctype)))
+		else:
+			cmap={ctypelist[0]:[0.5]*3+[1]}
+		self.cmap=cmap
+		colors=np.array([cmap[x] for x in ctype])
+		assert colors.shape==(len(ctype),4) and colors.min()>=0 and colors.max()<=1
+		#Color stat
+		statc=stat.const(colors,[d.cname,list('RGBA')])
+		#Alpha stat
+		stata=stat.function(lambda *x:alphas[0]+(alphas[1]-alphas[0])*x[0],[statw],names=[d.cname])
+		self.d=d
+		self.legend_loc=legend_loc
+		self.legend_ka=legend_ka
+		super().__init__(ax,pts,statx,staty,statka={'color':statc,'alpha':stata},scatterka=ka)
+	def init(self):
+		from dictys.plot import colorlegend
+		t1=list(self.cmap)
+		colorlegend(self.ax,self.legend_loc,t1,[self.cmap[x] for x in t1],**self.legend_ka)
+		self.ax.set_aspect(1.)
+		self.ax.axis('off')
+		return super().init()
+
+class cellscatter_pointer(statscatter):
+	def __init__(self,ax,pts,statx,staty,statw,**ka):
+		"""
+		Draw pointer for average cell location.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statx:		dictys.net.stat.base
+			Stat instance for X axis with shape=(n_cell)
+		staty:		dictys.net.stat.base
+			Stat instance for Y axis with shape=(n_cell)
+		statw:		dictys.net.stat.base
+			Stat instance for cell weights with shape=(n_cell)
+		ka:			dict
+			Keyword arguments scatterka for drawing average cell pointer with dictys.plot.panel.statscatter
+		"""
+		import numpy as np
+		from dictys.plot import get_cmap
+		#X&Y coordindates
+		statx,staty=[stat.function(lambda *x:((x[0]*x[1]).sum(axis=0)/x[1].sum(axis=0)).reshape(1,-1),[y,statw],names=[['pointer']]) for y in [statx,staty]]
+		super().__init__(ax,pts,statx,staty,scatterka=ka)
+
+class cellscatter(overlay):
+	def __init__(self,ax,d,pts,traj,weightfunc,pointer=True,scatterka={'s':2,'lw':0},pointerka={'color':'k','s':20,'zorder':99}):
+		"""
+		Draws overlay plot of scatter plots of cells and average cell pointer.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		d:			dictys.net.network
+			Dynamic network object to draw cells
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		traj:		dicty.traj.trajectory
+			Trajectory of points
+		weightfunc:	(TBA)
+			Function that weight cells for color and pointer
+		pointer:	bool
+			Whether to show the current scatter plot as pointers
+		scatterka:	dict
+			Keyword arguments for ax.scatter for cells.
+		pointerka:	dict
+			Keyword arguments for ax.scatter for pointers.
+		"""
+		import numpy as np
+		#X&Y coordindates
+		statx=stat.const(d.prop['c']['coord'][0],[d.cname],label='Dim1')
+		staty=stat.const(d.prop['c']['coord'][1],[d.cname],label='Dim2')
+		#Cell weight
+		statw=stat.fsmooth(stat.sprop(d,'sc','w'),traj,weightfunc)
+		statw=stat.function(lambda *x:(x[0]/x[0].max(axis=0)),[statw],names=[d.cname])
+		panels=[]
+		#Scatter
+		panels.append(cellscatter_scatter(ax,d,pts,statx,staty,statw,**scatterka))
+		if pointer:
+			panels.append(cellscatter_pointer(ax,pts,statx,staty,statw,**pointerka))
+		return super().__init__(ax,pts,panels[::-1])
+
+class statheatmap(base):
+	def __init__(self,ax,pts,stat,names=None,annotate=[None,None],lim=None,cmap_sym=True,**ka):
+		"""
+		Draw dynamic heatmap for a single stat.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		stat:		dictys.net.stat.base
+			Stat instance to draw. Must be two-dimensional.
+		names:		[list of str,list of str] or None
+			Names to show. Defaults to all.
+		annotate:	[list of str,list of str] or None
+			Names to annotate. Defaults to all.
+		lim:		[float,float]
+			Limits in [min,xmax] for coloring. Defaults to min and max values.
+		cmap_sym:	bool
+			Whether to use symmetric lim if lim is unspecified.
+		ka:	dict
+			Keyword arguments for ax.imshow.
+		"""
+		import numpy as np
+		super().__init__(ax,pts)
+		self.stat=stat
+		#Rows & columns to show
+		if names is None:
+			names=[None,None]
+		assert len(stat.names)==2
+		for xi in range(2):
+			if names[xi] is None:
+				names[xi]=stat.names[xi]
+		t1=[np.nonzero([x not in stat.ndict[y] for x in names[y]])[0] for y in range(2)]
+		if len(t1[0])>0:
+			raise ValueError('Regulator(s) not found: {}'.format(','.join([names[0][x] for x in t1[0]])))
+		if len(t1[1])>0:
+			raise ValueError('Target(s) not found: {}'.format(','.join([names[1][x] for x in t1[1]])))
+		self.names=names
+		self.namesdict=[dict(zip(x,range(len(x)))) for x in self.names]
+		#Rows & columns to annotate
+		assert len(annotate)==2
+		for xi in range(2):
+			if annotate[xi] is None:
+				annotate[xi]=names[xi]
+		t1=[np.nonzero([x not in self.namesdict[y] for x in names[y]])[0] for y in range(2)]
+		if len(t1[0])>0:
+			raise ValueError('Regulator(s) to annotate not found: {}'.format(','.join([annotate[0][x] for x in t1[0]])))
+		if len(t1[1])>0:
+			raise ValueError('Target(s) to annotate not found: {}'.format(','.join([annotate[1][x] for x in t1[1]])))
+		self.annotate=annotate
+		if lim is None:
+			lim=stat.default_lims(pts)
+			if cmap_sym:
+				lim=np.abs(lim).max()
+				lim=[-lim,lim]
+		self.lim=lim
+		self.ka=ka
+		#Genes to annotate. Defaults to none
+		# assert all([x in self.nametdict for x in g_ann])
+		# if type(g_ann) is dict:
+		# 	self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
+		# else:
+		# 	self.g_ann={self.nametdict[x]:x for x in g_ann}
+	def get_data(self,pts):
+		import numpy as np
+		data=self.stat.compute(pts)
+		data=data[[self.stat.ndict[0][x] for x in self.names[0]]][:,[self.stat.ndict[1][x] for x in self.names[1]]]
+		return data
+	def init(self):
+		#Draw initial panel
+		self.objs=[]
+		data=self.get_data(self.pts[[0]])
+		self.objs.append(self.ax.imshow(data,vmin=self.lim[0],vmax=self.lim[1],**self.ka))
+		t1=[[x[0][y] for y in x[1]] for x in zip(self.namesdict,self.annotate)]
+		self.ax.set_xticks(t1[1])
+		self.ax.set_xticklabels(self.annotate[1],rotation=90)
+		self.ax.set_yticks(t1[0])
+		self.ax.set_yticklabels(self.annotate[0])
+		self.ax.set_xlabel('Target')
+		self.ax.set_ylabel('Regulator')
+		return self.objs
+	def draw(self,t):
+		data=self.get_data(self.pts[[t]])
+		self.objs[0].set_array(data)
 		objs=list(self.objs)
 		return objs
 
-class panel_stathist_tf(panel_base):
-	def __init__(self,ax,d,pts,stat,namet=None,g_ann=[],lims=None,scatterka=dict(),**ka):
+class network_node(statscatter):
+	def __init__(self,ax,pts,statloc,*a,**ka):
+		"""
+		Draw network nodes with scatter plot.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statloc:	dictys.net.stat.base
+			Stat instance for axes. Must be two-dimensional with shape (n_cell,2).
+		a:			list
+			Arguments for dictys.plot.panel.statscatter
+		ka:			dict
+			Keyword arguments for dictys.plot.panel.statscatter
+		"""
+		statx=statloc[:,0]
+		staty=statloc[:,1]
+		super().__init__(ax,pts,statx,staty,*a,**ka)
+
+class network_edge_old(base):
+	def __init__(self,ax,pts,statloc,statnet,*a,nmax=1000,**ka):
 		"""Draw scatter plots from two stats of TFs.
 		statx,
-		staty:		Stat instances on X and Y axes 
-		namet:		TFs to show as a list of gene names. Defaults to all.
-		g_ann:		TFs to annotate on scatter plot as list of gene names or {gene name:annotation text}.
-		lims:		Limits of X and Y axes in [[xmin,xmax],[ymin,ymax]]. Defaults to min and max values on nodes with 2% expansion on each side.
-		scatterka:	Keyword arguments for ax.scatter.
+		staty:		Stat instances on X and Y axes
+		names:		Dots to show as a list of names. Defaults to all.
+		annotate:	Dots to annotate on scatter plot as list of names or {name:text}. Use 'all' for all dots.
+		lim:		Limits of X and Y axes in [[xmin,xmax],[ymin,ymax]]. Defaults to min and max values on nodes with 2% expansion on each side.
+		scatterka:	Keyword arguments for ax.scatter. 
+		statka:		Keyword arguments for ax.scatter whose values are stats. Keys must be settable in matplotlib.collections.PathCollection.set.
 		staty2,
 		scatterka2:	Respective parameters to draw a second y stat. Defaults to staty2=None to disable second y axis (on right side).
 		ka:			Keyword arguments passed to parent class.
 		"""
-		import numpy as np
-		super().__init__(ax,d,pts,**ka)
-		#TF names and annotations
-		if namet is None:
-			namet=stat.names[0]
-		self.namet=namet
-		self.nametdict=dict(zip(self.namet,range(len(self.namet))))
-		#Genes to annotate. Defaults to none
-		assert all([x in self.nametdict for x in g_ann])
-		if type(g_ann) is dict:
-			self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
-		else:
-			self.g_ann={self.nametdict[x]:x for x in g_ann}
-		#Search stat functions
-		self.stat=stat
-		assert isinstance(self.stat,stat_base)
-		self.scatterka=scatterka
-		self.lims=lims
+		self.statnet=statnet
+		self.statloc=statloc
+		self.nmax=nmax
+		self.map=[{y:self.statloc.ndict[0][self.statnet.names[x][y]] for y in range(len(self.statnet.names[x])) if self.statnet.names[x][y] in self.statloc.ndict[0]} for x in range(2)]
+		self.ka=ka
+		super().__init__(ax,pts,*a)
 	def init(self):
-		#Prepare limits
-		if self.lims is None:
-			self.lims=[None]*(self.ny+1)
-		for xi in range(self.ny+1):
-			if self.lims[xi] is not None:
-				continue
-			self.lims[xi]=self.stat.default_lims(pts=self.pts,names=[self.namet])
-		assert len(self.lims)==self.ny+1 and all([len(x)==2 for x in self.lims])
-		#Draw initial panel
-		ans=[]
-		self.objs=[]
-		self.objs.append(self.ax.scatter([],[],**self.scatterka))
-		self.objs+=[self.ax.text(self.lims[0][0],self.lims[1][0],'') for x in self.g_ann]
-		self.ax.set_xlim(self.lims[0])
-		self.ax.set_ylim(self.lims[1])
-		self.ax.set_xlabel(self.stats[0].label)
-		self.ax.set_ylabel(self.stats[1].label)
-		if self.ny>1:
-			#Second Y
-			self.ax2=self.ax.twinx()
-			self.objs.append(self.ax2.scatter([],[],**self.scatterka2))
-			self.objs+=[self.ax2.text(self.lims[0][0],self.lims[2][0],'') for x in self.g_ann]
-			self.ax2.set_ylim(self.lims[2])
-			self.ax2.set_ylabel(self.stats[2].label)
-		return ans
-	def get_data(self,pts):
-		#n_stat,n_t,n_pts for data and isshow
-		#Compute values at point from nodes
-		import numpy as np
-		data0=[self.stats[x].compute_points(pts) for x in range(self.ny+1)]
-		assert all([data0[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1)])
-		data=[data0[x][[self.stats[x].ndict[0][y] for y in self.namet]] for x in range(self.ny+1)]
-		assert all([x.shape==data[0].shape for x in data[1:]])
-		data=np.array(data)
-
-		#Compute isshow from data
-		isshow=[self.stats[x].compute_show(pts,data0[x]) for x in range(self.ny+1)]
-		assert all([isshow[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1)])
-		isshow=[isshow[x][[self.stats[x].ndict[0][y] for y in self.namet]] for x in range(self.ny+1)]
-		assert all([x.shape==isshow[0].shape for x in isshow[1:]])
-		isshow=np.array(isshow)
-		isshow[1:]&=isshow[0]
-		return [data,isshow]
+		self.objs=[self.ax.arrow(0,0,0,0,alpha=0,**self.ka) for _ in range(self.nmax)]
+		return self.objs
 	def draw(self,t):
 		import numpy as np
-		import itertools
-		objs=[]
 		pts=self.pts[[t]]
-		data,isshow=[x[:,:,0] for x in self.get_data(pts)]
+		net,loc=[np.take(x.compute(pts),0,axis=-1) for x in [self.statnet,self.statloc]]
+		net=np.abs(net)
+		t1=np.unravel_index(np.argpartition(net.ravel(),-self.nmax)[-self.nmax:],net.shape)
+		t2=net[t1[0],t1[1]].min()
+		if t2==0:
+			t1=np.nonzero(net)
+		assert len(t1[0])<=len(self.objs)
+		for xi in range(len(t1[0])):
+			t3=[self.map[x][t1[x][xi]] for x in range(2)]
+			# t3=[self.statloc.ndict[0][self.statnet.names[x][t1[x][xi]]] for x in range(2)]
+			self.objs[xi].set_data(x=loc[t3[0],0],y=loc[t3[0],1],dx=loc[t3[1],0]-loc[t3[0],0],dy=loc[t3[1],1]-loc[t3[0],1])
+			self.objs[xi].set_alpha(1)
+		[x.set_alpha(0) for x in self.objs[len(t1[0]):]]
+		return self.objs
 
-		#Update scatter
-		for xi in range(self.ny):
-			self.objs[xi*(len(self.g_ann)+1)].set_offsets(data[[0,1+xi]].T)
-		#Update annotation
-		t1=list(self.g_ann)
-		for xi,xj in itertools.product(range(self.ny),range(len(t1))):
-			if isshow[xi][t1[xj]]:
-				self.objs[(1+len(self.g_ann))*xi+1+xj].set_text(self.g_ann[t1[xj]])
-				self.objs[(1+len(self.g_ann))*xi+1+xj].set_position(data[[0,1+xi],t1[xj]])
+class network_edge(base):
+	def __init__(self,ax,pts,statloc,statnet,**ka):
+		"""
+		Draw network edges.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statloc:	dictys.net.stat.base
+			Stat instance for axes. Must be two-dimensional with shape (n_cell,2).
+		statnet:	dictys.net.stat.base
+			Stat instance for edge strengths. Must be two-dimensional with shape (n_reg,n_target).
+		ka:			dict
+			Keyword arguments for ax.arrow
+		"""
+		self.statnet=statnet
+		self.statloc=statloc
+		self.map=[{y:self.statloc.ndict[0][self.statnet.names[x][y]] for y in range(len(self.statnet.names[x])) if self.statnet.names[x][y] in self.statloc.ndict[0]} for x in range(2)]
+		self.ka=ka
+		super().__init__(ax,pts)
+	def init(self):
+		self.objs=[]
+		self.nlast=0
+		return self.objs
+	def draw(self,t):
+		import numpy as np
+		pts=self.pts[[t]]
+		net,loc=[np.take(x.compute(pts),0,axis=-1) for x in [self.statnet,self.statloc]]
+		net=np.abs(net)
+		t1=np.nonzero(net)
+		for xi in range(len(t1[0])):
+			t3=[self.map[x][t1[x][xi]] for x in range(2)]
+			if xi<len(self.objs):
+				self.objs[xi].set_data(x=loc[t3[0],0],y=loc[t3[0],1],dx=loc[t3[1],0]-loc[t3[0],0],dy=loc[t3[1],1]-loc[t3[0],1])
+				self.objs[xi].set_alpha(1)
 			else:
-				self.objs[(1+len(self.g_ann))*xi+1+xj].set_text('')
-		objs=list(self.objs)
-		return objs
+				self.objs.append(self.ax.arrow(loc[t3[0],0],loc[t3[0],1],loc[t3[1],0]-loc[t3[0],0],loc[t3[1],1]-loc[t3[0],1],**self.ka))
+		#Use last frame arrow count to determin objects for redraw
+		if len(t1[0])<self.nlast:
+			[x.set_alpha(0) for x in self.objs[len(t1[0]):self.nlast]]
+			t2=self.nlast
+			self.nlast=len(t1[0])
+			return self.objs[:t2]
+		else:
+			self.nlast=len(t1[0])
+			return self.objs[:self.nlast]
 
-class panel_cellscatter(panel_base):
-	#HERE: need to update
-	def __init__(self,ax,d,pts,loc='mean',skeleton=False,weightfunc=('conv',[1.],dict())):
-		"""Draw scatter plots of cells
-		loc:		How to compute pointer location.
-			mean:	Takes weighted mean of cells involved.
-			given:	Uses given pseudotime for linear interpolation
-		skeleton:	Whether to show trajectory skeleton
-		weightfunc:	Function that weight cells for color and pointer
+class network(overlay):
+	def __init__(self,ax,pts,statloc,statnet,nodeka=dict(),edgeka=dict()):
 		"""
-		from lwang.pipeline.dynet2.traj import trajc,pointc
-		super().__init__(ax,d,pts)
-		#Compute coordinates
-		traj0=trajc.fromdist(self.d['traj-edge'],d['traj-dist'])
-		point=pointc(traj0,self.d['trajsub-edge'],self.d['trajsub-loc'])
-		traj_coord=self.d['traj-coord']
-		trajsub_coord=point.weight_linear()@traj_coord
-		self.coord_node=trajsub_coord.T
-		self.coord_cell=self.d['dtumap']
-		self.loc=loc
-		self.weightfunc=weightfunc
-		self.cellweight=d['trajsub-set']
-		self.skeleton=skeleton
+		Draws overlay plot of network.
+
+		Parameters
+		----------
+		ax:			matplotlib.pyplot.axes
+			Axes to draw on
+		d:			dictys.net.network
+			Dynamic network object to draw cells
+		pts:		dictys.traj.point
+			Points of path to visualize network
+		statloc:	dictys.net.stat.base
+			Stat instance for axes. Must be two-dimensional with shape (n_cell,2).
+		statnet:	dictys.net.stat.base
+			Stat instance for edge strengths. Must be two-dimensional with shape (n_reg,n_target).
+		nodeka:		dict
+			Keyword arguments for drawing nodes with dictys.plot.panel.network_node
+		edgeka:		dict
+			Keyword arguments for drawing edges with dictys.plot.panel.network_edge
+		"""
+		panels=[]
+		#Scatter
+		nodeka0={'scatterka':dict()}
+		if 'scatterka' in nodeka:
+			nodeka=dict(nodeka)
+			nodeka0['scatterka'].update(nodeka['scatterka'])
+			del nodeka['scatterka']
+		nodeka0.update(nodeka)
+		panels.append(network_node(ax,pts,statloc,**nodeka0))
+		panels.append(network_edge(ax,pts,statloc,statnet,**edgeka))
+		return super().__init__(ax,pts,panels[::-1])
 	def init(self):
-		ans=[]
-		self.objs=[]
-		#Cell scatter
-		self.ax.set_aspect(1.)
+		self.ax.set_aspect(1)
 		self.ax.axis('off')
-		self.objs.append(self.ax.scatter(*self.coord_cell,marker='.',c='k',lw=0,s=5,alpha=0))
-		if self.skeleton:
-			#Node scatter
-			self.ax.scatter(*self.coord_node,marker='o',c='k',lw=0,s=30)
-			#Edges
-			for xi in self.pts.p.edges:
-				self.ax.plot(*self.coord_node[:,xi],'k-');
-		#Pointer
-		self.objs.append(self.ax.scatter([],[],marker='o',c=[(0.4,0.,0.)],lw=0,s=50))
-		return ans
-	def draw(self,t):
-		import numpy as np
-		from lwang.pipeline.dynet2.traj import pointc
-		#Compute cell weight
-		objs=[]
-		w=self.compute_cellweight(self.pts.edges[t],self.pts.locs[t],self.weightfunc)
-		w=w.ravel()/w.max()
-		#Update cell color
-		c=np.repeat([[1,0,0]],len(w),axis=0).T*w
-		c+=np.repeat([np.ones(3)*0.9],len(w),axis=0).T*(1-w)
-		c=np.clip(c,0,1)
-		self.objs[0].set_color(c.T)
-		self.objs[0].set_alpha(1.)
-		#Update pointer location
-		if self.loc=='mean':
-			loc=(self.coord_cell@w)/w.sum()
-		elif self.loc=='given':
-			raise NotImplementedError
-		else:
-			raise ValueError('Unknown value loc={} during initializatin of class {}'.format(self.loc,self.__class__.name))
-		self.objs[1].set_offsets(loc.reshape(1,2))
-		objs=list(self.objs)
-		return objs
-	def compute_nodeweight_byloc(self,edge,loc,weightfunc):
-		import numpy as np
-		from lwang.pipeline.dynet2.traj import pointc
-		#Compute values at point
-		point=pointc(self.pts.p,np.array([edge]),np.array([loc]))
-		return self.compute_nodeweight_bypoint(point,weightfunc)
-	def compute_nodeweight_bypoint(self,point,weightfunc):
-		wfunc=getattr(point,'weight_'+weightfunc[0])
-		ans=wfunc(*weightfunc[1],**weightfunc[2])
-		return ans
-	def compute_cellweight(self,edge,loc,weightfunc):
-		w=self.compute_nodeweight_byloc(edge,loc,weightfunc)
-		return w@self.cellweight.T
+		return super().init()
 
-class panel_netheatmap(panel_base):
-	def __init__(self,ax,d,pts,smoothen_func=('conv',[1.],dict()),varname='dynet',namets=None,g_ann=[[],[]],lim=None,**ka):
-		"""Draw dynamic heatmap for network.
-		smoothen_func:	Function to smoothen network. See lwang.pipeline.dynet2.traj.trajc.smoothened
-		varname:	Variable name to represent network
-		namets:		Regulator and target gene lists to visualize as [reg list, target list]. Defaults to all.
-		g_ann:		TFs to annotate on scatter plot as list of gene names or {gene name:annotation text}.
-		ka:			Keyword arguments passed to parent class.
-		"""
-		import numpy as np
-		assert len(g_ann)==2
-		if any([len(x)>0 for x in g_ann]):
-			raise NotImplementedError
-		super().__init__(ax,d,pts)
-		self.varname=varname
-		namets0=[]
-		dynet=self.d[self.varname]
-		if dynet.ndim==5:
-			dynet=dynet.reshape(dynet.shape[0],dynet.shape[2],dynet.shape[4])
-			for xi in range(2):
-				namets0.append(self.d.dim[self.d.d[self.varname].shape[2+2*xi]])
-		else:
-			assert dynet.ndim==3
-			for xi in range(2):
-				namets0.append(self.d.dim[self.d.d[self.varname].shape[1+xi]])
-		if namets is None:
-			namets=[None,None]
-		for xi in range(2):
-			if namets[xi] is not None:
-				t1=dict(zip(namets0[xi],range(len(namets0[xi]))))
-				t2=np.nonzero([x not in t1 for x in namets[xi]])[0]
-				if len(t2)>0:
-					raise ValueError(('TF' if xi==0 else 'Gene')+'(s) not found: '+','.join([namets[xi][x] for x in t2]))
-				t1=[t1[x] for x in namets[xi]]
-				dynet=dynet.swapaxes(0,xi+1)[t1].swapaxes(0,xi+1)
-				namets0[xi]=namets[xi]
-		self.namets=namets0
-		self.nametdicts=[dict(zip(x,range(len(x)))) for x in self.namets]
-		if lim is None:
-			lim=[dynet.min(),dynet.max()]
-			lim=np.abs(lim).max()
-			lim=[-lim,lim]
-		self.lim=lim
-		self.dynet=self.pts.p.smoothened(dynet,smoothen_func[0],*smoothen_func[1],**smoothen_func[2],axis=0)
-		self.ka=ka
-		#Genes to annotate. Defaults to none
-		# assert all([x in self.nametdict for x in g_ann])
-		# if type(g_ann) is dict:
-		# 	self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
-		# else:
-		# 	self.g_ann={self.nametdict[x]:x for x in g_ann}
-	def init(self):
-		#Draw initial panel
-		ans=[]
-		self.objs=[]
-		net=self.dynet(self.pts[[0]])[0]
-		self.objs.append(self.ax.imshow(net,vmin=self.lim[0],vmax=self.lim[1],**self.ka))
-		self.ax.set_xticks(list(range(len(self.namets[1]))))
-		self.ax.set_xticklabels(self.namets[1],rotation=90)
-		self.ax.set_yticks(list(range(len(self.namets[0]))))
-		self.ax.set_yticklabels(self.namets[0])
-		self.ax.set_xlabel('Target')
-		self.ax.set_ylabel('TF')
-		return ans
-	def draw(self,t):
-		net=self.dynet(self.pts[[t]])[0]
-		self.objs[0].set_array(net)
-		objs=list(self.objs)
-		return objs
-
-class panel_statheatmap(panel_base):
-	def __init__(self,ax,d,pts,stat,annotation=[[],[]],lims=None,swapaxes=False,**ka):
-		"""Draw dynamic heatmap for stat.
-		stat:		Stat instance to draw. Must output two dimensions before the time dimension. 
-		annotation:	Names of X and Y dimensions to draw dynamic heatmap for. Each element as a list of names or {name:annotation text}.
-					Defaults to no annotation.
-		lims:		Limits of values as [vmin,vmax] for coloring. Defaults to min and max values of all times.
-		swapaxes:	By default, Dimension 0/1 are shown as Y/X respectively. Set swapaxes=True to swap X and Y axes.
-		ka:			Keyword arguments passed to ax.imshow.
-		"""
-		import numpy as np
-		assert len(g_ann)==2
-		assert all([len(x)>0 for x in g_ann])
-		if swapaxes:
-			raise NotImplementedError('swapaxes is not implemented.')
-
-		for xi in range(2):
-			if len(g_ann[xi])!=len(set(g_ann[xi])):
-				raise ValueError(f'Found duplicates in g_ann[{xi}].')
-			t1=set(g_ann[xi])-set(stat.names[xi])
-			if len(t1)>0:
-				raise ValueError('Names not found in stat: '+','.join(t1))
-		tid=[dict(x) for x in stat.names]
-		tid=[[x[0][y] for y in x[1]] for x in zip(tid,g_ann)]
-		self.tid=tid
-		self.namet=namet
-		self.nametdict=dict(zip(self.namet,range(len(self.namet))))
-		#Genes to annotate. Defaults to none
-		assert all([x in self.nametdict for x in g_ann])
-		if type(g_ann) is dict:
-			self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
-		else:
-			self.g_ann={self.nametdict[x]:x for x in g_ann}
-		#Search stat functions
-		self.stats=[statx,staty]
-		if staty2 is not None:
-			#Second Y
-			self.stats.append(staty2)
-		assert all([isinstance(x,stat_base) for x in self.stats])
-		self.scatterka=scatterka
-		self.lims=lims
-		if staty2 is not None:
-			#Second Y
-			self.ny=2
-			self.scatterka2=scatterka2
-		else:
-			self.ny=1
-			
-		super().__init__(ax,d,pts)
-		self.varname=varname
-		namets0=[]
-		dynet=self.d[self.varname]
-		if dynet.ndim==5:
-			dynet=dynet.reshape(dynet.shape[0],dynet.shape[2],dynet.shape[4])
-			for xi in range(2):
-				namets0.append(self.d.dim[self.d.d[self.varname].shape[2+2*xi]])
-		else:
-			assert dynet.ndim==3
-			for xi in range(2):
-				namets0.append(self.d.dim[self.d.d[self.varname].shape[1+xi]])
-		if namets is None:
-			namets=[None,None]
-		for xi in range(2):
-			if namets[xi] is not None:
-				t1=dict(zip(namets0[xi],range(len(namets0[xi]))))
-				t1=[t1[x] for x in namets[xi]]
-				dynet=dynet.swapaxes(0,xi+1)[t1].swapaxes(0,xi+1)
-				namets0[xi]=namets[xi]
-		self.namets=namets0
-		self.nametdicts=[dict(zip(x,range(len(x)))) for x in self.namets]
-		if lim is None:
-			lim=[dynet.min(),dynet.max()]
-			lim=np.abs(lim).max()
-			lim=[-lim,lim]
-		self.lim=lim
-		self.dynet=self.pts.p.smoothened(dynet,smoothen_func[0],*smoothen_func[1],**smoothen_func[2],axis=0)
-		self.ka=ka
-		#Genes to annotate. Defaults to none
-		# assert all([x in self.nametdict for x in g_ann])
-		# if type(g_ann) is dict:
-		# 	self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
-		# else:
-		# 	self.g_ann={self.nametdict[x]:x for x in g_ann}
-	def init(self):
-		#Draw initial panel
-		ans=[]
-		self.objs=[]
-		net=self.dynet(self.pts[[0]])[0]
-		self.objs.append(self.ax.imshow(net,vmin=self.lim[0],vmax=self.lim[1],**self.ka))
-		self.ax.set_xticks(list(range(len(self.namets[1]))))
-		self.ax.set_xticklabels(self.namets[1],rotation=90)
-		self.ax.set_yticks(list(range(len(self.namets[0]))))
-		self.ax.set_yticklabels(self.namets[0])
-		self.ax.set_xlabel('Target')
-		self.ax.set_ylabel('TF')
-		return ans
-	def draw(self,t):
-		net=self.dynet(self.pts[[t]])[0]
-		self.objs[0].set_array(net)
-		objs=list(self.objs)
-		return objs
 
 class animate_generic:
-	"""Generic class to visualize animations"""
+	"""
+	Engine class to visualize animations
+	"""
 	def __init__(self,pts,fig,panels):
+		"""Animation engine.
+
+		Parameters
+		----------
+		pts:	dictys.traj.point
+			Points for drawing animation
+		fig:	matplotlib.pyplot.Figure
+			Figure for drawing animation
+		panels:	list of dictys.plots.panel.base
+			Panels to animate
 		"""
-		"""
-		assert all([isinstance(x,panel_base) for x in panels])
+		assert all([isinstance(x,base) for x in panels])
 		self.panels=panels
 		self.fig=fig
 		self.hasinit=False
 		self.pts=pts
 	def init(self):
+		"""
+		Initialize canvas.
+
+		Returns
+		----------
+		list of artists
+			Artists that may be redrawn in the future frames
+		"""
 		from contextlib import suppress
 		if self.hasinit:
 			return []
@@ -579,59 +796,39 @@ class animate_generic:
 		self.hasinit=True
 		return objs
 	def draw(self,t):
+		"""
+		Update canvas at frame t.
+
+		Parameters
+		----------
+		t:	int
+			Frame ID
+		
+		Returns
+		----------
+		list of artists
+			Artists redrawn
+		"""
 		objs=[]
 		for xi in self.panels:
 			objs+=xi.draw(t)
 		return objs
-	def animate(self,**ka):
-		"""Draw animation.
-		ka:  Keyword arguments of matplotlib.animation.FuncAnimation.
-		Return:
-		Animation"""
+	def animate(self,blit=True,**ka):
+		"""
+		Draw animation.
+
+		Parameters
+		----------
+		blit:	Whether to redraw only the needed parts.
+		ka:  Keyword arguments passed to matplotlib.animation.FuncAnimation.
+
+		Returns
+		----------
+		matplotlib.animation.FuncAnimation
+			Animation
+		"""
 		from matplotlib.animation import FuncAnimation
-		return FuncAnimation(self.fig,self.draw,init_func=self.init,frames=self.pts.npt,blit=True,**ka)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		return FuncAnimation(self.fig,self.draw,init_func=self.init,frames=self.pts.npt,blit=blit,**ka)
 
 
 

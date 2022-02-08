@@ -28,7 +28,7 @@ def pkg_setup():
 		# download_url=url,
 		scripts=['bin/dictys'],
 		# include_package_data=True,
-		install_requires=['numpy','scipy','pandas','scikit-learn','biothings_client'],
+		install_requires=['numpy','scipy','pandas','scikit-learn','biothings_client','matplotlib>=3.5.0'],
 		classifiers=['Development Status :: 2 - Pre-Alpha ',
 			'License :: OSI Approved :: BSD License',
 			'Environment :: Console',

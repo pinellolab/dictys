@@ -9,6 +9,71 @@ __all__=['panel','population']
 
 from . import *
 
+def get_cmap(cmap,n):
+	import numpy as np
+	import matplotlib.pyplot as plt
+	c=plt.get_cmap(cmap)
+	if n<c.N:
+		return c(np.linspace(0,1,c.N)[:n])
+	else:
+		return c(np.linspace(0,1,n))
+
+def colorlegend(ax,
+				loc,
+				labels,
+				colors,
+				horizontalalignment='left',
+				verticalalignment='top',
+				spacex=0,
+				spacey=0.15,
+				space=None,
+				ncol=1,
+				**ka):
+	"""Draw legends using colored texts
+	ax:		axis
+	loc:	Location of first line
+	labels: List of labels
+	colors: List of colors
+	spacex,
+	spacey:	Extra proportion of space in columns/rows
+	space:	Alterantive parameter name for both spacex and spacey
+	ncol:	Number of columns
+	horizontalalignment,
+	verticalalignment,
+	ka: Arguments passed to ax.text"""
+	import numpy as np
+	from matplotlib import transforms
+	n=len(labels)
+	assert len(colors) == n
+	if space is not None:
+		spacex=space
+		spacey=space
+	cid=np.array_split(np.arange(n),ncol)
+	t0 = ax.transAxes
+	canvas = ax.figure.canvas
+	for xi in range(ncol):
+		t=t0
+		widthmax=0
+		for xj in range(len(cid[xi])):
+			text = ax.text(*loc,
+						   labels[cid[xi][xj]],
+						   color=colors[cid[xi][xj]],
+						   transform=t,
+						   horizontalalignment=horizontalalignment,
+						   verticalalignment=verticalalignment,
+						   **ka)
+			# Need to draw to update the text position.
+			text.draw(canvas.get_renderer())
+			ex = text.get_window_extent()
+			widthmax=max(widthmax,ex.width)
+			if xj==0:
+				text0_transform=text.get_transform()
+			t = transforms.offset_copy(text.get_transform(),
+					y=-ex.height * (1 + spacey),
+					units='dots')
+		t0 = transforms.offset_copy(text0_transform,
+				x=widthmax+spacex,
+				units='dots')
 
 def heatmap(d,
 			optimal_ordering=True,

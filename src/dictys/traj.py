@@ -1,13 +1,24 @@
-
 #!/usr/bin/python3
+# Lingfei Wang, 2020-2022. All rights reserved.
+
+
+"""
+Classes for trajectory and points on trajectory
+"""
 
 _docstring2argparse_ignore_=['trajectory','point']
 
 class trajectory:
 	def __init__(self,edges,lens):
-		"""Create trajectory object. Only supports fully connected tree trajectory.
-		edges:	Start and end node IDs for each edge as np.array(shape=(n_edge,2))
-		lens:	Length of each edge as np.array(shape=(n_edge,))
+		"""
+		Create state trajectory object. Only supports fully connected tree trajectory.
+
+		Parameters
+		----------
+		edges:	numpy.ndarray(shape=(n_edge,2))
+			Start and end state node IDs for each edge
+		lens:	numpy.ndarray(shape=(n_edge,))
+			Length of each edge
 		"""
 		import networkx as nx
 		import numpy as np
@@ -49,11 +60,20 @@ class trajectory:
 		self.deg[t1[:,0]]=t1[:,1]
 	@staticmethod
 	def len_edge(dists,edges):
-		"""Computes the length of each edge using sample distances to each node
-		dists:	Distance matrix between each sample point on the graph and each node as np.array(shape=(n_sample,n_node))	
-		edges:	Start and end node IDs for each edge as np.array(shape=(n_edge,2))
-		Return:
-		Length of each edge as np.array(shape=(n_edge,))
+		"""
+		Computes the length of each edge using points' distances to each state node
+
+		Parameters
+		----------
+		dists:	numpy.ndarray(shape=(n_sample,n_node))
+			Distance matrix between each sample point on the graph and state each node
+		edges:	numpy.ndarray(shape=(n_edge,2))
+			Start and end node IDs for each edge
+
+		Returns
+		----------
+		lengths:	numpy.ndarray(shape=(n_edge,))
+			Length of each edge
 		"""
 		import numpy as np
 		ne=len(edges)
@@ -64,19 +84,42 @@ class trajectory:
 		return ans
 	@classmethod
 	def fromdist(cls,edges,dists):
-		"""Create trajectory object from distance matrix betwen sample points and nodes. Only supports fully connected tree trajectory.
-		edges:	Start and end node IDs for each edge as np.array(shape=(n_edge,2))
-		dists:	Distance matrix between each sample point on the graph and each node as np.array(shape=(n_sample,n_node))	
+		"""
+		Create trajectory object from distance matrix betwen sample points and state nodes. Only supports fully connected tree trajectory.
+
+		Parameters
+		----------
+		edges:	numpy.ndarray(shape=(n_edge,2))
+			Start and end node IDs for each edge
+		dists:	numpy.ndarray(shape=(n_sample,n_node))
+			Distance matrix between each sample point on the graph and each node
 		"""
 		return cls(edges,cls.len_edge(dists,edges))
 	def topoint(self):
+		"""
+		Convert trajectory object to point object on this trajectory.
+
+		Returns
+		----------
+		dictys.traj.point
+			Point object converted.
+		"""		
 		return point.fromnodes(self)
 	def conform_locs(self,locs,edges,rel_err=1E-7):
-		"""Conform locs by clipping small deviations under float precision.
-		locs:	np.array(shape=n) of locs to conform
-		edges:	np.array(shape=edges) of respective edge ID each loc is on
-		Return:
-		Conformed locs as np.array(shape=n)
+		"""
+		Conform point locations by clipping small deviations under float precision.
+
+		Parameters
+		----------
+		locs:	numpy.ndarray(shape=n)
+			Points' locations on each edge to conform
+		edges:	numpy.ndarray(shape=n)
+			Points' edges to conform
+
+		Returns
+		----------
+		numpy.ndarray(shape=n)
+			Conformed locs
 		"""
 		import numpy as np
 		errbound=rel_err*self.lens[edges]
@@ -84,16 +127,23 @@ class trajectory:
 			raise ValueError(f'Some locs are beyond relative error {rel_err}.')
 		locs=np.clip(locs,0,self.lens[edges])
 		return locs
-	def points(self):
-		"""Create list of points of nodes of the trajectory"""
-		return point.fromnodes(self)
 	def linspace(self,start,end,n):
-		"""Find evenly spaced points on a path np.linspace
-		start,
-		end:	Start/end nodes' IDs to indicate the path.
-		n:		Number of points including terminal nodes
-		Return:
-		Instance of point class with points go from start to end nodes.
+		"""
+		Find evenly spaced points on a path like np.linspace
+
+		Parameters
+		----------
+		start:	int
+			Start nodes' IDs to indicate the path
+		end:	int
+			End nodes' IDs to indicate the path
+		n:		int
+			Number of points including terminal nodes
+
+		Returns
+		----------
+		dictys.traj.point
+			Instance of point class with points go from start to end nodes.
 		"""
 		import numpy as np
 		assert n>=2
@@ -101,13 +151,23 @@ class trajectory:
 		locs=np.linspace(0,self.lens[[self.edgedict[path[x],path[x+1]][0] for x in range(len(path)-1)]].sum(),n)
 		return self.path_points(start,end,locs)
 	def path_points(self,start,end,lengths):
-		"""Find points at specific lengths on a path.
-		start,
-		end:	Start/end nodes' IDs to indicate the path.
-		lengths:Lengths of movement from the starting node towards the ending node as np.array. Each length correspond to an output point.
-				For lengths greater than total length of path, point at the end node will be returned.
-		Return:
-		Instance of point class with points go from start to end nodes.
+		"""
+		Find points at specific lengths on a path.
+
+		Parameters
+		----------
+		start:	int
+			Start nodes' IDs to indicate the path
+		end:	int
+			End nodes' IDs to indicate the path
+		lengths:	int
+			Lengths of movement from the starting node towards the ending node as numpy.ndarray. Each length correspond to an output point.
+			For lengths greater than total length of path, point at the end node will be returned.
+
+		Returns
+		----------
+		dictys.traj.point
+			Instance of point class with points go from start to end nodes.
 		"""
 		import numpy as np
 		n=len(lengths)
@@ -135,11 +195,20 @@ class trajectory:
 		ans_lengths[aorder]=lengths
 		return point(self,ans_steps,ans_lengths)
 	def path(self,start,end):
-		"""Find path from start to end node as list of node IDs
-		start,
-		end:	Start/end nodes' IDs to indicate the path.
-		Return:
-		np.array of edge IDs to go from start to end nodes (inclusive).
+		"""
+		Find path from start to end node as list of node IDs
+
+		Parameters
+		----------
+		start:	int
+			Path sttart node's index
+		end:	int
+			Path end node's index
+
+		Returns
+		----------
+		numpy.ndarray
+			Node indices to go from start to end nodes (inclusive).
 		"""
 		import networkx as nx
 		import numpy as np
@@ -147,42 +216,55 @@ class trajectory:
 		assert end>=0 and end<self.nn
 		assert start!=end
 		return np.array(nx.shortest_path(self.g,start,end))		
-	def smoothen(self,data,axis,func_name,a,ka,points):
-		"""Function to compute smoothened/interpolated values on given data at provided points. Used by self.smoothened.
-		data:		np.array(shape=(...,n_node,...) of base data to smoothen/interpolate from.
-		axis:		Axis of data to smoothen. data must have length n_node at this axis.
-		func_name:	Name of smoothening function of class point. Using weight_conv should provide func_name='conv',
-		a:			Arguments of smoothening function.
-		ka:			Keyword arguments smoothening function.
-		points:		point instance to interpolate data for
-		Return:
-		Smoothened values that have the same dimensionality as data in all axes other than axis. For axis, the dimension is n_pts.
+	def smoothened(self,data,*a,axis=-1,nodes=None,nodes_path=None,**ka):
 		"""
-		func=getattr(points,'weight_'+func_name)
-		w=func(*a,**ka).T
-		assert w.ndim==2
-		 # and w.shape[0]==w.shape[1]
-		w/=w.sum(axis=0)
-		ans=(data.swapaxes(axis,-1)@w).swapaxes(axis,-1)
-		assert ans.shape[:axis]==data.shape[:axis]
-		assert ans.shape[axis+1]==data.shape[axis+1]
-		return ans
-	def smoothened(self,data,func_name,*a,axis=-1,**ka):
-		"""Create a smoothened/interpolated function on given data that computes values at provided points
-		data:		np.array(shape=(...,n_node,...) of base data to smoothen/interpolate from.
-		func_name:	Name of smoothening function of class point. Using weight_conv should provide func_name='conv',
-		a:			Arguments of smoothening function.
-		axis:		Axis of data to smoothen. data must have length n_node at this axis.
-		ka:			Keyword arguments smoothening function.
-		Return:
-		function(points)=smoothened values.
-		Smoothened values have the same dimensionality as data in all axes other than axis. For axis, the dimension is n_pts.
+		Create a smoothened/interpolated function of given data on trajectory nodes that computes values at provided points.
+
+		Parameters
+		----------
+		data:		numpy.ndarray(shape=(...,n_node,...))
+			Base data to smoothen/interpolate from.
+		a:			list
+			Arguments of smoothening function.
+		axis:		int
+			Axis of data to smoothen. data must have length n_node at this axis.
+		nodes:		list or None
+			List of node indices to specify the subset of nodes used.
+		nodes_path:	(int,int)
+			Start and end node indices to specify a path. All nodes along the path will be used for `nodes` parameter.
+		ka:			dict
+			Keyword arguments smoothening function.
+
+		Returns
+		----------
+		function(point)->numpy.ndarray(shape=(...,len(point),...))
+			Function to compute smoothened data matrix at any points. It has the same dimensionality as data in all axes other than axis.
 		"""
-		from functools import partial
-		assert data.shape[axis]==self.nn
-		return partial(self.smoothen,data,axis,func_name,a,ka)
+		import numpy as np
+		pts=self.topoint()
+		assert data.shape[axis]==len(pts)
+		if nodes_path is not None:
+			assert nodes is None
+			assert len(nodes_path)==2
+			nodes=self.path(*nodes_path)
+		if nodes is not None:
+			assert np.min(nodes)>=0 and np.max(nodes)<self.nn
+			nodes=set(nodes)
+			nodes=np.array([x in nodes for x in range(self.nn)])
+			assert data.shape[axis]==len(pts)
+			pts=pts[nodes]
+			data=data.swapaxes(axis,0)[nodes].swapaxes(axis,0)
+		assert data.shape[axis]==len(pts)
+		return pts.smoothened(data,*a,axis=axis,**ka)
 	def terminal_nodes(self):
-		"""Return: IDs of terminal nodes (degree=1) as np.array."""
+		"""
+		Finds the terminal nodes (degree=1).
+
+		Returns
+		----------
+		numpy.ndarray
+			Terminal node indices
+		"""
 		from collections import Counter
 		import numpy as np
 		ans=Counter(self.edges.ravel()).items()
@@ -191,17 +273,55 @@ class trajectory:
 	#I/O
 	@classmethod
 	def from_fileobj(cls,f):
+		"""
+		Load object from file object
+
+		Parameters
+		----------
+		f:	fileobj
+			File object to load from
+
+		Returns
+		----------
+		dictys.traj.trajectory
+			Loaded class object
+		"""
 		import numpy as np
 		params=[np.array(f['edges']),np.array(f['lens'])]
 		return cls(*params)
 	@classmethod
 	def from_file(cls,path):
+		"""
+		Load object from file
+
+		Parameters
+		----------
+		path:	str
+			File path to load from
+
+		Returns
+		----------
+		dictys.traj.trajectory
+			Loaded class object
+		"""
 		import h5py
 		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
 			return cls.from_fileobj(path)
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(f)
 	def to_fileobj(self,f,compression="gzip",**ka):
+		"""
+		Save object to file object
+
+		Parameters
+		----------
+		f:	fileobj
+			File object to save to
+		compression: str
+			Type of compression. See h5py.File.create_dataset.
+		ka:	dict
+			Keyword arguments passed to h5py.File.create_dataset
+		"""
 		p=dict(ka)
 		p['compression']=compression
 		p['data']=self.lens
@@ -211,6 +331,16 @@ class trajectory:
 		p['data']=self.edges
 		f.create_dataset('edges',**p)
 	def to_file(self,path,**ka):
+		"""
+		Save object to file
+
+		Parameters
+		----------
+		path:		str
+			File path to save to.
+		ka:			dict
+			Keyword arguments passed to self.to_fileobj
+		"""
 		import h5py
 		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
 			return self.to_fileobj(path,**ka)
@@ -219,12 +349,19 @@ class trajectory:
 
 class point:
 	def __init__(self,traj,edges,locs,dist=None):
-		"""Point list on trajectory
-		traj:	Trajectory the points are on. Instance of trajectory
-		edges:	Edge ID each point is on as np.array(shape=(n_point))
-		losc:	Distance from the starting node on its edge for each point as np.array(shape=(n_point))
-		dist:	Distance matrix between each point and each node as np.array(shape=(n_point,n_node)).
-				Automatically computed if not provided
+		"""
+		Point list on trajectory.
+
+		Parameters
+		----------
+		traj:	dictys.traj.trajectory
+			Trajectory the points are on
+		edges:	numpy.ndarray(shape=(n_point))
+			Edge ID each point is on
+		locs:	numpy.ndarray(shape=(n_point))
+			Distance from the starting node on its edge for each point
+		dist:	numpy.ndarray(shape=(n_point,n_node))
+			Distance matrix between each point and each node. Automatically computed if not provided.
 		"""
 		import numpy as np
 		if locs is None and dist is None:
@@ -245,7 +382,23 @@ class point:
 		self.dist=dist
 	@classmethod
 	def from_dist(cls,traj,edges,dist):
-		"""Compute edges and locs given dist"""
+		"""
+		Class conctructor from edges and distance to all nodes of each point.
+
+		Parameters
+		----------
+		traj:	dictys.traj.trajectory
+			Trajectory the points are on
+		edges:	numpy.ndarray(shape=(n_point))
+			Edge ID each point is on
+		dist:	numpy.ndarray(shape=(n_point,n_node))
+			Distance matrix between each point and each node. Automatically computed if not provided.
+
+		Returns
+		----------
+		dictys.traj.point
+			Constructed point object
+		"""
 		import numpy as np
 		assert edges.ndim==1
 		assert dist.shape==(len(edges),traj.nn)
@@ -253,7 +406,19 @@ class point:
 		return cls(traj,edges,locs,dist=dist)
 	@classmethod
 	def fromnodes(cls,traj):
-		"""Create list of points for nodes of the trajectory"""
+		"""
+		Convert trajectory nodes to points on the trajectory
+
+		Parameters
+		----------
+		traj:	dictys.traj.trajectory
+			Trajectory to convert
+
+		Returns
+		----------
+		dictys.traj.point
+			Constructed point object
+		"""
 		import numpy as np
 		nodes,indices=np.unique(traj.edges,return_index=True)
 		indices=[indices//2,indices%2]
@@ -265,10 +430,18 @@ class point:
 	def copy(self):
 		return self.__class__(self.p,self.edges,self.locs,dist=self.dist)
 	def __sub__(self,other):
-		"""Subtraction computes the distance matrix between all point pairs in two point lists.
-		other:	Destination point list
-		Return:
-		Distance matrix as np.array(shape=(self.npt,other.npt))
+		"""
+		Subtraction computes the distance matrix between all point pairs in two point lists.
+
+		Parameters
+		----------
+		other:	dictys.traj.point
+			Destination point list.
+
+		Returns
+		----------
+		numpy.ndarray(shape=(self.npt,other.npt))
+			Distance matrix
 		"""
 		import numpy as np
 		from lwang.utils.numpy import groupby
@@ -304,13 +477,22 @@ class point:
 		assert (ans>=0).all()
 		return ans
 	def compute_dist(self):
-		"""Compute distance to every node on trajectory given locs
-		Return:
-		Distance matrix as np.array(shape=(n_point,n_node))
+		"""
+		Compute distance to every node on trajectory given locs
+
+		Returns
+		----------
+		numpy.ndarray(shape=(n_point,n_node))
+			Distance matrix
 		"""
 		return self-self.fromnodes(self.p)
 	def perturb(self,scale=1):
-		"""Perturb locations of points without changing order with other nodes in the list. Overlapping points will have random order.
+		"""
+		Perturb locations of points without changing order of points and nodes in the list. Overlapping points will have random order.
+
+		Parameters
+		----------
+		scale:	Scale of perturbation relative to distance between points/nodes. Must be <=1 because >1 will change the order.
 		"""
 		import numpy as np
 		from collections import defaultdict
@@ -370,24 +552,62 @@ class point:
 		self.locs=self.p.conform_locs(self.locs+perturb_amount,self.edges)
 		self.dist=self.compute_dist()
 	def path_loc(self,nstart,nend,distpath=None):
-		"""Computes locations on the path from node nstart to nend.
-		Distances due to deviation from the main path are removed.
-		nstart,
-		nend:		Starting/ending node ID of path
-		distpath:	Distance from nstart to nend node. Computed if missing
-		Return:
-		Locations on path as np.array that can be the input of self.p.path_points.
+		"""
+		Computes points' locations on a given path. Locations are computed after mapping each point to the path. Distances in branches away from the path are ignored (set to 0).
+
+		Parameters
+		----------
+		nstart:		Starting node index to define the path
+		nend:		Ending node index to define the path
+		distpath:	Distance from nstart to nend node. Computed if missing.
+
+		Returns
+		----------
+		numpy.ndarray(shape=(len(self)))
+			Locations of each point on path as the distance from node nstart. They can be the input of self.p.path_points.
 		"""
 		if distpath is None:
 			distpath=(self.p.topoint()[[nstart]]-self.p.topoint()[[nend]]).ravel()[0]
 		loc=self.dist[:,[nstart,nend]].T
 		loc=loc[0]-(loc.sum(axis=0)-distpath)/2
 		return loc
+	# def path_loc_test(self,nstart,nend,distpath=None):
+	# 	"""Computes locations on the path from node nstart to nend.
+	# 	Distances due to deviation from the main path are removed.
+	# 	Can go negative or beyond the distance from nstart to nend if on either side of the path.
+	# 	nstart,
+	# 	nend:		Starting/ending node ID of path
+	# 	distpath:	Distance from nstart to nend node. Computed if missing
+	# 	Return:
+	# 	Distance from node nstart on path as numpy.ndarray, that can be the input of self.p.path_points.
+	# 	"""
+	# 	import numpy as np
+	# 	if distpath is None:
+	# 		distpath=(self.p.topoint()[[nstart]]-self.p.topoint()[[nend]]).ravel()[0]
+	# 	loc=self.dist[:,[nstart,nend]].T
+	# 	ans=loc[0].copy()
+	# 	#On branch or path
+	# 	t1=loc[1]-loc[0]
+	# 	t2=np.abs(t1)<distpath
+	# 	ans[t2]=(distpath-t1[t2])/2
+	# 	#On side of nstart
+	# 	t2=(loc[1]>=distpath)&(loc[1]>loc[0])&~t2
+	# 	ans[t2]*=-1
+	# 	return ans
 	def filter_path(self,nstart,nend):
-		"""Filters points to retain only those on the given path from node nstart to node nend.
-		nstart,
-		nend:	IDs of starting and ending nodes that define the path
-		Return:	np.array of index of points on the path."""
+		"""
+		Filters points to retain only those on the given path.
+
+		Parameters
+		----------
+		nstart:		Starting node index to define the path
+		nend:		Ending node index to define the path
+
+		Returns
+		----------
+		numpy.ndarray
+			Indices of points on the path.
+		"""
 		import numpy as np
 		p=self.p.path(nstart,nend)
 		edges=set([self.p.edgedict[p[x],p[x+1]][0] for x in range(len(p)-1)])
@@ -396,227 +616,247 @@ class point:
 		#Point at the terminal node of edge
 		t1|=(self.dist[:,p]==0).any(axis=1)
 		return np.nonzero(t1)[0]
-	def subsets(self,ncell,noverlap):
-		"""Construct overlapping cell subsets for network reconstruction on each subset.
-		The subset assignment is based on the following hard constraints:
-			a. Number of cells in each subset from ncell
-			b. Upper bound of cell overlap count between neighboring subsets from noverlap 
-			c. Every cell is assigned to at least one subset.
-		There are exceptions where it's impossible to satisfy all constraints simultaneously so b will be relaxed and a warning will appear. Such scenarios include:
-			a. The subsets of two neighboring branching/terminal nodes have overlap cell count>noverlap
-			b. Between two neighboring branching/terminal nodes the number of unassigned cells<ncell-2*noverlap
-			c. Very small noverlap.
-		For cells at identical (pseudotime) locations, to choose a subset random draws are performed whenever necessary.
-		Error will be triggered if there are more distance=0 cells than ncell at any node.
+	# def subsets_old(self,ncell,noverlap):
+	# 	"""Construct overlapping cell subsets for network reconstruction on each subset.
+	# 	The subset assignment is based on the following hard constraints:
+	# 		a. Number of cells in each subset from ncell
+	# 		b. Upper bound of cell overlap count between neighboring subsets from noverlap 
+	# 		c. Every cell is assigned to at least one subset.
+	# 	There are exceptions where it's impossible to satisfy all constraints simultaneously so b will be relaxed and a warning will appear. Such scenarios include:
+	# 		a. The subsets of two neighboring branching/terminal nodes have overlap cell count>noverlap
+	# 		b. Between two neighboring branching/terminal nodes the number of unassigned cells<ncell-2*noverlap
+	# 		c. Very small noverlap.
+	# 	For cells at identical (pseudotime) locations, to choose a subset random draws are performed whenever necessary.
+	# 	Error will be triggered if there are more distance=0 cells than ncell at any node.
 		
-		Parameters:
-		dist:     Distance matrix between each cell and each node as np.array(shape=(n_cell,n_node))
-		edges:    Start and end node IDs for each edge as np.array(shape=(n_edge,2))
-		branch:   Cell edge membership by ID as np.array(shape=n_cell)
-		ncell:    Number of cells in each subset
-		noverlap: Soft upper bound on the number of overlap cells between neighboring subsets.
+	# 	Parameters:
+	# 	dist:     Distance matrix between each cell and each node as numpy.ndarray(shape=(n_cell,n_node))
+	# 	edges:    Start and end node IDs for each edge as numpy.ndarray(shape=(n_edge,2))
+	# 	branch:   Cell edge membership by ID as numpy.ndarray(shape=n_cell)
+	# 	ncell:    Number of cells in each subset
+	# 	noverlap: Soft upper bound on the number of overlap cells between neighboring subsets.
 		
-		Steps:
-		A. Construct subset at each node
-			1. Create a subset containing cells with distance=0. Raise error if there are more distance=0 cells than ncell.
-			2. Add the nearest cells to subset to reach ncell cells.
-		B. Construct subsets for each edge between nodes 
-			1. Determine the number of intermediate subsets as floor(( the number of cells not in any subset + noverlap ) / (ncell-noverlap))
-			2. If the number of intermediate subsets=0 and the number of unassigned cells>0, use one intermediate subset instead.
-				a. If one intermediate subset, set subset central location to those of unassigned cells. Proceed to 4d.
-			3. Determine noverlap_edge as noverlap for this edge with equation in 1.
-			4. Assign subsets with equal overlap between each neighboring subset pair. Takes these steps:
-				a. Order unassigned cells and noverlap_edge/2 cells from either side of edge on 1 dimension
-				b. Split cells evenly and continuously into 2*(number of intermediate subsets) groups with linspace
-				c. Middle point between indicies [0,2], [2,4], etc are the central locations of subset [0,1,...]
-				d. Assign the nearest ncell cells for each central location with function distance.
+	# 	Steps:
+	# 	A. Construct subset at each node
+	# 		1. Create a subset containing cells with distance=0. Raise error if there are more distance=0 cells than ncell.
+	# 		2. Add the nearest cells to subset to reach ncell cells.
+	# 	B. Construct subsets for each edge between nodes 
+	# 		1. Determine the number of intermediate subsets as floor(( the number of cells not in any subset + noverlap ) / (ncell-noverlap))
+	# 		2. If the number of intermediate subsets=0 and the number of unassigned cells>0, use one intermediate subset instead.
+	# 			a. If one intermediate subset, set subset central location to those of unassigned cells. Proceed to 4d.
+	# 		3. Determine noverlap_edge as noverlap for this edge with equation in 1.
+	# 		4. Assign subsets with equal overlap between each neighboring subset pair. Takes these steps:
+	# 			a. Order unassigned cells and noverlap_edge/2 cells from either side of edge on 1 dimension
+	# 			b. Split cells evenly and continuously into 2*(number of intermediate subsets) groups with linspace
+	# 			c. Middle point between indicies [0,2], [2,4], etc are the central locations of subset [0,1,...]
+	# 			d. Assign the nearest ncell cells for each central location with function distance.
 		
-		Return:
-		Data:
-		edges:   	Edge of center of each cell subset np.array(shape=(n_subset)). Center is mean of min and max.
-		locs:    	Distance of center of each cell subset from starting node as np.array(shape=(n_subset))
-		radius:  	Distance to center of cell subset to be included as np.array(shape=(n_subset))
-		subsets: 	Subset assignment of each cell as np.array(shape=(n_cell,n_subset))
-		nodegraph:	Neighborhood graph between nodes as np.array(shape=(n_subset,n_subset),dtype=bool)
-		Dimenions:
-		subsets: 	Subset names as np.array(shape=(n_subset,))
-		"""
-		import numpy as np
-		import logging
-		from collections import Counter
-		ns=self.npt
-		nn=self.p.nn
-		ne=self.p.ne
-		assert noverlap<ncell and noverlap>=0
+	# 	Return:
+	# 	Data:
+	# 	edges:   	Edge of center of each cell subset numpy.ndarray(shape=(n_subset)). Center is mean of min and max.
+	# 	locs:    	Distance of center of each cell subset from starting node as numpy.ndarray(shape=(n_subset))
+	# 	radius:  	Distance to center of cell subset to be included as numpy.ndarray(shape=(n_subset))
+	# 	subsets: 	Subset assignment of each cell as numpy.ndarray(shape=(n_cell,n_subset))
+	# 	nodegraph:	Neighborhood graph between nodes as numpy.ndarray(shape=(n_subset,n_subset),dtype=bool)
+	# 	Dimenions:
+	# 	subsets: 	Subset names as numpy.ndarray(shape=(n_subset,))
+	# 	"""
+	# 	import numpy as np
+	# 	import logging
+	# 	from collections import Counter
+	# 	ns=self.npt
+	# 	nn=self.p.nn
+	# 	ne=self.p.ne
+	# 	assert noverlap<ncell and noverlap>=0
 		
-		ans_edges=[]
-		ans_locs=[]
-		ans_radius=[]
-		test_mask=np.zeros(ns,dtype=bool)
-		s=self.copy()
+	# 	ans_edges=[]
+	# 	ans_locs=[]
+	# 	ans_radius=[]
+	# 	test_mask=np.zeros(ns,dtype=bool)
+	# 	s=self.copy()
 
-		#Step A
-		subsets=argpartition(s.dist,ncell,axis=0,draw_order='random')[ncell]
-		if s.dist[subsets,np.arange(nn)].min()==0:
-			raise ValueError('Found trajectory nodes having more cells annotated than parameter ncell. Input finer trajectory or larger ncell.')
-		s.perturb()
-		subsets=argpartition(s.dist,ncell,axis=0,draw_order='random')[:ncell+1]
-		if not np.isfinite(np.max([s.dist[subsets[ncell,x],x] for x in range(nn)])):
-			raise ValueError('Cannot find sufficient cells for some trajectory nodes. Input smaller ncell or remove small disconnected subgraphs.')
-		subsets=subsets[:ncell].T
-		t1=np.zeros((ns,nn),dtype=bool)
-		for xi in range(nn):
-			t1[subsets[xi],xi]=True
-			t2=[np.nonzero(x)[0] for x in s.p.edges.T==xi]
-			if len(t2[0])>0:
-				ans_edges.append(t2[0][0])
-				ans_locs.append(0)
-			else:
-				assert len(t2[1])>0
-				t2=t2[1][0]
-				ans_edges.append(t2)
-				ans_locs.append(s.p.lens[t2])
-			ans_radius.append(distance(ans_edges[-1],ans_locs[-1],s.dist[subsets[xi]],s.p.edges,s.edges[subsets[xi]]).max())
-		subsets=t1
-		subsets_extra=[]
-		test_mask[subsets.any(axis=1)]=True
-		nodeg=[]
+	# 	#Step A
+	# 	subsets=argpartition(s.dist,ncell,axis=0,draw_order='random')[ncell]
+	# 	if s.dist[subsets,np.arange(nn)].min()==0:
+	# 		raise ValueError('Found trajectory nodes having more cells annotated than parameter ncell. Input finer trajectory or larger ncell.')
+	# 	s.perturb()
+	# 	subsets=argpartition(s.dist,ncell,axis=0,draw_order='random')[:ncell+1]
+	# 	if not np.isfinite(np.max([s.dist[subsets[ncell,x],x] for x in range(nn)])):
+	# 		raise ValueError('Cannot find sufficient cells for some trajectory nodes. Input smaller ncell or remove small disconnected subgraphs.')
+	# 	subsets=subsets[:ncell].T
+	# 	t1=np.zeros((ns,nn),dtype=bool)
+	# 	for xi in range(nn):
+	# 		t1[subsets[xi],xi]=True
+	# 		t2=[np.nonzero(x)[0] for x in s.p.edges.T==xi]
+	# 		if len(t2[0])>0:
+	# 			ans_edges.append(t2[0][0])
+	# 			ans_locs.append(0)
+	# 		else:
+	# 			assert len(t2[1])>0
+	# 			t2=t2[1][0]
+	# 			ans_edges.append(t2)
+	# 			ans_locs.append(s.p.lens[t2])
+	# 		ans_radius.append(distance(ans_edges[-1],ans_locs[-1],s.dist[subsets[xi]],s.p.edges,s.edges[subsets[xi]]).max())
+	# 	subsets=t1
+	# 	subsets_extra=[]
+	# 	test_mask[subsets.any(axis=1)]=True
+	# 	nodeg=[]
 		
-		for xi in range(ne):
-			#Step B1,B2
-			nodes=s.p.edges[xi]
-			nodestart,nodeend=nodes
-			freecell=np.nonzero(s.edges==xi)[0]
-			freecell=freecell[~subsets[freecell].any(axis=1)]
-			if len(freecell)==0:
-				nodeg.append(nodes)
-				continue
-			nsubset=int(np.floor((len(freecell)+noverlap)/(ncell-noverlap)))
-			if ncell*nsubset<len(freecell):
-				nsubset+=1
-			if nsubset==1:
-				#Step B2a
-				cells=freecell[s.dist[freecell,nodestart].argsort()]
-				centrals=np.array([s.dist[cells[[0,-1]],nodestart].mean()])
-				test_mask[cells]=True
-			else:
-				#Step B3
-				noverlap_edge_half=int(np.floor((ncell*nsubset-len(freecell))/(2*(nsubset+1))))
-				assert noverlap_edge_half>=0
-				#Step B4a
-				#Order free cells based on distance from starting node
-				cells=freecell[s.dist[freecell,nodestart].argsort()]
-				t1=s.dist[cells,nodestart]
-				t1=t1*(2*((s.edges[cells]==xi)|(s.dist[cells,nodeend]<s.dist[cells,nodestart]))-1)
-				assert (t1[1:]>=t1[:-1]).all()
+	# 	for xi in range(ne):
+	# 		#Step B1,B2
+	# 		nodes=s.p.edges[xi]
+	# 		nodestart,nodeend=nodes
+	# 		freecell=np.nonzero(s.edges==xi)[0]
+	# 		freecell=freecell[~subsets[freecell].any(axis=1)]
+	# 		if len(freecell)==0:
+	# 			nodeg.append(nodes)
+	# 			continue
+	# 		nsubset=int(np.floor((len(freecell)+noverlap)/(ncell-noverlap)))
+	# 		if ncell*nsubset<len(freecell):
+	# 			nsubset+=1
+	# 		if nsubset==1:
+	# 			#Step B2a
+	# 			cells=freecell[s.dist[freecell,nodestart].argsort()]
+	# 			centrals=np.array([s.dist[cells[[0,-1]],nodestart].mean()])
+	# 			test_mask[cells]=True
+	# 		else:
+	# 			#Step B3
+	# 			noverlap_edge_half=int(np.floor((ncell*nsubset-len(freecell))/(2*(nsubset+1))))
+	# 			assert noverlap_edge_half>=0
+	# 			#Step B4a
+	# 			#Order free cells based on distance from starting node
+	# 			cells=freecell[s.dist[freecell,nodestart].argsort()]
+	# 			t1=s.dist[cells,nodestart]
+	# 			t1=t1*(2*((s.edges[cells]==xi)|(s.dist[cells,nodeend]<s.dist[cells,nodestart]))-1)
+	# 			assert (t1[1:]>=t1[:-1]).all()
 				
-				t0=[]
-				if len(t0)<noverlap_edge_half:
-					#Include half overlapping cells on starting node side on the same edge
-					t1=np.nonzero(s.edges==xi)[0]
-					t1=t1[s.dist[t1,nodestart]<=s.dist[cells[0],nodestart]]
-					t2=set(cells)
-					t0=t1[[x not in t2 for x in t1]]
-					if len(t0)>0:
-						if len(t0)>noverlap_edge_half:
-							t0=t0[argpartition(s.dist[t0,nodestart],-noverlap_edge_half,draw_order='error')[-noverlap_edge_half:]]
-						t0=t0[s.dist[t0,nodestart].argsort()]
-				if len(t0)<noverlap_edge_half:
-					#Include half overlapping cells on starting node side on different edges
-					t1=np.nonzero(s.edges!=xi)[0]
-					t1=t1[s.dist[t1,nodestart]<s.dist[t1,nodeend]]
-					if len(t1)+len(t0)>noverlap_edge_half:
-						t1=t1[argpartition(s.dist[t1,nodestart],noverlap_edge_half-len(t0),draw_order='error')[:noverlap_edge_half-len(t0)]]
-					t0=np.r_[t1[s.dist[t1,nodestart].argsort()[::-1]],t0]
-				if len(t0)<noverlap_edge_half:
-					logging.warning('Cannot reach desired overlap rate at some terminal nodes. Please check validity of cell subsetting output or reduce parameter noverlap.')
-				else:
-					assert len(t0)==noverlap_edge_half
-				cells=np.r_[t0,cells].astype(int)
-				t1=s.dist[cells,nodestart]
-				t1=t1*(2*((s.edges[cells]==xi)|(s.dist[cells,nodeend]<s.dist[cells,nodestart]))-1)
-				assert (t1[1:]-t1[:-1]>=0).all()
+	# 			t0=[]
+	# 			if len(t0)<noverlap_edge_half:
+	# 				#Include half overlapping cells on starting node side on the same edge
+	# 				t1=np.nonzero(s.edges==xi)[0]
+	# 				t1=t1[s.dist[t1,nodestart]<=s.dist[cells[0],nodestart]]
+	# 				t2=set(cells)
+	# 				t0=t1[[x not in t2 for x in t1]]
+	# 				if len(t0)>0:
+	# 					if len(t0)>noverlap_edge_half:
+	# 						t0=t0[argpartition(s.dist[t0,nodestart],-noverlap_edge_half,draw_order='error')[-noverlap_edge_half:]]
+	# 					t0=t0[s.dist[t0,nodestart].argsort()]
+	# 			if len(t0)<noverlap_edge_half:
+	# 				#Include half overlapping cells on starting node side on different edges
+	# 				t1=np.nonzero(s.edges!=xi)[0]
+	# 				t1=t1[s.dist[t1,nodestart]<s.dist[t1,nodeend]]
+	# 				if len(t1)+len(t0)>noverlap_edge_half:
+	# 					t1=t1[argpartition(s.dist[t1,nodestart],noverlap_edge_half-len(t0),draw_order='error')[:noverlap_edge_half-len(t0)]]
+	# 				t0=np.r_[t1[s.dist[t1,nodestart].argsort()[::-1]],t0]
+	# 			if len(t0)<noverlap_edge_half:
+	# 				logging.warning('Cannot reach desired overlap rate at some terminal nodes. Please check validity of cell subsetting output or reduce parameter noverlap.')
+	# 			else:
+	# 				assert len(t0)==noverlap_edge_half
+	# 			cells=np.r_[t0,cells].astype(int)
+	# 			t1=s.dist[cells,nodestart]
+	# 			t1=t1*(2*((s.edges[cells]==xi)|(s.dist[cells,nodeend]<s.dist[cells,nodestart]))-1)
+	# 			assert (t1[1:]-t1[:-1]>=0).all()
 
-				t0=[]
-				if len(t0)<noverlap_edge_half:
-					#Include half overlapping cells on ending node side on the same edge
-					t1=np.nonzero(s.edges==xi)[0]
-					t1=t1[s.dist[t1,nodeend]<=s.dist[cells[-1],nodeend]]
-					t2=set(cells)
-					t0=t1[[x not in t2 for x in t1]]
-					if len(t0)>0:
-						if len(t0)>noverlap_edge_half:
-							t0=t0[argpartition(s.dist[t0,nodeend],-noverlap_edge_half,draw_order='error')[-noverlap_edge_half:]]
-						t0=t0[s.dist[t0,nodeend].argsort()[::-1]]
-				if len(t0)<noverlap_edge_half:
-					#Include half overlapping cells on ending node side on different edges
-					t1=np.nonzero(s.edges!=xi)[0]
-					t1=t1[s.dist[t1,nodeend]<s.dist[t1,nodestart]]
-					t1=t1[[x not in t2 for x in t1]]
-					if len(t1)+len(t0)>noverlap_edge_half:
-						t1=t1[argpartition(s.dist[t1,nodeend],noverlap_edge_half-len(t0),draw_order='error')[:noverlap_edge_half-len(t0)]]
-					t0=np.r_[t0,t1[s.dist[t1,nodeend].argsort()]]
-				if len(t0)<noverlap_edge_half:
-					logging.warning('Cannot reach desired overlap rate at some terminal nodes. Please check validity of cell subsetting output or reduce parameter noverlap.')
-				else:
-					assert len(t0)==noverlap_edge_half
-				cells=np.r_[cells,t0].astype(int)
-				t1=s.dist[cells,nodestart]
-				t1=t1*(2*((s.edges[cells]==xi)|(s.dist[cells,nodeend]<s.dist[cells,nodestart]))-1)
-				assert (t1[1:]>=t1[:-1]).all()
-				test_mask[cells]=True
+	# 			t0=[]
+	# 			if len(t0)<noverlap_edge_half:
+	# 				#Include half overlapping cells on ending node side on the same edge
+	# 				t1=np.nonzero(s.edges==xi)[0]
+	# 				t1=t1[s.dist[t1,nodeend]<=s.dist[cells[-1],nodeend]]
+	# 				t2=set(cells)
+	# 				t0=t1[[x not in t2 for x in t1]]
+	# 				if len(t0)>0:
+	# 					if len(t0)>noverlap_edge_half:
+	# 						t0=t0[argpartition(s.dist[t0,nodeend],-noverlap_edge_half,draw_order='error')[-noverlap_edge_half:]]
+	# 					t0=t0[s.dist[t0,nodeend].argsort()[::-1]]
+	# 			if len(t0)<noverlap_edge_half:
+	# 				#Include half overlapping cells on ending node side on different edges
+	# 				t1=np.nonzero(s.edges!=xi)[0]
+	# 				t1=t1[s.dist[t1,nodeend]<s.dist[t1,nodestart]]
+	# 				t1=t1[[x not in t2 for x in t1]]
+	# 				if len(t1)+len(t0)>noverlap_edge_half:
+	# 					t1=t1[argpartition(s.dist[t1,nodeend],noverlap_edge_half-len(t0),draw_order='error')[:noverlap_edge_half-len(t0)]]
+	# 				t0=np.r_[t0,t1[s.dist[t1,nodeend].argsort()]]
+	# 			if len(t0)<noverlap_edge_half:
+	# 				logging.warning('Cannot reach desired overlap rate at some terminal nodes. Please check validity of cell subsetting output or reduce parameter noverlap.')
+	# 			else:
+	# 				assert len(t0)==noverlap_edge_half
+	# 			cells=np.r_[cells,t0].astype(int)
+	# 			t1=s.dist[cells,nodestart]
+	# 			t1=t1*(2*((s.edges[cells]==xi)|(s.dist[cells,nodeend]<s.dist[cells,nodestart]))-1)
+	# 			assert (t1[1:]>=t1[:-1]).all()
+	# 			test_mask[cells]=True
 				
-				#Step B4bc
-				centrals=(np.linspace(0,1,2*nsubset+1)[::2]*len(cells)).astype(int)
-				centrals=np.concatenate([[centrals[x],centrals[x+1]-1] for x in range(len(centrals)-1)])
-				centrals=cells[centrals]
-				centrals=[
-					s.dist[centrals,nodestart]*(2*((s.edges[centrals]==xi)|(s.dist[centrals,nodestart]>s.dist[centrals,nodeend]))-1),
-					s.dist[centrals,nodeend]*(2*((s.edges[centrals]==xi)|(s.dist[centrals,nodestart]<s.dist[centrals,nodeend]))-1),
-				]
-				centrals=np.array(centrals).reshape(2,len(centrals[0])//2,2)
-				centrals=centrals.mean(axis=2).T
-				t1=(centrals>0).all(axis=1)
-				if (~t1).any():
-					centrals=centrals[t1]
-				assert (centrals>0).all()
-				centrals=centrals[:,0]
-			#Step B4d
-			t3=distance(xi,centrals,s.dist,s.p.edges,s.edges)
-			t2=argpartition(t3,ncell,axis=0,draw_order='error')[:ncell].T
-			t1=np.zeros((ns,len(centrals)),dtype=bool)
-			for xj in range(len(centrals)):
-				t1[t2[xj],xj]=True
-			subsets_extra.append(t1)
-			nodeg+=[[nodestart,len(ans_radius)]]+[[len(ans_radius)+x,len(ans_radius)+x+1] for x in range(len(centrals)-1)]+[[len(ans_radius)+len(centrals)-1,nodeend]]
-			ans_edges+=[xi]*len(centrals)
-			ans_locs+=list(centrals)
-			ans_radius+=list(t3[t2[:,ncell-1],np.arange(len(centrals))])
+	# 			#Step B4bc
+	# 			centrals=(np.linspace(0,1,2*nsubset+1)[::2]*len(cells)).astype(int)
+	# 			centrals=np.concatenate([[centrals[x],centrals[x+1]-1] for x in range(len(centrals)-1)])
+	# 			centrals=cells[centrals]
+	# 			centrals=[
+	# 				s.dist[centrals,nodestart]*(2*((s.edges[centrals]==xi)|(s.dist[centrals,nodestart]>s.dist[centrals,nodeend]))-1),
+	# 				s.dist[centrals,nodeend]*(2*((s.edges[centrals]==xi)|(s.dist[centrals,nodestart]<s.dist[centrals,nodeend]))-1),
+	# 			]
+	# 			centrals=np.array(centrals).reshape(2,len(centrals[0])//2,2)
+	# 			centrals=centrals.mean(axis=2).T
+	# 			t1=(centrals>0).all(axis=1)
+	# 			if (~t1).any():
+	# 				centrals=centrals[t1]
+	# 			assert (centrals>0).all()
+	# 			centrals=centrals[:,0]
+	# 		#Step B4d
+	# 		t3=distance(xi,centrals,s.dist,s.p.edges,s.edges)
+	# 		t2=argpartition(t3,ncell,axis=0,draw_order='error')[:ncell].T
+	# 		t1=np.zeros((ns,len(centrals)),dtype=bool)
+	# 		for xj in range(len(centrals)):
+	# 			t1[t2[xj],xj]=True
+	# 		subsets_extra.append(t1)
+	# 		nodeg+=[[nodestart,len(ans_radius)]]+[[len(ans_radius)+x,len(ans_radius)+x+1] for x in range(len(centrals)-1)]+[[len(ans_radius)+len(centrals)-1,nodeend]]
+	# 		ans_edges+=[xi]*len(centrals)
+	# 		ans_locs+=list(centrals)
+	# 		ans_radius+=list(t3[t2[:,ncell-1],np.arange(len(centrals))])
 
-		ans_subsets=np.concatenate([subsets]+subsets_extra,axis=1)
-		ans_edges,ans_locs,ans_radius=[np.array(x) for x in [ans_edges,ans_locs,ans_radius]]
-		ans_edges=ans_edges.astype('u2')
-		ans_locs=self.p.conform_locs(ans_locs,ans_edges)
-		ansname_subsets=np.array([f'subset{x}' for x in range(ans_subsets.shape[1])])
-		nodeg=np.array(nodeg).T
-		ans_nodegraph=np.zeros((ans_subsets.shape[1],ans_subsets.shape[1]),dtype=bool)
-		ans_nodegraph[nodeg[0],nodeg[1]]=True
-		ans_nodegraph[nodeg[1],nodeg[0]]=True
-		assert ans_subsets.ndim==2
-		assert all([x.shape==(ans_subsets.shape[1],) for x in [ans_edges,ans_locs,ans_radius]])
-		assert ans_subsets.any(axis=1).all()
-		assert (ans_subsets.sum(axis=0)==ncell).all()
-		assert (ans_nodegraph.T==ans_nodegraph).all()
-		assert (ans_nodegraph.sum(axis=0)>=1).all()
-		assert not np.diag(ans_nodegraph).any()
-		return ans_edges,ans_locs,ans_radius,ans_subsets,ans_nodegraph,ansname_subsets
-	def subsets2(self,ncell,noverlap,dmax):
-		"""Construct overlapping cell subsets for network reconstruction on each subset.
+	# 	ans_subsets=np.concatenate([subsets]+subsets_extra,axis=1)
+	# 	ans_edges,ans_locs,ans_radius=[np.array(x) for x in [ans_edges,ans_locs,ans_radius]]
+	# 	ans_edges=ans_edges.astype('u2')
+	# 	ans_locs=self.p.conform_locs(ans_locs,ans_edges)
+	# 	ansname_subsets=np.array([f'subset{x}' for x in range(ans_subsets.shape[1])])
+	# 	nodeg=np.array(nodeg).T
+	# 	ans_nodegraph=np.zeros((ans_subsets.shape[1],ans_subsets.shape[1]),dtype=bool)
+	# 	ans_nodegraph[nodeg[0],nodeg[1]]=True
+	# 	ans_nodegraph[nodeg[1],nodeg[0]]=True
+	# 	assert ans_subsets.ndim==2
+	# 	assert all([x.shape==(ans_subsets.shape[1],) for x in [ans_edges,ans_locs,ans_radius]])
+	# 	assert ans_subsets.any(axis=1).all()
+	# 	assert (ans_subsets.sum(axis=0)==ncell).all()
+	# 	assert (ans_nodegraph.T==ans_nodegraph).all()
+	# 	assert (ans_nodegraph.sum(axis=0)>=1).all()
+	# 	assert not np.diag(ans_nodegraph).any()
+	# 	return ans_edges,ans_locs,ans_radius,ans_subsets,ans_nodegraph,ansname_subsets
+	def subsets(self,ncell,noverlap,dmax):
+		"""Constructs overlapping cell subsets as moving window for network reconstruction on each subset. Points in self should be cells.
+
 		Parameters
-		ncell:		Number of cells in each subset
-		noverlap:	Average number of cell overlap between neighboring subsets.
-		dmax:		Upper bound of distance between neighboring subsets. Violation exception: not possible with data.
+		----------
+		ncell:		int
+			Number of cells in each subset
+		noverlap:	int
+			Average number of cell overlap between neighboring subsets.
+		dmax:		float
+			Upper bound of distance between neighboring subsets. This bound can be violated if not achievable with data.
+		
+		Returns
+		----------
+		edges:		numpy.ndarray(shape=(n_subset))
+			Edge of initial center of each cell subset. Center is the anchor point from which the nearest cells are selected.
+		locs:		numpy.ndarray(shape=(n_subset))
+			Location of initial center of cell subset
+		subsets:	numpy.ndarray(shape=(len(self),n_subset),dtype=bool)
+			Subset assignment of each cell
+		nodegraph:	numpy.ndarray(shape=(n_subset,n_subset),dtype=bool)
+			Neighborhood graph between cell subset centers
+		subsets:	numpy.ndarray(shape=(n_subset,))
+			Subset names
 
+		Method
+		-------
 		A. Initialize all subsets as node subsets (nearest ncell cells for each node)
 		B. For each edge:
 			1. Use node subsets as nearest ncell cells for each terminal node of the edge
@@ -624,14 +864,6 @@ class point:
 			3. At a random order, remove each subset in the current subsets if after removal, its nearest neighbor on both side would still satisfy the relation overlap count>noverlap and average distance between cells in the subsets<dmax.
 			4. Add remaining current subsets to all subsets
 
-		Return:
-		Data:
-		edges:   	Edge of initial center of each cell subset np.array(shape=(n_subset)). Center is the anchor point from which the nearest cells are selected.
-		locs:    	Location of initial center of cell subset as np.array(shape=(n_subset))
-		subsets: 	Subset assignment of each cell as np.array(shape=(n_cell,n_subset))
-		nodegraph:	Neighborhood graph between nodes as np.array(shape=(n_subset,n_subset),dtype=bool)
-		Dimenions:
-		subsets: 	Subset names as np.array(shape=(n_subset,))
 		"""
 		import numpy as np
 		import logging
@@ -730,33 +962,42 @@ class point:
 		ansn_subsets=np.array([f'Subset{x+1}' for x in range(n)])
 		return [ans_edges,ans_locs,ans_subsets,ans_neighbors,ansn_subsets]
 	def subtraj(self,edges=None):
-		"""Convert list of points to a finer trajectory by treating each point as a node.
+		"""
+		Convert list of points to a finer trajectory by treating each point as a trajectory node.
 		Each terminal and branching node of trajectory must have one corresponding point.
-		edges:	Optional parameter to specify edges between points
-		Return:
-		Trajectory as instance of trajectory where each node is each point in self.
+
+		Parameters
+		----------
+		edges:	numpy.ndarray(shape=(len(self),2))
+			The edge each point is on, specified by the start and end nodes. Must be specified.
+
+		Returns
+		----------
+		dictys.traj.trajectory
+			Trajectory whose each node is each point in self.
 		"""
 		if edges is None:
 			raise NotImplementedError
 		assert edges.ndim==2 and edges.shape[1]==2
-		import numpy as np
 		#Check existence of points for terminal & branching nodes
 		# assert (self.dist[:,self.p.deg!=2]==0).any(axis=0).all()
 		dist=self-self
 		return trajectory(edges,dist[edges[:,0],edges[:,1]])
 	def __getitem__(self,key):
+		"""
+		Choose a subset of points.
+		"""
 		if not isinstance(key,slice) and not hasattr(key,'__len__'):
 			raise TypeError('Key must be iterable with __len__.')
 		return self.__class__(self.p,self.edges[key],self.locs[key],dist=self.dist[key])
 	def __len__(self):
 		return self.npt
 	def weight_linear(self):
-		"""Treat properties of each point as a weighted sum of nodes.
-		Returns weight matrix between points and nodes.
-		Uses linear interpolation between nodes.
+		"""
+		Smoothing function to compute data on points with data on nodes with linear interpolation between nodes.
 		Return:
-		Weight of each node on each point as np.array(shape=[npt,nn]).
-		Sums to 1 over axis 1
+		numpy.ndarray(shape=[len(self),len(self.p)])
+			Weight of each node on each point.
 		"""
 		import numpy as np
 		w=self.locs/self.p.lens[self.edges]
@@ -766,16 +1007,24 @@ class point:
 		ans_w[np.arange(self.npt),self.p.edges[self.edges,1]]=w
 		return ans_w
 	def weight_conv(self,radius,cut=0,nodes=None,nodes_path=None):
-		"""Treat properties of each point as a weighted sum of nodes.
-		Returns weight matrix between points and nodes.
-		Uses convolution based on distance between each point and each node.
-		radius:	Radius or sigma of gaussian filter in terms of distance
-		cut:	Set node weight to 0 if below this threshold
-		nodes:	Set of nodes to use for convolution. Defaults to all.
-		nodes_path: [start,end] node IDs whose shortest path defines the nodes to use for convolution. Disabled by default.
-		Return:
-		Weight of each node on each point as np.array(shape=[npt,nn]).
-		Sums to 1 over axis 1
+		"""
+		Smoothing function to compute data on points with data on nodes with Gaussian kernel smoothing.
+
+		Parameters
+		----------
+		radius:	float
+			Radius or sigma of gaussian filter as distance
+		cut:	float
+			Set node weight to 0 if below this threshold
+		nodes:	list or None
+			Set of nodes to use for convolution. Defaults to all.
+		nodes_path: (int,int)
+			[start,end] node IDs whose shortest path defines the nodes to use for convolution. Disabled by default.
+
+		Returns
+		----------
+		numpy.ndarray(shape=[len(self),len(self.p)])
+			Weight of each node on each point.
 		"""
 		import numpy as np
 		w=np.exp(-((self.dist/radius)**2)/2)
@@ -797,6 +1046,210 @@ class point:
 				t1=(w>0)&(w<cut)
 		assert (w>=0).all() and (w<=1).all()
 		return w
+	def weight_linear(self,other):
+		"""
+		Smoothing function to compute data on other points with data on current (self's) points with linear interpolation between points.
+
+		Parameters
+		----------
+		other: dictys.traj.point
+			Points to compute data for
+
+		Returns
+		----------
+		numpy.ndarray(shape=[len(self),len(other)])
+			Weight of self's points on other's points.
+		"""
+		import numpy as np
+		n=len(other)
+		d=self-other
+		t1=np.argpartition(d,1,axis=0)[:2]
+		t2=np.array([d[t1[1],np.arange(n)],d[t1[0],np.arange(n)]])
+		t2=t2[0]/t2.sum(axis=0)
+		w=np.zeros((len(self),n),dtype=float)
+		w[t1[0],np.arange(n)]=t2[0]
+		w[t1[1],np.arange(n)]=1-t2[0]
+		return w
+	def weight_conv(self,other,radius,cut=0):
+		"""
+		Smoothing function to compute data on other points with data on current (self's) points with Gaussian kernel smoothing.
+
+		Parameters
+		----------
+		radius:	float
+			Radius or sigma of gaussian filter as distance
+		cut:	float
+			Set weight to 0 if below this threshold
+
+		Returns
+		----------
+		numpy.ndarray(shape=[len(self),len(other)])
+			Weight of each node on each point.
+		"""
+		import numpy as np
+		d=self-other
+		w=np.exp(-((d/radius)**2)/2)
+		w/=w.sum(axis=0)
+		if cut>0:
+			raise NotImplementedError
+			t1=(w>0)&(w<cut)
+			while t1.any():
+				#TODO: Need to remove only the weakest if all weights removed for each point
+				w[t1]=0
+				w/=w.sum(axis=0)
+				t1=(w>0)&(w<cut)
+		assert (w>=0).all() and (w<=1).all()
+		return w
+	def smoothen(self,data,*a,points=None,axis=-1,func_name='linear',nan='ignore',**ka):
+		"""
+		Function to compute smoothened/interpolated values of other points based on data at current points. Used by self.smoothened.
+
+		Parameters
+		----------
+		data:		numpy.ndarray(shape=(...,len(self),...)
+			Data to smoothen/interpolate from.
+		a:			list
+			Arguments of smoothening function.
+		points:		dictys.traj.point
+			Points to interpolate data for. Required.
+		axis:		int
+			Axis of data to smoothen. data must have length len(self) at this axis.
+		func_name:	str
+			Name of smoothening function of class point. Using self.weight_conv should provide func_name='conv'. Accepts:
+			linear:	For linear interpolation
+			conv: For Gaussian kernel smoothing
+		nan:		str
+			How to handle nan in data. Accepts
+			ignore:		Weights becomes zero, so output is nan only if all data with nonzero weights are nan.
+			propagate:	Weights are kept, so nan propagates
+		ka:			dict
+			Keyword arguments smoothening function.
+
+		Returns
+		----------
+		numpy.ndarray(shape=(...,len(points),...)
+			Smoothened values that have the same dimensionality as data in all axes other than axis.
+		"""
+		import numpy as np
+		assert points is not None
+		assert data.shape[axis]==self.npt
+		func=getattr(self,'weight_'+func_name)
+		w=func(points,*a,**ka)
+		assert w.ndim==2
+		if nan=='ignore':
+			w2=~np.isnan(data)
+			data=np.nan_to_num(data)
+			ans=(data.swapaxes(axis,-1)@w).swapaxes(axis,-1)
+			w2=(w2.swapaxes(axis,-1)@w).swapaxes(axis,-1)
+			ans=ans/(w2+1E-300)
+			ans[w2==0]=np.nan
+		elif nan=='propagate':
+			ans=(data.swapaxes(axis,-1)@w).swapaxes(axis,-1)
+		else:
+			raise ValueError('Unknown nan parameter value.')
+		assert ans.shape[:axis]==data.shape[:axis]
+		assert ans.shape[axis+1]==data.shape[axis+1]
+		return ans
+	def smoothened(self,data,*a,**ka):
+		"""
+		Creates a smoothened/interpolated function on data of self's points that computes values at other points
+
+		Parameters
+		----------
+		data:	numpy.ndarray(shape=(...,len(self),...)
+			Base data to smoothen/interpolate from.
+		a:		list
+			Other arguments for self.smoothen.
+		ka:		dict
+			Keyword arguments for self.smoothen, except `points`.
+
+		Returns
+		----------
+		function(point)->numpy.ndarray(shape=(...,len(point),...))
+			Function to compute smoothened data matrix at any points. It has the same dimensionality as data in all axes other than axis.
+		"""
+		from functools import partial
+		return partial(self.smoothen,data,*a,**ka)
+	#I/O
+	@classmethod
+	def from_fileobj(cls,traj,f):
+		"""
+		Load object from file object
+
+		Parameters
+		----------
+		traj:	dictys.traj.trajectory
+			Trajectory object for points
+		f:	fileobj
+			File object to load from
+
+		Returns
+		----------
+		dictys.traj.point
+			Loaded class object
+		"""
+		import numpy as np
+		params=[np.array(f['edges']),np.array(f['locs'])]
+		return cls(traj,*params)
+	@classmethod
+	def from_file(cls,traj,path):
+		"""
+		Load object from file
+
+		Parameters
+		----------
+		traj:	dictys.traj.trajectory
+			Trajectory object for points
+		path:	str
+			File path to load from
+
+		Returns
+		----------
+		dictys.traj.point
+			Loaded class object
+		"""
+		import h5py
+		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
+			return cls.from_fileobj(traj,path)
+		with h5py.File(path,'r') as f:
+			return cls.from_fileobj(traj,f)
+	def to_fileobj(self,f,compression="gzip",**ka):
+		"""
+		Save object to file object
+
+		Parameters
+		----------
+		f:	fileobj
+			File object to save to
+		compression: str
+			Type of compression. See h5py.File.create_dataset.
+		ka:	dict
+			Keyword arguments passed to h5py.File.create_dataset
+		"""
+		p=dict(ka)
+		p['compression']=compression
+		p['data']=self.edges
+		f.create_dataset('edges',**p)
+		p=dict(ka)
+		p['compression']=compression
+		p['data']=self.locs
+		f.create_dataset('locs',**p)
+	def to_file(self,path,**ka):
+		"""
+		Save object to file
+
+		Parameters
+		----------
+		path:		str
+			File path to save to.
+		ka:			dict
+			Keyword arguments passed to self.to_fileobj
+		"""
+		import h5py
+		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
+			return self.to_fileobj(path,**ka)
+		with h5py.File(path,'w') as f:
+			return self.to_fileobj(f,**ka)
 
 
 

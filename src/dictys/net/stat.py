@@ -2,48 +2,73 @@
 # Lingfei Wang, 2020-2022. All rights reserved.
 
 """
-Statistics of networks
+Statistics of networks for data visualization and export.
 """
+
 import dictys.traj
 
-class stat_base:
+
+def _getitem(key,v):
+	"""
+	Get items from numpy.array
+	key:	iterable of keys. Each key is a iterable or individual value.
+	v:		numpy.array to get items from
+	Return:	numpy.array
+	"""
+	import numpy as np
+	sid=0
+	for xi in range(len(key)):
+		if hasattr(key[xi],'__len__'):
+			v=v.swapaxes(sid,0)[key[xi]].swapaxes(sid,0)
+			sid+=1
+		else:
+			v=np.take(v,key[xi],axis=sid)
+	return v
+
+class base:
 	def __init__(self,names=None,label=None):
-		"""Base class for statistics for each gene
-		label:	Label of stat that is shown as coordindate label.
-		names:	List of names of each axis of output stat, except last axis which is always time. Default is obtained from default_names function.
 		"""
+		Base class for statistics for each gene
+		names:	List of names of each axis of output stat, except last axis which is always time. Default is obtained from default_names function.
+		label:	Label of stat that is shown as coordindate label unless overidden.
+		"""
+		import numpy as np
 		if label is None:
 			label=self.default_label()
 		self.label=label
 		if names is None:
 			names=self.default_names()
 		assert len(names)>0
-		self.names=names
+		self.names=[np.array(x) for x in names]
 		self.ndict=[dict(zip(x,range(len(x)))) for x in names]
 	def compute(self,pts):
-		"""Use this function to compute stat values at each state or point
-		pts:	Point list instance of lwang.pipeline.dynet2.traj.pointc, or state list either by name or by id as list of str or list of int
+		"""
+		Use this function to compute stat values at each state or point
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		Stat value for each gene as np.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
+		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 		raise NotImplementedError
 	def default_names(self):
-		"""Use this function to determine the default names for each axis.
-		Only names shared with other stats will be visualized
+		"""
+		Use this function to determine the default names for each axis.
+		Note that only names shared with other stats will be visualized.
 		Return:
 		List of list of names for each axis.
 		"""
 		raise NotImplementedError
 	def default_lims(self,pts=None,names=None,expansion=0.02):
-		"""Use this function to determine the default limits of the stat.
+		"""
+		Use this function to determine the default limits of the stat.
 		This implementation uses min/max of stat values.
 		pts:	Point list instance to compute min/max
-		namet:	Gene names used to compute limits
+		namet:	Names used to compute limits. Defaults to all.
 		expansion:	Expand limits by this relative amount on each side.
 		Return:
 		Limits as [min,max]
 		"""
-		if pts is not None:
+		import numpy as np
+		if pts is None:
 			raise NotImplementedError
 		ans=self.compute(pts)
 		if names is not None:
@@ -51,54 +76,111 @@ class stat_base:
 			assert all([all([y in self.ndict[x] for y in names[x]]) for x in range(len(self.names))])
 			for xi in range(len(names)):
 				ans=ans.swapaxes(0,xi)[[self.ndict[xi][x] for x in names[xi]]].swapaxes(0,xi)
-		ans=[ans.min(),ans.max()]
+		t1=np.isfinite(ans)
+		#Ignore NAN except all are NAN
+		if not t1.any():
+			return [np.nan,np.nan]
+		ans=[ans[t1].min(),ans[t1].max()]
 		t1=(ans[1]-ans[0])*expansion
 		return [ans[0]-t1,ans[1]+t1]
 	def default_label(self):
-		"""Use this function to determine the label of this stat
+		"""
+		Use this function to determine the label of this stat
 		Return:
 		Label as str
 		"""	
 		raise NotImplementedError
+	#Arithmetic operations between stats
 	def __add__(self,other):
 		from operator import add
-		if isinstance(other,stat_base):
-			return statf_function(add,[self,other],label='({})+({})'.format(self.label,other.label))
+		if isinstance(other,base):
+			return function(add,[self,other],label='({})+({})'.format(self.label,other.label))
 		else:
 			raise NotImplementedError
 	def __sub__(self,other):
 		from operator import sub
-		if isinstance(other,stat_base):
-			return statf_function(sub,[self,other],label='({})-({})'.format(self.label,other.label))
+		if isinstance(other,base):
+			return function(sub,[self,other],label='({})-({})'.format(self.label,other.label))
 		else:
 			raise NotImplementedError
 	def __mul__(self,other):
 		from operator import truediv
-		if isinstance(other,stat_base):
-			return statf_function(mul,[self,other],label='({})*({})'.format(self.label,other.label))
+		if isinstance(other,base):
+			return function(mul,[self,other],label='({})*({})'.format(self.label,other.label))
 		else:
 			raise NotImplementedError
 	def __truediv__(self,other):
 		from operator import truediv
-		if isinstance(other,stat_base):
-			return statf_function(truediv,[self,other],label='({})/({})'.format(self.label,other.label))
+		if isinstance(other,base):
+			return function(truediv,[self,other],label='({})/({})'.format(self.label,other.label))
 		else:
 			raise NotImplementedError
+	def __getitem__(self, key):
+		"""Subset stat as a substat"""
+		from functools import partial
+		if not isinstance(key, tuple):
+			key=(key,)
+		if len(key)>len(self.names):
+			raise KeyError('Takes at most {} dimensions'.format(len(self.names)))
+		names=[]
+		keys=[]
+		for xi in range(len(key)):
+			key1=key[xi]
+			if isinstance(key1,slice):
+				key1=list(range(*key1.indices(len(self.names[xi]))))
+			if hasattr(key1,'__len__') and not isinstance(key1,str):
+				if isinstance(key1[0],str):
+					key1=[self.ndict[xi][x] for x in key1]
+				elif not isinstance(key1[0],int):
+					raise TypeError('Key must be type int or str.')
+				names.append(self.names[xi][key1])
+			keys.append(key1)
+		names+=self.names[len(key):]
+		return function(partial(_getitem,keys),[self],names=names,label=self.label)
 
-class statf_function(stat_base):
-	def __init__(self,func,stats,**ka):
-		"""Stat that is any function of any other stat(s)
-		func:	Function to combine other stats. Should have self.compute_points=func(*[x.compute_points(...) for x in stats]).
-		stats:	List of stats whose final outputs (compute_points) will be operated on by func.
+class const(base):
+	isconst=True
+	def __init__(self,val,names,label='Constant',**ka):
+		"""
+		Show constant(/state-invariant) value for stat
+		val:	Value to show
+		names:	Names of each value
+		label:	Label of stat
+		ka:		Keyword arguments passed to parent class
+		"""
+		assert val.shape==tuple([len(x) for x in names])
+		self.val=val
+		self.default_names_=names
+		self.default_label_=label
+		super().__init__(**ka)
+	def default_names(self):
+		return self.default_names_
+	def default_label(self):
+		return self.default_label_
+	def compute(self,pts):
+		import numpy as np
+		return np.repeat(self.val.reshape(*self.val.shape,1),len(pts),axis=-1)
+
+class function(base):
+	def __init__(self,func,stats,isconst=None,**ka):
+		"""
+		Stat that is a function of other stat(s)
+		func:	Function to combine other stats. Should have self.compute=func(*[x.compute(...) for x in stats]).
+		stats:	List of stats whose final outputs (compute) will be operated on by func.
+		isconst:Overide whether the function stat is a constant. By default, it is constant only if all dependent stats are constant.
 		label:	Label of stat that is shown as coordindate label.
 		"""
 		self.n=len(stats)
 		assert self.n>0
 		self.func=func
 		self.stats=stats
+		if isconst is None:
+			isconst=all([hasattr(x,'isconst') and x.isconst for x in stats])
+		self.isconst=isconst
 		super().__init__(**ka)
 	def default_names(self):
-		"""Use names shared by all stats by default. Only suitable when all stats have the same number of dimensions
+		"""
+		Use intersection names of all stats by default. Only suitable when all stats have the same number of dimensions
 		"""
 		from functools import reduce
 		from operator import and_
@@ -110,66 +192,49 @@ class statf_function(stat_base):
 	def default_label(self):
 		return 'Function'
 	def compute(self,pts):
-		"""Computes stat for states or points
-		ans:	Result of computation by given stats
+		"""
+		Computes stat for states or points
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		stat as np.array(shape=[len(x) for x in self.names]+[n])
+		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 		import numpy as np
 		n=len(pts)
 		ans=[x.compute(pts) for x in self.stats]
 		assert all([ans[x].ndim==len(self.stats[x].names)+1 for x in range(self.n)])
 		assert all([ans[x].shape==tuple([len(y) for y in self.stats[x].names]+[n]) for x in range(self.n)])
-		t1=[[[x.ndict[y][z] for z in self.names[y]] for y in range(len(self.names))] for x in self.stats]
-		for xi in range(len(self.names)):
-			ans=[ans[x].swapaxes(0,xi)[t1[x][xi]].swapaxes(0,xi) for x in range(self.n)]
-		assert all([x.shape==ans[0].shape for x in ans[1:]])
 		ans2=self.func(*ans)
 		assert ans2.shape==tuple([len(x) for x in self.names]+[n])
-		ans2[np.isnan(ans).any(axis=0)]=np.nan
 		return ans2
 
-class statf_singlestat(stat_base):
+class fsinglestat(const):
 	def __init__(self,func_stat,stat,pts,**ka):
-		"""Show constant value for stat
+		"""
+		Show constant value for stat by combining different points.
 		func_stat:	Function to combine different points to one for the stat.
 		stat:	Stats to be combined to single point
 		pts:	Points to combine for the stat
 		"""
-		self.stat=stat
-		super().__init__(**ka)
-		self.val=func_stat(stat.compute(pts))
-		if self.val.ndim==1:
-			self.val=self.val.reshape(-1,1)
-		assert self.val.shape==tuple([len(x) for x in self.names]+[len(pts)])
-	def default_names(self):
-		"""Use genes of original stat by default
-		"""
-		return self.stat.names
-	def default_label(self):
-		return 'Single value of '+self.stat.label
-	def compute(self,pts):
-		"""Computes stat
-		pts:	Point list instance to compute stat
-		Return:
-		stat as np.array(shape=[len(x) for x in self.names]+[len(pts)])
-		"""
-		import numpy as np
-		return np.repeat(self.val,len(pts),axis=-1)
+		val=func_stat(stat.compute(pts))
+		ka1={'label':'Single value of '+stat.label}
+		ka1.update(ka)
+		super().__init__(val,stat.names,**ka1)
 
-def statf_initial(stat,pts,**ka):
-	return statf_singlestat(lambda x,y:x,lambda x,y:y,stat,pts[[0]] if isinstance(pts,dictys.traj.point) else [pts[0]],**ka)
-
-def statf_mean(stat,pts,**ka):
-	"""Use mean value for stat
-	Return:
-	stat
+def finitial(stat,pts,**ka):
 	"""
-	return statf_singlestat(lambda x,y:((x*y).sum(axis=-1)/y.sum(axis=-1)),stat,pts,**ka)
-def statf_diff(stat,stat_base,label=None,**ka):
-	"""Use value difference for stat
-	Return:
-	stat
+	Using initial value as a constant stat.
+	"""
+	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]] if isinstance(pts,dictys.traj.point) else [pts[0]],**ka)
+
+def fmean(stat,pts,**ka):
+	"""
+	Use mean value for stat.
+	"""
+	return fsinglestat(lambda x,y:((x*y).sum(axis=-1)/y.sum(axis=-1)),stat,pts,**ka)
+
+def fdiff(stat,stat_base,label=None,**ka):
+	"""
+	Use value difference for stat: stat-stat_base
 	"""
 	s1=stat-stat_base
 	if label is None:
@@ -178,43 +243,55 @@ def statf_diff(stat,stat_base,label=None,**ka):
 		s1.label=label
 	return s1
 
-class statf_smooth(stat_base):
-	def __init__(self,stat,traj,smoothen_func,**ka):
-		"""Base class for statistics obtained from smoothening of their values at nodes
+class fsmooth(base):
+	def __init__(self,stat,pts,smoothen_func,**ka):
+		"""
+		Base class for statistics obtained from smoothing of their values at points/states
 		stat:	Stat to smoothen
-		traj:	Trajectory instance of lwang.pipeline.dynet2.traj.trajectory
-		smoothen_func:	[name,args,keyword args] as in lwang.pipeline.dynet2.traj.trajc.smoothened
-		namet:	Names of genes to compute stat for. Default is obtained from default_namet function.
+		pts:	Trajectory or point instance of dictys.traj.trajectory or dictys.traj.point
+		smoothen_func:	[name,args,keyword args] as in dictys.point.smoothened
 		"""
 		import numpy as np
 		assert len(smoothen_func)==3
-		self.traj=traj
+		if isinstance(pts,dictys.traj.point):
+			n=len(pts)
+		elif isinstance(pts,dictys.traj.trajectory):
+			n=pts.nn
+		else:
+			raise TypeError('pts must be dictys.traj.trajectory or distys.traj.point')
 		self.stat=stat
 		super().__init__(**ka)
-		self.func_smooth=self.traj.smoothened(stat.compute(np.arange(traj.nn)),smoothen_func[0],*smoothen_func[1],**smoothen_func[2])
+		self.func_smooth=pts.smoothened(stat.compute(np.arange(n)),*smoothen_func[1],func_name=smoothen_func[0],**smoothen_func[2])
 	def default_names(self):
-		"""Use genes of original stat by default
-		"""
 		return self.stat.names
 	def default_label(self):
 		return self.stat.label
 	def compute(self,pts):
-		"""Use designated smoothening function to compute stat values at points from nodes.
-		pts:	Point list instance of lwang.pipeline.dynet2.traj.pointc
+		"""
+		Use designated smoothening function to compute stat values at points from nodes.
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		Stat value for each gene as np.array(shape=[len(x) for x in self.names]+[len(pts)])
+		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 		if not isinstance(pts,dictys.traj.point):
 			raise TypeError('Smooth function only available at points not states.')
-		ans=self.func_smooth(pts)
+		ans=self.func_smooth(points=pts)
 		assert ans.shape==tuple([len(x) for x in self.names]+[len(pts)])
 		return ans
 
-class statf_binarize(stat_base):
-	def __init__(self,stat,statmask,*a,posrate=0.01,signed=True,**ka):
-		"""Compute all edge weights of whole network with binarization if specified.
-		varname:	Variable name used for network
-		posrate:	Proportion of top edges when converting to binary network. Set to None to retain continuous network.
+class fbinarize(base):
+	def __init__(self,stat,*a,statmask=None,posrate=0.01,signed=True,**ka):
+		"""
+		Convert continuous network stat to binary network stat.
+		stat:		Stat for continuous network as numpy.ndarray(shape=(n_reg,n_target),dtype=float)
+		statmask:	Stat for network mask indicating which edges are tested in the continuous network,
+					as numpy.ndarray(shape=(n_reg,n_target),dtype=bool)
+		posrate:	Proportion of significant edges when converting to binary network.
+		signed:		Whether continuous network is signed. 
+					If so, larger absolute values indicate stronger edge.
+					If not, larger values indicate stronger edge.
+		a,
+		ka:			Arguments and keyword arguments passed to parent class
 		"""
 		self.posrate=posrate
 		self.signed=signed
@@ -222,75 +299,57 @@ class statf_binarize(stat_base):
 		self.mask=statmask
 		super().__init__(*a,**ka)
 	def default_names(self):
-		"""Use genes of original stat by default
-		"""
 		return self.stat.names
 	def default_label(self):
 		return self.stat.label
 	def compute(self,pts):
-		"""Computes network strength at each node 
+		"""
+		Computes binary network strength at each point
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		Networks as np.array(shape=(regulators,targets,n_node))
+		Networks as numpy.array(shape=(n_reg,n_target,n_pts))
 		"""
 		#Load individual networks for each node
 		import numpy as np
 		ans=self.stat.compute(pts)
-		mask=self.mask.compute(pts)
 		if self.signed:
 			ans=np.abs(ans)
-		cut=(self.posrate*mask.sum(axis=0).sum(axis=0)).astype(int)
+		#Determine cutoff for each point
+		if self.mask is None:
+			cut=np.repeat(int(self.posrate*np.prod(ans.shape[:-1])),ans.shape[-1])
+		else:
+			mask=self.mask.compute(pts)
+			cut=(self.posrate*mask.sum(axis=0).sum(axis=0)).astype(int)
+		assert cut.shape==(ans.shape[-1],)
 		cut=[np.partition(x.ravel(),-y)[-y] for x,y in zip(ans.transpose(2,0,1),cut)]
 		ans=ans>=cut
 		assert ans.shape==tuple([len(y) for y in self.names]+[len(pts)])
 		return ans
 
-class stat_smooth_old(stat_base):
-	def __init__(self,d,traj,smoothen_func,raw_states=True,**ka):
-		"""Base class for statistics obtained from smoothening of their values at nodes
-		d:		network object
-		traj:	Trajectory instance of lwang.pipeline.dynet2.traj.trajc
-		label:	Label of stat that is shown as coordindate label.
-		smoothen_func:	[name,args,keyword args] as in lwang.pipeline.dynet2.traj.trajc.smoothened
-		err_states:	Whether to throw error when smoothening for state computations.
-		namet:	Names of genes to compute stat for. Default is obtained from default_namet function.
+class pseudotime(base):
+	def __init__(self,d,pts,*a,traj=None,**ka):
 		"""
-		assert len(smoothen_func)==3
-		self.d=d
-		self.traj=traj
-		super().__init__(**ka)
-		self.err_states=err_states
-		self.func_smooth=self.traj.smoothened(self.compute_allstates(),smoothen_func[0],*smoothen_func[1],**smoothen_func[2])
-	def compute(self,pts):
-		"""Use designated smoothening function to compute stat values at points from nodes.
-		pts:	Point list instance of lwang.pipeline.dynet2.traj.pointc
-		Return:
-		Stat value for each gene as np.array(shape=[len(x) for x in self.names]+[len(pts)])
-		"""
-		if not isinstance(pts,dictys.traj.point):
-			raise TypeError('Values at states should not be smoothened.')
-		ans=self.func_smooth(pts)
-		assert ans.shape==tuple([len(x) for x in self.names]+[len(pts)])
-		return ans
-
-class stat_pseudotime(stat_base):
-	def __init__(self,d,traj,pts,*a,**ka):
-		"""Pseudotime statistic
+		Statistic to output pseudotime
 		d:		Dataset object
-		traj:	Trajectory instance of lwang.pipeline.dynet2.traj.trajc
 		pts:	Actual point list instance to use for visualization
+		traj:	Trajectory instance of dictys.traj.trajectory
 		"""
 		self.d=d
-		self.traj
+		if traj is None:
+			traj=d.traj
+		self.traj=traj
 		self.pts=pts
 		super().__init__(*a,**ka)
 	def default_names(self):
-		"""Use all genes by default.
+		"""
+		Use all genes by default.
 		"""
 		return [self.d.nname]
 	def default_label(self):
 		return 'Pseudo-time'
 	def compute(self,pts):
-		"""Computes pseudotime at each point. All genes have the same value.
+		"""
+		Computes pseudotime at each point. All genes have the same value.
 		pts:	Point list instance to compute pseudotime
 		Return:
 		pseudotime at each point as np.array(shape=[len(x) for x in self.names]+[len(pts)])
@@ -303,31 +362,30 @@ class stat_pseudotime(stat_base):
 		assert ans.shape==tuple([len(x) for x in self.names]+[len(pts)])
 		return ans
 
-class stat_lcpm(stat_base):
+class lcpm(base):
 	def __init__(self,d,*a,cut=0.01,const=1,**ka):
-		"""LogCPM stat. Specifically: log2 (CPM+const)
+		"""
+		LogCPM stat. Specifically: log2 (CPM+const)
 		d:		Dataset object
 		const:	Constant to add to CPM before log.
-		cut:	CPM above cut will be shown
+		cut:	CPM below cut will be hidden
 		"""
 		self.d=d
 		self.cut=cut
 		self.const=const
 		super().__init__(*a,**ka)
 	def default_names(self):
-		"""Use all genes by default.
-		"""
 		return [self.d.nname]
 	def default_label(self):
 		return 'Log2 CPM'
 	def compute(self,pts):
 		"""Computes logCPM at each node
 		Return:
-		log2(CPM+const) as np.array(shape=(len(namet),n_node))
+		log2(CPM+const) as np.array(shape=(n_gene,len(pts)))
 		"""
 		import numpy as np
 		if isinstance(pts,dictys.traj.point):
-			raise ValueError('stat_lcpm should not be computed at any point. Use existing states or wrap with stat_smooth instead.')
+			raise ValueError('lcpm should not be computed at any point. Use existing states or wrap with smooth instead.')
 
 		t1=set(self.d.nname)
 		t1=np.nonzero([x not in t1 for x in self.names[0]])[0]
@@ -344,47 +402,85 @@ class stat_lcpm(stat_base):
 			raise ValueError('CPM results not found. Please recompute.')
 		cpm=self.d.prop['ns']['cpm'][[tdict[x] for x in namet]][:,pts]
 		ans=np.log2(cpm+self.const)
-		ans[cpm<=self.cut]=np.nan
+		ans[cpm<self.cut]=np.nan
 		return ans
 
-class stat_net(stat_base):
-	def __init__(self,d,*a,varname='w',**ka):
-		"""Compute all edge weights of whole network with binarization if specified.
-		varname:	Variable name used for network
-		posrate:	Proportion of top edges when converting to binary network. Set to None to retain continuous network.
+class sprop(base):
+	def __init__(self,d,ptype,pname,*a,names_pref=[],**ka):
 		"""
+		Base class of state dependent properties directly read from dataset object
+		d:		Dataset object
+		ptype:	Property type (key in d.prop)
+		pname:	Property name (key in d.prop[ptype])
+		names_pref:	Prefixes added to the names of each dimension
+		"""
+		import itertools
+		import numpy as np
+		assert ptype in d.prop and pname in d.prop[ptype]
+
+		#Name collection
+		sid=np.array(list(itertools.chain.from_iterable([[False,False] if x=='e' else [x=='s'] for x in ptype])))
+		names=list(itertools.chain.from_iterable([[getattr(d,x+'name')] if x!='e' else [d.nname[y] for y in d.nids] for x in ptype]))
+		if not sid.any():
+			raise ValueError('Stat sprop is only for state-dependent properties.')
+		names=[names[x] for x in np.nonzero(~sid)[0]]
+		t1=[d.prop[ptype][pname].ndim,len(names_pref)+len(names)+sid.sum()]
+		if t1[0]!=t1[1]:
+			raise ValueError("Incorrect prefix dimension for property {}. Final dimension: {}. Correct dimension: {}.".format(pname,t1[1],t1[0]))
+		t1=[d.prop[ptype][pname].shape[:len(names_pref)],tuple([len(x) for x in names_pref])]
+		if t1[0]!=t1[1]:
+			raise ValueError("Incorrect prefix shape for property {}. Final shape: {}. Correct shape: {}.".format(pname,t1[1],t1[0]))
+		names=names_pref+names
 		self.d=d
-		self.varname=varname
+		self.ptype=ptype
+		self.pname=pname
+		self.sid=np.nonzero(sid)[0]
+		self.default_names_=names
 		super().__init__(*a,**ka)
 	def default_label(self):
-		return 'Network edge strength'
+		return self.pname
 	def default_names(self):
-		"""Use all genes of the specified role by default.
-		"""
-		# dynet=self.d.eprops['w']
-		# assert dynet.ndim==3
-		namet=[self.d.nname[x] for x in self.d.nids]
-		return namet
+		return self.default_names_
 	def compute(self,pts):
-		"""Computes network strength at each node 
+		"""
+		Obtains property at each state.
 		Return:
-		Networks as np.array(shape=(regulators,targets,n_node))
+		Networks as np.array(shape=(...,len(pts)))
 		"""
 		import numpy as np
 		if isinstance(pts,dictys.traj.point):
-			raise ValueError('stat_net should not be computed at any point. Use existing states or wrap with stat_smooth instead.')
+			raise ValueError('Property should not be computed at any point. Use existing states or wrap with smooth instead.')
 		#Load individual networks for each node
-		dynet=np.take(self.d.prop['es'][self.varname],pts,axis=-1)
-		#Gene IDs for each TF
-		t1=[np.nonzero([x not in self.ndict[y] for x in self.names[y]])[0] for y in range(len(self.names))]
-		for xi in range(len(self.names)):
-			if len(t1[xi])>0:
-				raise ValueError('Genes not found in given role: {}'.format(','.join(self.names[xi][t1[xi]])))
-		dynet=dynet[[self.ndict[0][x] for x in self.names[0]]][:,[self.ndict[1][x] for x in self.names[1]]]
-		return dynet
+		ans=[]
+		for xi in pts:
+			ans1=self.d.prop[self.ptype][self.pname]
+			for xj in self.sid[::-1]:
+				ans1=np.take(ans1,xi,axis=xj)
+			ans.append(ans1)
+		assert all([x.shape==ans[0].shape for x in ans[1:]])
+		ans=np.array(ans)
+		ans=ans.transpose(*list(range(1,ans.ndim)),0)
+		return ans
 
-class statf_centrality_base(stat_base):
+class net(sprop):
+	def __init__(self,d,*a,varname='w',**ka):
+		"""
+		Compute all edge weights of whole network with binarization if specified.
+		varname:	Variable name used for network
+		posrate:	Proportion of top edges when converting to binary network. Set to None to retain continuous network.
+		"""
+		super().__init__(d,'es',varname,*a,label='Network edge strength',**ka)
+
+class fcentrality_base(base):
 	def __init__(self,statnet,func,directed=False,roleaxis=0,label=None):
+		"""
+		Base class for centrality measure from network stat
+		statnet:	Stat for network
+		func:		networkx function to compute the centrality from a networkx.Graph or networkx.DiGraph
+		directed:	Whether to created a networkx.DiGraph instead of networkx.Graph
+		roleaxis:	Axis to compute centrality for. Use 0 for regulators' centrality and 1 for targets' centrality.
+		label:		Custom label for the statistic
+		"""
 		self.stat=statnet
 		self.func_centrality=func
 		self.directed=directed
@@ -395,10 +491,11 @@ class statf_centrality_base(stat_base):
 	def default_label(self):
 		return 'Centrality'
 	def compute(self,pts):
-		"""Computes log number of neighbors from networks at each point
-		pts:	Point list instance to compute stat
+		"""
+		Computes centrality for states or points
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		log2(number of targets+1) as np.array(shape=(len(namet),len(pts)))
+		Centrality as numpy.array(shape=(n,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 		import numpy as np
 		import networkx as nx
@@ -419,14 +516,14 @@ class statf_centrality_base(stat_base):
 		assert ans.shape==(len(self.names[0]),len(pts))
 		return ans
 
-class statf_centrality_degree(stat_base):
+class fcentrality_degree(base):
 	"""Use roleaxis=0 for outdegree and =1 for indegree."""
 	def __init__(self,statnet,statmask=None,roleaxis=0):
 		"""
-		Compute degree centrality for network.
+		Degree centrality stat for network.
 		statnet:	stat for network
 		statmask:	stat for mask. When specified, computes the degree centrality rate, i.e. degree/node_count, instead of degree
-		roleaxis:	Axis to compute degree for. 0 for outdegree and 1 for in degree.
+		roleaxis:	Axis to compute degree for. 0 for outdegree and 1 for indegree.
 		"""
 		self.stat=statnet
 		self.mask=statmask
@@ -437,10 +534,11 @@ class statf_centrality_degree(stat_base):
 	def default_label(self):
 		return 'Outdegree centrality' if self.roleaxis==0 else 'Indegree centrality'
 	def compute(self,pts):
-		"""Computes log number of neighbors from networks at each point
-		pts:	Point list instance to compute stat
+		"""
+		Computes degree centrality for states or points
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		log2(number of targets+1) as np.array(shape=(len(namet),len(pts)))
+		Centrality as numpy.array(shape=(n,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 		import numpy as np
 		dynet=self.stat.compute(pts)
@@ -452,23 +550,233 @@ class statf_centrality_degree(stat_base):
 		assert dynet.shape==(len(self.names[0]),len(pts))
 		return dynet
 
-def statf_centrality_eigenvector(statnet,label='Eigenvalue centrality',**ka):
+def fcentrality_eigenvector(statnet,label='Eigenvalue centrality',**ka):
+	"""
+	Eigenvalue centrality stat
+	statnet:	stat for network
+	"""
 	import networkx as nx
-	return statf_centrality_base(statnet,nx.eigenvector_centrality,label=label,**ka)
-def statf_centrality_betweenness(statnet,label='Betweenness centrality',**ka):
+	return fcentrality_base(statnet,nx.eigenvector_centrality,label=label,**ka)
+def fcentrality_betweenness(statnet,label='Betweenness centrality',**ka):
+	"""
+	Betweenness centrality stat
+	statnet:	stat for network
+	"""
 	import networkx as nx
 	print('Betweenness centrality: very slow!')
-	return statf_centrality_base(statnet,nx.betweenness_centrality,label=label,**ka)
-def statf_centrality_closeness(statnet,label='Closeness centrality',**ka):
+	return fcentrality_base(statnet,nx.betweenness_centrality,label=label,**ka)
+def fcentrality_closeness(statnet,label='Closeness centrality',**ka):
+	"""
+	Closeness centrality stat
+	statnet:	stat for network
+	"""
 	import networkx as nx
 	print('Closeness centrality: very slow!')
-	return statf_centrality_base(statnet,nx.closeness_centrality,label=label,**ka)
-def statf_lnneighbor(statnet,label='Log2 (Outdegree + 1)',const=1,**ka):
+	return fcentrality_base(statnet,nx.closeness_centrality,label=label,**ka)
+
+def flnneighbor(statnet,label='Log2 (Outdegree + 1)',const=1,**ka):
+	"""
+	Log2 outdegree centrality stat. Specifically, Log2 (Outdegree + const)
+	statnet:	stat for network
+	const:		Constant to add before log2.
+	"""
 	import numpy as np
-	return statf_function(lambda x:np.log2(x+const),[statf_centrality_degree(statnet,**ka)],label=label)
+	return function(lambda x:np.log2(x+const),[fcentrality_degree(statnet,**ka)],label=label)
 
+class flayout_base(base):
+	def __init__(self,statnet,layout_func,ndim=2,pts=None,netscale=1,**ka):
+		"""
+		Compute layout coordinates of nodes from network.
+		statnet:	stat of network edge weight
+		layout_func:Function to compute layout of network in networkx format, e.g. dictys.net.layout._fruchterman_reingold.
+		ndim:		Number of dimensions of coordinates
+		pts:		Points on the trajectory to compute layout for
+		netscale:	Normalization scale for network edge strength.
+		ka:			Keyword arguments passed to flayout_base.compute_all, including
+			nodrop_reg:	Whether to keep regulators even if they do not have any edge
+			abs:		Whether to use the absolute value of edge strength. If not, uses raw value where negative values are weaker than positive.
+			scale:		How to scale network layout coordindates. Accepts:
+				none:	No scaling
+				size:	Use fixed average distance from figure center
+				length:	Use fixed average length of each edge
+			rand_expand:	Extra distance to put newly added nodes from the existing network 
+		"""
+		assert len(statnet.names)==2
+		names=sorted(list(set(statnet.names[0])|set(statnet.names[1])))
+		if pts is None:
+			pts=statnet.pts
+		self.func=layout_func
+		self.default_names_=[names,[f'Dim {x}' for x in range(1,ndim+1)]]
+		self.stat=statnet
+		self.pts=pts
+		self.ndim=ndim
+		self.netscale=netscale
+		super().__init__()
+		self.compute_all(**ka)
+	def default_names(self):
+		return self.default_names_
+	def default_label(self):
+		return 'Coordinates'
+	def init_pos(self,m,sep=1,always=[]):
+		"""
+		Initialize node positions for the initial network.
+		m:	Directed network edge matrix as numpy.array(shape=(n_node,n_node))
+		sep:	Initial separation between disconnected subnetworks
+		always:	List of indices to always show (even without neighbors)
+		Return:	numpy.ndarray(shape=(n_node,n_dim)) as initial node positions. NAN means hidden.
+		"""
+		import itertools
+		import numpy as np
+		import networkx as nx
+		g=nx.Graph()
+		if self.netscale is not None:
+			m=m*(self.netscale/np.sqrt((m[(~np.isnan(m))&(m!=0)]**2).mean()))
 
+		t1=m!=0
+		t1=np.nonzero(t1|t1.T)
+		g.add_edges_from(np.array(t1).T)
+		nids=[np.array(list(x)) for x in nx.connected_components(g) if len(x)>1]
+		#Force include always shown nodes
+		t1=set(list(itertools.chain.from_iterable(nids)))
+		nids+=[np.array([x]) for x in always if x not in t1]
+		ans=np.ones((m.shape[0],self.ndim),dtype=float)*np.nan
+		xbase=0
+		for xi in nids:
+			#Initialize every subnetwork
+			n=len(xi)
+			if n==1:
+				ans[xi]=[[xbase,0]]
+				xbase+=sep
+				continue
+			m1=m[xi][:,xi]
+			posinit=np.random.rand(n,self.ndim)*np.sqrt(n)*sep
+			#Compute positions
+			pos0=self.func(m1,posinit)
+			pos0[:,0]-=pos0[:,0].min()
+			pos0[:,1]-=pos0[:,1].mean()
+			ans[xi,0]=pos0[:,0]+xbase
+			ans[xi,1]=pos0[:,1]
+			xbase+=pos0[:,0].max()+sep
+		#Reinitialize full network twice
+		nids=list(itertools.chain.from_iterable(nids))
+		m1=m[nids][:,nids]
+		for xi in range(2):
+			ans[nids]=self.func(m1,ans[nids])
+		return ans
 
+	def compute_all(self,nodrop_reg=False,abs=True,scale='size',rand_expand=0.1):
+		"""
+		Compute node locations for all time points.
+		nodrop_reg:	Whether to keep regulators even if they do not have any edge
+		abs:		Whether to use the absolute value of edge strength. If not, uses raw value where negative values are weaker than positive.
+		scale:		How to scale network layout coordindates. Accepts:
+			none:	No scaling
+			size:	Use fixed average distance from figure center
+			length:	Use fixed average length of each edge
+		rand_expand:	Extra distance to put newly added nodes from the existing network 
+		"""
+		import numpy as np
+		n=len(self.names[0])
+		ans=[]
+		tmap0=None
+
+		stat=self.stat.compute(self.pts)
+		if abs:
+			stat=np.abs(stat)
+		namemap=[[self.ndict[0][x] for x in self.stat.names[y]] for y in range(2)]
+		m=np.zeros((len(self.names[0]),len(self.names[0]),len(self.pts)),dtype=float)
+		for xi in range(len(self.stat.names[0])):
+			m[namemap[0][xi],namemap[1]]=stat[xi]
+		if self.netscale is not None:
+			m*=self.netscale/np.sqrt((m[(~np.isnan(m))&(m!=0)]**2).mean())
+
+		del stat
+		#Prefilter nodes to show
+		t1=(m!=0).any(axis=2)
+		tmap=t1.any(axis=0)|t1.any(axis=1)
+		if nodrop_reg:
+			t1=np.zeros_like(tmap)
+			t1[namemap[0]]=True
+			tmap|=t1
+		self.names[0]=self.names[0][tmap]
+		self.ndict[0]=dict(zip(self.names[0],range(len(self.names[0]))))
+		namemap=[[self.ndict[0][x] for x in self.stat.names[y] if x in self.ndict[0]] for y in range(2)]
+		m0=m[tmap][:,tmap]
+		#Initialize positions
+		pos0=self.init_pos(m0[:,:,0],always=(m0!=0).any(axis=1) if nodrop_reg else [])
+		#Layout for each point
+		for xi in range(len(self.pts)):
+			m=m0[:,:,xi]
+			#Prefilter nodes to show
+			t1=(m!=0)
+			tmap=t1.any(axis=0)|t1.any(axis=1)
+			if nodrop_reg:
+				t1=np.zeros_like(tmap)
+				t1[namemap[0]]=True
+				tmap|=t1
+			elif not tmap.any():
+				ans.append(np.ones((len(tmap),self.ndim),dtype=float)*np.nan)
+				pos0=None
+				tmap0=None
+				continue
+			m=m[tmap][:,tmap]
+			#Initial positions for new nodes
+			vrange=[pos0.min(axis=0),pos0.max(axis=0)]
+			vrange=[(vrange[1]+vrange[0])/2,(vrange[1]-vrange[0]).max()/2+rand_expand]
+			vrange=[vrange[0]-vrange[1],vrange[0]+vrange[1]]
+			posinit=np.ones((len(tmap),self.ndim),dtype=float)*np.nan
+			posinit[tmap0]=pos0
+			posinit=posinit[tmap]
+			t1=np.isnan(posinit).any(axis=1)
+			posinit[t1]=np.random.rand(t1.sum(),self.ndim)*(vrange[1]-vrange[0])+vrange[0]
+			assert not np.isnan(posinit).any()
+			assert not (posinit==0).all(axis=1).any()
+			#Compute positions
+			pos0=self.func(m,posinit)
+			tmap0=tmap
+			#Format & normalize output
+			ans1=pos0
+			ans1=ans1-ans1.mean(axis=0)
+			if scale=='none':
+				pass
+			elif scale=='size':
+				ans1=ans1/(np.sqrt((ans1**2).mean())+1E-300)
+			elif scale=='length':
+				t1=np.nonzero(m)
+				ans1=(ans1.T/(np.sqrt(((ans1[t1[0]]-ans1[t1[1]])**2).sum(axis=1).mean())+1E-300)).T
+			else:
+				raise ValueError(f'Unknown scale {scale}.')
+			ans2=np.ones((len(tmap),self.ndim),dtype=float)*np.nan
+			ans2[tmap]=ans1
+			ans.append(ans2)
+		self.pos=np.array(ans).transpose(1,2,0)
+	def ptsmap(self,pts):
+		"""
+		Maps points to known points.
+		"""
+		import numpy as np
+		if isinstance(pts,dictys.traj.point):
+			#Map given points to 
+			t1=[np.nonzero(x)[0] for x in pts-self.pts==0]
+			t1=np.array([x[0] for x in t1 if len(x)>0])
+			return t1
+		else:
+			return None
+	def compute(self,pts):
+		"""
+		Computes node coordinates from the provided layout for states or known points
+		pts:	Point list instance of dictys.traj.point, or state list as list of int
+		Return:
+		Node coordindates as numpy.array(shape=(n,n_dim,len(pts))) . Use nan to hide value or set as invalid.
+		"""
+		import numpy as np
+		if isinstance(pts,dictys.traj.point):
+			#Map given points to self.pts
+			pts2=self.ptsmap(pts)
+			if pts2 is None or len(pts2)!=len(pts):
+				raise ValueError('Property should not be computed at any point. Use only input points or wrap with smooth instead.')
+			pts=pts2
+		return self.pos[:,:,pts]
 
 
 

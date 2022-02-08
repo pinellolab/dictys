@@ -30,17 +30,17 @@ def compute_reg_spec(d0,min_entropy=0.5,ncut=0.4,nmin=20,nmax_reg=10,select_stat
 	else:
 		select_state=np.array([d0.sdict[x] for x in select_state])
 	#Network mask
-	mask=stat.stat_net(d0,varname='mask')
+	mask=stat.net(d0,varname='mask')
 	#Binary network
-	binnet=stat.statf_binarize(stat.stat_net(d0),mask)
+	binnet=stat.fbinarize(stat.net(d0),statmask=mask)
 	#Target count
-	na=stat.statf_centrality_degree(binnet,roleaxis=0).compute(select_state)
+	na=stat.fcentrality_degree(binnet,roleaxis=0).compute(select_state)
 	#Degree centrality rate
-	dcrate=stat.statf_centrality_degree(binnet,statmask=mask,roleaxis=0).compute(select_state)
+	dcrate=stat.fcentrality_degree(binnet,statmask=mask,roleaxis=0).compute(select_state)
 	#Degree centrality specificity
 	va=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
 	#CPM
-	cpm=2**(stat.stat_lcpm(d0,cut=-1,const=1).compute(select_state)[d0.nids[0]])-1
+	cpm=2**(stat.lcpm(d0,cut=-1,const=1).compute(select_state)[d0.nids[0]])-1
 
 	assert (na>=0).all() and (va>=0).all() and (va<=1).all()
 	assert na.shape==va.shape
