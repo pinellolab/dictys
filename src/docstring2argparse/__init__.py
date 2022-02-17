@@ -12,6 +12,24 @@ class function_parser_base:
 		return ans
 	@staticmethod
 	def check(ans):
+		"""
+		Format check for self._parse
+
+		Parameters
+		----------
+		ans:	tuple
+			Supposed return of self.parse. Direct return of self._parse.
+
+		Returns
+		-------
+		tuple
+			Same as input `ans` if format is good.
+
+		Raises
+		------
+		AssertionError
+			If incorrectly formatted.
+		"""
 		assert len(ans)==4
 		assert isinstance(ans[0],str) or ans[0] is None
 		assert isinstance(ans[1],str) or ans[1] is None
@@ -20,15 +38,16 @@ class function_parser_base:
 		assert ans[3] is None or (isinstance(ans[3],tuple) and len(ans[3])==3 and (isinstance(ans[3][0],str) or ans[3][0] is None) and (isinstance(ans[3][2],str) or ans[3][2] is None)) or all([x is None or (isinstance(x,tuple) and len(x) in {3,4} and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None)) for x in ans[3]])
 		return ans
 	def _parse(self,func):
-		"""Parse function to get documentation for argparse
+		"""
+		Parse function to get documentation for argparse
 		
 		Parameters
 		----------
 		func:	function
 			Function to parse
 		
-		Return
-		------
+		Returns
+		-------
 		doc_short:	str or NoneType
 			Short documentation for subcommand introduction. Use None for not parsed.
 		doc_long:	str or NoneType
@@ -37,7 +56,6 @@ class function_parser_base:
 			Documentation for each parameter. Each entry is a tuple (name,type,description,(whether_optional,default_value)) for each parameters. default_value must be None if whether_optional is False. doc_parameters or any of its element can be None for not parsed.
 		doc_return:	list or tuple or NoneType
 			Documentation for each return. Each entry is a tuple (name,type,description) for each return. doc_return can be such a tuple for single return. doc_return or any of its element can be None for not parsed. Note: for argparse purpose, this return is not checked because it is irrelevant to command I/O.
-			
 		"""
 		raise NotImplementedError
 
@@ -149,12 +167,33 @@ class function_parser_union(function_parser_base):
 		t1=len(v1[0])
 		assert all([len(x)==t1 for x in v1[1:]])
 		#Recursive union
-		return type(v1[0])([cls.union(x) for x in zip(*v1)])			
+		return type(v1[0])([cls.union(x) for x in zip(*v1)])
 	def _parse(self,func):
 		ans=[x.parse(func) for x in self.parsers]
 		return self.union(ans)
 
 def get_functions(pkgname,parser,varname_ignore='_docstring2argparse_ignore_',func_ignore=lambda name,obj:name.startswith('_')):
+	"""
+	Get all functions to argparse from module
+		
+	Parameters
+	----------
+	pkgname:	str
+		Name of package/module to argparse
+	parser:		docstring2argparse.function_parser_base
+		Parser for function documentation
+	varname_ignore:	str
+		Ignore list variable name in each file. The variable is a list of str. Each str is the name of function to be ignored for argparse.
+	func_ignore:	function
+		Function takes the name and object to determine if the object should be ignored for argparse or recursive search.
+	
+	Returns
+	-------
+	ans_f:	dict
+		Dictionary that converts function name (pkgname.submodulename....functionname) to function_parser_base._parse outputs
+	ans_m:	dict
+		Dictionary that converts submodule name (pkgname.submodulename1....submodulenamen) to module documentation as str
+	"""
 	from inspect import ismodule
 	from importlib import import_module
 	#Find functions
@@ -164,10 +203,13 @@ def get_functions(pkgname,parser,varname_ignore='_docstring2argparse_ignore_',fu
 	mods_done=[]
 	c=0
 	while len(mods)>0:
+		#Recursive search within the module
 		t1=mods.pop()
 		mods_done.append(t1)
 		t2=t1[0].__dict__
+		#Restrict to modules & functions
 		ans_add=filter(lambda x:hasattr(t2[x],'__module__') and hasattr(t2[x],'__call__') and t2[x].__module__.startswith('.'.join(t1[1])),t2)
+		#Withing this module
 		mod_add=filter(lambda x:ismodule(t2[x]) and hasattr(t2[x],'__package__') and t2[x].__package__==pkgname,t2)
 		if varname_ignore is not None and varname_ignore in t2:
 			ans_add,mod_add=[filter(lambda x:x not in t2[varname_ignore],y) for y in [ans_add,mod_add]]
@@ -183,30 +225,53 @@ def get_functions(pkgname,parser,varname_ignore='_docstring2argparse_ignore_',fu
 	ans_m={x:y.strip() if y is not None else '' for x,y in ans_m.items()}
 	return (ans_f,ans_m)
 
-def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.ArgumentDefaultsHelpFormatter)):
+def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.ArgumentDefaultsHelpFormatter),**ka):
+	"""
+	Create argparse parser for module
+		
+	Parameters
+	----------
+	pkgname:		str
+		Name of package/module to argparse
+	parser:			function_parser_base
+		Parser for function documentation
+	ka_argparse:	dict
+		Keyword arguments passed to argparse.ArgumentParser
+	ka:				dict
+		Keyword arguments passed to docstring2argparse.get_functions
+	
+	Returns
+	-------
+	argparse.ArgumentParser
+		Command line argument parser for module
+	"""
 	import argparse
 	from os import linesep
 	#Find functions & modules
-	f,m=get_functions(pkgname,parser)
+	f,m=get_functions(pkgname,parser,**ka)
 	#Parsers
 	p=dict()
 	#Subparsers
 	ps=dict()
 	p[pkgname]=argparse.ArgumentParser(prog=pkgname,description=m[pkgname],**ka_argparse)
-	ps[pkgname]=p[pkgname].add_subparsers(help='sub-commands',required=True)
+	ps[pkgname]=p[pkgname].add_subparsers(help='sub-commands',dest='subcommand',required=True)
 
 	for xi in f:
+		#Iteratively add parsers for functions
 		t1=xi.split('.')
 		for xj in range(1,len(t1)):
+			#Recursively add subparsers for all parent modules of this function if not present
 			t2='.'.join(t1[:xj])
-			if t2 not in p:
-				t3='.'.join(t2.split('.')[:-1])
-				assert t3 in ps
-				tka=dict(ka_argparse)
-				if m[t2] is not None:
-					tka['help']=m[t2]
-				p[t2]=ps[t3].add_parser(t2.split('.')[-1],**tka)
-				ps[t2]=p[t2].add_subparsers(help='sub-commands',required=True)
+			if t2 in p:
+				continue
+			t3='.'.join(t2.split('.')[:-1])
+			assert t3 in ps
+			tka=dict(ka_argparse)
+			if m[t2] is not None:
+				tka['help']=m[t2]
+			p[t2]=ps[t3].add_parser(t2.split('.')[-1],**tka)
+			ps[t2]=p[t2].add_subparsers(help='sub-commands',dest='subcommand',required=True)
+		#Add subparser for this function
 		t2='.'.join(t1[:-1])
 		tka=dict(ka_argparse)
 		desc=''
@@ -218,8 +283,10 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 		p[xi]=ps[t2].add_parser(t1[-1],description=desc,**tka)
 		for xj in f[xi][2]:
 			if xj[3][0]:
+				#Keyword arguments
 				p[xi].add_argument('--'+xj[0],type=xj[1],help=xj[2],default=xj[3][1],action='store')
 			else:
+				#Required arguments
 				p[xi].add_argument(xj[0],type=xj[1],help=xj[2],action='store')
 	return p[pkgname]
 	

@@ -3,6 +3,7 @@
 """Chromatin accessibility analyses
 """
 
+from typing import Union
 import numpy as np
 
 ################################################################
@@ -58,13 +59,13 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	names=list(filter(lambda x:len(x)>0,names))
 	if len(names)==0:
 		raise ValueError('No sample name found in '+fi_names)
-	names=linesep.join([x+'.bam' for x in names])+linesep
+	namestxt=linesep.join([x+'.bam' for x in names])+linesep
 	
 	#Run script for macs2
 	cmd = scriptpath+f" cellnames.txt {fi_bam} {fo_bam} {fo_bai} {fo_bed} {genome_size} {qcut} {nth}"
 	d2 = shell.cmdfile(cmd,
 					   [],
-					   infiles={'cellnames.txt': names},
+					   infiles={'cellnames.txt': namestxt},
 					   quiet=False,
 					   cd=True)
 	if d2 is None or len(d2)>0 or not all([isfile(x) for x in [fo_bam,fo_bai,fo_bed]]):
@@ -82,7 +83,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 # TF footprinting
 ################################################################
 
-def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:str=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
+def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Union[str,None]=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
 	"""
 	TF Footprinting with wellington.
 	
@@ -106,15 +107,15 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:str=None
 		Maximum number of footprints to retain, ordered by wellington score. Use 0 for no limit.
 		
 	"""
-	from os.path import dirname, basename, abspath
+	from os.path import dirname, basename, abspath, isfile
 	from os.path import join as pjoin
 	from .utils import shell
-	if blacklist is None:
-		blacklist='None'
+	if fi_blacklist is None:
+		fi_blacklist='None'
 	else:
-		if not isfile(blacklist):
-			raise FileNotFoundError(blacklist)
-		blacklist=abspath(blacklist)
+		if not isfile(fi_blacklist):
+			raise FileNotFoundError(fi_blacklist)
+		fi_blacklist=abspath(fi_blacklist)
 	if cut<=0:
 		raise ValueError('cut must be positive.')
 	for xi in [fi_bam,fi_bai,fi_bed]:
@@ -123,7 +124,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:str=None
 	
 	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_wellington.sh')
 	fi_bam,fi_bai,fi_bed,fo_bed=[abspath(x) for x in [fi_bam,fi_bai,fi_bed,fo_bed]]
-	cmd = scriptpath+f" {fi_bam} {fi_bai} {fi_bed} {fo_bed} {cut} {nth} {npeakmax} {blacklist}"
+	cmd = scriptpath+f" {fi_bam} {fi_bai} {fi_bed} {fo_bed} {cut} {nth} {npeakmax} {fi_blacklist}"
 	d2 = shell.cmdfile(cmd,
 					   [],
 					   quiet=False,
@@ -216,7 +217,7 @@ def homer(fi_bed:str,fi_motif:str,fo_bed:str,fo_wellington:str,fo_homer:str,geno
 		Number of threads
 
 	"""
-	from os.path import dirname, basename, abspath
+	from os.path import dirname, basename, abspath, isfile
 	from os.path import join as pjoin
 	from .utils import shell
 	for xi in [fi_bed,fi_motif]:

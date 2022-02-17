@@ -5,6 +5,7 @@
 Statistics of networks for data visualization and export.
 """
 
+import abc
 import dictys.traj
 
 
@@ -25,7 +26,7 @@ def _getitem(key,v):
 			v=np.take(v,key[xi],axis=sid)
 	return v
 
-class base:
+class base(metaclass=abc.ABCMeta):
 	def __init__(self,names=None,label=None):
 		"""
 		Base class for statistics for each gene
@@ -41,6 +42,7 @@ class base:
 		assert len(names)>0
 		self.names=[np.array(x) for x in names]
 		self.ndict=[dict(zip(x,range(len(x)))) for x in names]
+	@abc.abstractmethod
 	def compute(self,pts):
 		"""
 		Use this function to compute stat values at each state or point
@@ -48,7 +50,7 @@ class base:
 		Return:
 		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		raise NotImplementedError
+	@abc.abstractmethod
 	def default_names(self):
 		"""
 		Use this function to determine the default names for each axis.
@@ -56,7 +58,6 @@ class base:
 		Return:
 		List of list of names for each axis.
 		"""
-		raise NotImplementedError
 	def default_lims(self,pts=None,names=None,expansion=0.02):
 		"""
 		Use this function to determine the default limits of the stat.
@@ -83,13 +84,13 @@ class base:
 		ans=[ans[t1].min(),ans[t1].max()]
 		t1=(ans[1]-ans[0])*expansion
 		return [ans[0]-t1,ans[1]+t1]
+	@abc.abstractmethod
 	def default_label(self):
 		"""
 		Use this function to determine the label of this stat
 		Return:
 		Label as str
 		"""	
-		raise NotImplementedError
 	#Arithmetic operations between stats
 	def __add__(self,other):
 		from operator import add
@@ -663,7 +664,6 @@ class flayout_base(base):
 		for xi in range(2):
 			ans[nids]=self.func(m1,ans[nids])
 		return ans
-
 	def compute_all(self,nodrop_reg=False,abs=True,scale='size',rand_expand=0.1):
 		"""
 		Compute node locations for all time points.

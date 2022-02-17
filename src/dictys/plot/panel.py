@@ -5,9 +5,12 @@
 Visualization panels of networks
 """
 
+import abc
 from dictys.net import stat
+from typing import Union
+from collections.abc import Sequence
 
-class base:
+class base(metaclass=abc.ABCMeta):
 	def __init__(self,ax,pts):
 		"""
 		Base class to visualize single panel for dynamic network
@@ -21,7 +24,8 @@ class base:
 		"""
 		self.ax=ax
 		self.pts=pts
-	def init(self):
+	@abc.abstractmethod
+	def init(self)->list:
 		"""
 		Draws initial canvas that doesn't change.
 		Prepares artists with empty drawing for future update at each frame.
@@ -32,8 +36,8 @@ class base:
 		list
 			List of artists that may be redrawn afterwards.
 		"""
-		raise NotImplementedError
-	def draw(self,t):
+	@abc.abstractmethod
+	def draw(self,t:int)->list:
 		"""Draws the changing part of given frame at given trajectory location.
 
 		Parameters
@@ -46,7 +50,6 @@ class base:
 		list
 			List of artists that are redrawn.
 		"""
-		raise NotImplementedError
 
 class overlay(base):
 	def __init__(self,ax,pts,panels):
@@ -76,8 +79,9 @@ class overlay(base):
 		return list(itertools.chain.from_iterable(objs))
 
 class statscatter(base):
-	def __init__(self,ax,pts,statx,staty,names=None,annotate=[],lim=None,scatterka=dict(),statka=dict(),
-				staty2=None,scatterka2=dict()):
+	def __init__(self,ax,pts,statx,staty,names:Union[list[str],None]=None,annotate:Union[list[str],dict[str,str]]=[],
+			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict=dict(),statka:dict=dict(),
+				staty2=None,scatterka2:dict=dict(),aspect:Union[float,None]=None):
 		"""
 		Draw scatter plots from two stats.
 
@@ -95,8 +99,18 @@ class statscatter(base):
 			Names to show. Defaults to all.
 		annotate:	list of str or {str:str}
 			Names to annotate on scatter plot. Use 'all' for all names. Use dict to rename annotation as {name:annotation}.
-		lim:
-			Limits of X and Y axes in [[xmin,xmax],[ymin,ymax]]. Defaults to min and max values on nodes with 2% expansion on each side.
+		lim:		Union
+			Limits of X and Y axes. Takes several formats.
+			* [[xmin,xmax],[ymin,ymax],[y2min,y2max] if y2 is present]. This exactly specifies lims. Each [min,max] can be None to be determined automatically with `default_lims` method of each stat.
+
+			* Set containing none, some, or all of the options for automatically determining limits based on `default_lims` method of each stat:
+
+				- 'sym': Each axis use symmetric [-x,x] limits. x is determined by the max of absolute values of limits.
+
+				- 'max': All axes use the max of max limits of all axes. If unset, all axes use their respective max limits.
+
+				- 'min': All axes use the min of min limits of all axes. If unset, all axes use their respective min limits.
+
 		scatterka:	dict
 			Keyword arguments for ax.scatter.
 		statka:		dict
@@ -150,46 +164,71 @@ class statscatter(base):
 		assert all([isinstance(x,stat.base) for x in self.stats])
 		self.scatterka=scatterka
 		self.statka=statka
-		self.lim=lim
+		self.aspect=aspect
 		if staty2 is not None:
 			#Second Y
 			self.ny=2
 			self.scatterka2=scatterka2
 		else:
 			self.ny=1
-	def init(self):
+		if isinstance(lim,list) and len(lim)!=self.ny+1:
+			raise ValueError('lim size ({}) must match the size of all axes ({}).'.format(len(lim),self.ny+1))
+		self.lim=lim
+	def autolimits(self):
+		#Determines limits of axes
 		import numpy as np
-		#Prepare limits
-		if self.lim is None:
-			self.lim=[None]*(self.ny+1)
-		for xi in range(self.ny+1):
-			if self.lim[xi] is not None:
-				continue
-			self.lim[xi]=self.stats[xi].default_lims(pts=self.pts,names=[self.names])
-		assert len(self.lim)==self.ny+1 and all([len(x)==2 for x in self.lim])
-		for xi in range(len(self.lim)):
-			if np.isnan(self.lim[xi]).any() or self.lim[xi][0]==self.lim[xi][1]:
-				self.lim[xi]=[0,1]
+		#Prepare autolimits
+		lim=[self.stats[x].default_lims(pts=self.pts,names=[self.names]) for x in range(self.ny+1)]
+		assert len(lim)==self.ny+1 and all([len(x)==2 for x in lim])
+		for xi in range(len(lim)):
+			if np.isnan(lim[xi]).any() or lim[xi][0]==lim[xi][1]:
+				lim[xi]=[0,1]
+		lim=np.array(lim)
+		#Replace/update autolimits based on user option
+		if isinstance(self.lim,set):
+			t1=self.lim-{'sym','min','max'}
+			if len(t1)>0:
+				raise ValueError('Unrecognized options for lim: '+','.join(t1))
+			if 'sym' in self.lim:
+				lim=np.repeat(np.abs(lim).max(axis=1).reshape(-1,1),2,axis=1)
+				lim[:,0]*=-1
+			lim=np.array(lim)
+			if 'min' in self.lim:
+				lim[:,0]=lim[:,0].min()
+			if 'max' in self.lim:
+				lim[:,1]=lim[:,1].max()
+		else:
+			for xi in range(self.ny+1):
+				if self.lim[xi] is None:
+					continue
+				for xj in range(2):
+					if self.lim[xi][xj] is not None:
+						lim[xi,xj]=self.lim[xi,xj]
+		return lim		
+	def init(self):
+		lim=self.autolimits()
 		self.objs=[]
 		#Draw initial panel
 		self.objs.append(self.ax.scatter([],[],**self.scatterka))
-		self.objs+=[self.ax.text(self.lim[0][0],self.lim[1][0],'') for x in self.annotate]
-		self.ax.set_xlim(self.lim[0])
-		self.ax.set_ylim(self.lim[1])
+		self.objs+=[self.ax.text(lim[0,0],lim[1,0],'') for x in self.annotate]
+		self.ax.set_xlim(lim[0])
+		self.ax.set_ylim(lim[1])
 		self.ax.set_xlabel(self.stats[0].label)
 		self.ax.set_ylabel(self.stats[1].label)
 		if self.ny>1:
 			#Second Y
 			self.ax2=self.ax.twinx()
 			self.objs.append(self.ax2.scatter([],[],**self.scatterka2))
-			self.objs+=[self.ax2.text(self.lim[0][0],self.lim[2][0],'') for x in self.annotate]
-			self.ax2.set_ylim(self.lim[2])
+			self.objs+=[self.ax2.text(lim[0,0],lim[2,0],'') for x in self.annotate]
+			self.ax2.set_ylim(lim[2])
 			self.ax2.set_ylabel(self.stats[2].label)
 		else:
 			if self.ax.spines['right'].get_visible():
 				self.ax.tick_params(right=True,which='both')
 		if self.ax.spines['top'].get_visible():
 			self.ax.tick_params(top=True,which='both')
+		if self.aspect is not None:
+			self.ax.set_aspect(self.aspect)
 		ans=self.draw(0,force=True)
 		return ans
 	def get_data(self,pts,force=False):
@@ -306,14 +345,7 @@ class statplot_static(statscatter):
 		self.colors=colors
 	def init(self):
 		import numpy as np
-		#Prepare limits
-		if self.lim is None:
-			self.lim=[None]*(self.ny+1)
-		for xi in range(self.ny+1):
-			if self.lim[xi] is not None:
-				continue
-			self.lim[xi]=self.stats[xi].default_lims(pts=self.pts,names=[self.names])
-		assert len(self.lim)==self.ny+1 and all([len(x)==2 for x in self.lim])		
+		# lim=self.autolimits()
 		#Prepare curve data
 		ans=[]
 		data,param=self.get_data(self.pts,force=True)
@@ -390,7 +422,7 @@ class statplot(overlay):
 		return super().__init__(ax,pts,panels[::-1])
 
 class cellscatter_scatter(statscatter):
-	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka=dict(),**ka):
+	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka=dict(),aspect=1,**ka):
 		"""
 		Draw scatter plots of cells.
 
@@ -442,13 +474,12 @@ class cellscatter_scatter(statscatter):
 		self.d=d
 		self.legend_loc=legend_loc
 		self.legend_ka=legend_ka
-		super().__init__(ax,pts,statx,staty,statka={'color':statc,'alpha':stata},scatterka=ka)
+		super().__init__(ax,pts,statx,staty,statka={'color':statc,'alpha':stata},scatterka=ka,aspect=aspect)
 	def init(self):
 		from dictys.plot import colorlegend
 		t1=list(self.cmap)
-		colorlegend(self.ax,self.legend_loc,t1,[self.cmap[x] for x in t1],**self.legend_ka)
-		self.ax.set_aspect(1.)
 		self.ax.axis('off')
+		colorlegend(self.ax,self.legend_loc,t1,[self.cmap[x] for x in t1],**self.legend_ka)
 		return super().init()
 
 class cellscatter_pointer(statscatter):
@@ -605,7 +636,7 @@ class statheatmap(base):
 		return objs
 
 class network_node(statscatter):
-	def __init__(self,ax,pts,statloc,*a,**ka):
+	def __init__(self,ax,pts,statloc,*a,aspect=1,**ka):
 		"""
 		Draw network nodes with scatter plot.
 
@@ -624,7 +655,7 @@ class network_node(statscatter):
 		"""
 		statx=statloc[:,0]
 		staty=statloc[:,1]
-		super().__init__(ax,pts,statx,staty,*a,**ka)
+		super().__init__(ax,pts,statx,staty,*a,aspect=aspect,**ka)
 
 class network_edge_old(base):
 	def __init__(self,ax,pts,statloc,statnet,*a,nmax=1000,**ka):
@@ -727,11 +758,11 @@ class network(overlay):
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
 		d:			dictys.net.network
-			Dynamic network object to draw cells
+			Dynamic network object to draw
 		pts:		dictys.traj.point
 			Points of path to visualize network
 		statloc:	dictys.net.stat.base
-			Stat instance for axes. Must be two-dimensional with shape (n_cell,2).
+			Stat instance for node coordindates. Must be two-dimensional with shape (n_node,2).
 		statnet:	dictys.net.stat.base
 			Stat instance for edge strengths. Must be two-dimensional with shape (n_reg,n_target).
 		nodeka:		dict
@@ -751,7 +782,6 @@ class network(overlay):
 		panels.append(network_edge(ax,pts,statloc,statnet,**edgeka))
 		return super().__init__(ax,pts,panels[::-1])
 	def init(self):
-		self.ax.set_aspect(1)
 		self.ax.axis('off')
 		return super().init()
 
