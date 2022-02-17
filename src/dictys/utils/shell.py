@@ -27,7 +27,7 @@ def tmpfolder_context(persist=False, d=None,**ka):
 			rmtree(d)
 
 
-class run_timed(object):
+class run_timed:
 	"""Class to run process with time out"""
 	def __init__(self, cmd):
 		"""Class to run process with time out
@@ -53,15 +53,15 @@ class run_timed(object):
 		ka:			Keyword arguments passed to subprocess.Popen
 		Return:		[subprocess.Popen(),stdout,stderr (both as b'')]
 		Raises TimeoutError on time-out."""
-		import threading, logging
+		import threading
 
 		def target(cmd, timeout, **ka):
 			import subprocess
-			self.process = subprocess.Popen(cmd, **ka)
+			self.process = subprocess.Popen(cmd, **ka)		# pylint: disable=R1732
 			try:
 				self.data = self.process.communicate(timeout=timeout)
-			except subprocess.TimeoutExpired:
-				raise TimeoutError('Command failed due to time out: ' + self.cmd)
+			except subprocess.TimeoutExpired as e:
+				raise TimeoutError('Command failed due to time out: ' + self.cmd) from e
 
 		thread = threading.Thread(target=target, args=(self.cmd, timeout), kwargs=ka)
 		thread.start()
@@ -71,14 +71,14 @@ class run_timed(object):
 				self.process.kill()
 			thread.join()
 			raise TimeoutError('Command failed due to time out: ' + self.cmd)
-		elif self.data is None:
+		if self.data is None:
 			raise TimeoutError('Command failed due to time out: ' + self.cmd)
 		return [self.process] + list(self.data)
 
 
 def cmdfile(cmd,
 			outfile,
-			infiles=dict(),
+			infiles={},
 			tmpfolder=None,
 			isprefix=True,
 			persist=False,
@@ -112,17 +112,21 @@ def cmdfile(cmd,
 	Return:		For timeout>=0 or None: Contents of the designated file as bytes or list of bytes for outfile list.
 				Or None if file does not exist.
 				For timeout<0: thread object"""
-	assert type(cmd) is str
-	assert outfile is None or type(outfile) is str or type(outfile) is list
-	assert type(infiles) is dict
-	assert type(persist) is bool and type(noerror) is bool
-	assert sizelimit is None or (type(sizelimit) is int and sizelimit >= 0)
-	if type(quiet) is bool:
+	import logging
+	from os.path import join as pjoin
+	import subprocess
+	import os
+	assert isinstance(cmd,str)
+	assert outfile is None or isinstance(outfile,(str,list))
+	assert isinstance(infiles,dict)
+	assert isinstance(persist,bool) and isinstance(noerror,bool)
+	assert sizelimit is None or (isinstance(sizelimit,int) and sizelimit >= 0)
+	if isinstance(quiet,bool):
 		quiet = int(quiet)
-	assert type(quiet) is int and quiet in {0, 1}
-	assert type(cd) is bool
+	assert isinstance(quiet,int) and quiet in {0, 1}
+	assert isinstance(cd,bool)
 	if timeout is not None and timeout < 0:
-		import numpy as np
+		assert isinstance(timeout,(int,float))
 		from threading import Thread
 		t1 = Thread(target=cmdfile,
 					args=(cmd, outfile),
@@ -131,38 +135,31 @@ def cmdfile(cmd,
 								isprefix=isprefix,
 								persist=persist,
 								noerror=noerror,
-								timeout=-timeout,
+								timeout=-timeout,		# pylint: disable=E1130
 								sizelimit=sizelimit,
 								quiet=quiet,
 								cd=cd))
 		t1.start()
 		return t1
-	import logging
-	from os.path import join as pjoin
-	import subprocess
-	import os
-
 	# Create tmp folder
-	ka = dict()
+	ka = {}
 	if tmpfolder is not None:
-		assert type(tmpfolder) is str and type(isprefix) is bool
+		assert isinstance(tmpfolder,str) and isinstance(isprefix,bool)
 		ka['prefix' if isprefix else 'd'] = tmpfolder
 
 	with tmpfolder_context(persist=persist, **ka) as td:
 		logging.debug('Using temporary folder: ' + td)
 		# Prepare input files
 		for fn in infiles:
-			assert type(fn) is str and (type(infiles[fn]) is str or
-										type(infiles[fn]) is bytes)
+			assert isinstance(fn,str) and isinstance(infiles[fn],(str,bytes))
 			fi = pjoin(td, fn)
 			logging.debug('Writing temporary input file: ' + fi)
-			f = open(fi, 'wb')
-			f.write(infiles[fn].encode()if type(infiles[fn]) is str else infiles[fn])
-			f.close()
-
+			with open(fi, 'wb') as f:
+				f.write(infiles[fn].encode() if isinstance(infiles[fn],str) else infiles[fn])
+			
 		# Run command
 		cmda = cmd.format(td)
-		ka = dict()
+		ka = {}
 		if quiet == 1 and outfile is not None:
 			ka['stdout'] = subprocess.DEVNULL
 			ka['stderr'] = subprocess.DEVNULL
@@ -174,7 +171,7 @@ def cmdfile(cmd,
 		logging.debug('Calling program ' + cmda)
 		try:
 			ans = run_timed.run(cmda, timeout, shell=True, **ka)
-		except TimeoutError as e:
+		except TimeoutError:
 			if not noerror:
 				raise
 
@@ -186,8 +183,7 @@ def cmdfile(cmd,
 		if outfile is None:
 			if len(ans) > 1 and ans[1] is not None:
 				return ans[1].decode()
-			else:
-				return
+			return
 
 		# Read output file
 		def readfile(fout):
@@ -199,11 +195,10 @@ def cmdfile(cmd,
 					raise BufferError('File too large ({}): '.format(t1) + fo)
 			except OSError:
 				return
-			f = open(fo, 'rb')
-			ans = f.read()
-			f.close()
+			with open(fo, 'rb') as f:
+				ans = f.read()
 			return ans
 
-		ans = readfile(outfile) if type(outfile) is str else [
+		ans = readfile(outfile) if isinstance(outfile,str) else [
 			readfile(x) for x in outfile]
 	return ans

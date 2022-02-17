@@ -1,5 +1,11 @@
 #!/usr/bin/python3
 
+"""
+Module for network class and stats.
+
+"""
+
+from __future__ import annotations
 __all__=['stat']
 
 _docstring2argparse_ignore_=['stat','network','binarize']
@@ -45,7 +51,7 @@ class network:
 	"""
 	_name_='network'
 	_shape_={'e':lambda x:tuple(x.nns)}
-	def _get_prop_shape_(self,propname):
+	def _get_prop_shape_(self,propname:str):
 		"""
 		Get shape of property from _shape_, use default (prefix with n) if not available.
 		"""
@@ -87,7 +93,7 @@ class network:
 			self.point={}
 		#Validation
 		self.check()
-	def check(self):
+	def check(self)->None:
 		"""
 		Validate self.
 		"""
@@ -107,7 +113,7 @@ class network:
 		assert all(len(self.point[x])==getattr(self,x+'n') for x in self.point)
 	#I/O
 	@classmethod
-	def from_file(cls,path):
+	def from_file(cls,path:str)->network:
 		"""
 		Load class instance from file.
 
@@ -147,7 +153,7 @@ class network:
 		params['nids']=[params['nids1'],params['nids2']]
 		del params['nids1'],params['nids2']
 		return cls(**params)
-	def to_file(self,path,compression="gzip",**ka):
+	def to_file(self,path:str,compression:str="gzip",**ka)->None:
 		"""
 		Save class instance to file.
 		

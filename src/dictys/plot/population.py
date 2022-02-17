@@ -97,7 +97,7 @@ def compute_reg_spec(d0,min_entropy=0.5,ncut=0.4,nmin=20,nmax_reg=10,select_stat
 	#CPM specificity
 	cpm_v=(cpm.T/(cpm.sum(axis=1)+1E-300)).T
 	
-	assert all([x.shape==na.shape for x in [va,cpm,cpm_v]])
+	assert all(x.shape==na.shape for x in [va,cpm,cpm_v])
 	assert (na>=0).all()
 	assert (va>=0).all() and (va<=1).all()
 	assert (cpm>=0).all()
@@ -247,7 +247,7 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 		raise ValueError('TF-cell type pair(s) have no targets in the specified direction: '+','.join(names[t1]))
 	t2=np.nonzero(t1<ntop)[0]
 	if len(t2)>0:
-		logging.warn('TF-cell type pair(s) have <{} targets in the specified direction: '.format(ntop)+','.join(names[t1]))
+		logging.warning('TF-cell type pair(s) have <{} targets in the specified direction: '.format(ntop)+','.join(names[t1]))
 	#Select target genes to show
 	t1=np.argpartition(net2,-ntop,axis=1)[:,-ntop:]
 	t1=np.array([t1[x,(net2 if direction!=0 else net)[x,t1[x]].argsort()[::-1]] for x in range(len(t1))])
@@ -279,19 +279,20 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 	ax=fig.add_axes([0,1-topheight*figscale/figsize[1],1, topheight*figscale/figsize[1]])
 	t1=np.array([color_type[x[1]] for x in selection])
 	t1=t1.reshape(1,*t1.shape)
-	ax.imshow(t1,aspect=topheight);
-	ax.set_xticks(np.arange(ns[0]));
-	ax.set_xticklabels(names,rotation=90);
+	ax.imshow(t1,aspect=topheight)
+	ax.set_xticks(np.arange(ns[0]))
+	ax.set_xticklabels(names,rotation=90)
 	ax.set_yticks([])
-	ax.tick_params(bottom=False,top=False,left=False,labeltop=True,labelbottom=False,length=0);
-	[x.set_visible(False) for x in ax.spines.values()]
+	ax.tick_params(bottom=False,top=False,left=False,labeltop=True,labelbottom=False,length=0)
+	for xi in ax.spines.values():
+		xi.set_visible(False)
 	#Panel for heatmap
 	ax=fig.add_axes([0,0,1, figsize1[1]/figsize[1]],sharex=ax)
-	ax.imshow(net.T,cmap=cmap_value,vmin=-vmax,vmax=vmax,aspect=aspect);
+	ax.imshow(net.T,cmap=cmap_value,vmin=-vmax,vmax=vmax,aspect=aspect)
 	gann2=np.nonzero([x in gann for x in names2])[0]
 	ax.set_yticks(gann2)
 	ax.set_yticklabels(names2[gann2])
-	ax.tick_params(bottom=False,top=False,left=True,labeltop=False,labelbottom=False);
+	ax.tick_params(bottom=False,top=False,left=True,labeltop=False,labelbottom=False)
 	
 	#Figure for colorbar
 	fig2,ax=plt.subplots(figsize=(0.15, 0.8))

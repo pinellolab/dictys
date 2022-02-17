@@ -6,11 +6,38 @@
 Classes for trajectory and points on trajectory
 """
 
-_docstring2argparse_ignore_=['trajectory','point']
+from __future__ import annotations
+from typing import Union,Tuple,IO,Callable
+import numpy.typing as npt
 
-def argpartition(a,kth,axis=-1,draw_order='undefined'):
+_docstring2argparse_ignore_=['argpartition','trajectory','point']
+
+
+def argpartition(a:npt.NDArray,kth:int,axis:int=-1,draw_order:str='undefined')->npt.NDArray:
+	"""
+	Performs numpy.argpartition with options to specify how to handle ties.
+
+	Parameters
+	----------
+	a:			numpy.ndarray
+		Array to perform argpartition
+	kth:		int
+		Index to partition
+	axis:		int
+		Axis to partition on
+	draw_order:	str
+		How to handle ties. Accepts:
+		* undefined:	Default behavior of numpy.argpartition
+		* random:		Random draw from ties
+		* error:		Raises a RuntimeError
+
+	Returns
+	-------
+	numpy.ndarray
+		Result of numpy.argpartition with custom handling of ties.
+	"""
 	import numpy as np
-	assert draw_order in {'undefined','original','random','inverse','error'}
+	assert draw_order in {'undefined','random','error'}
 	shape=a.shape
 	a2=np.swapaxes(a,axis,0)
 	shape2=a2.shape
@@ -38,7 +65,7 @@ def argpartition(a,kth,axis=-1,draw_order='undefined'):
 	return ans
 
 class trajectory:
-	def __init__(self,edges,lens):
+	def __init__(self,edges:npt.NDArray,lens:npt.NDArray)->None:
 		"""
 		Create state trajectory object. Only supports fully connected tree trajectory.
 
@@ -88,7 +115,7 @@ class trajectory:
 		t1=np.array(list(Counter(self.edges.ravel()).items()))
 		self.deg[t1[:,0]]=t1[:,1]
 	@staticmethod
-	def len_edge(dists,edges):
+	def len_edge(dists:npt.NDArray,edges:npt.NDArray)->npt.NDArray:
 		"""
 		Computes the length of each edge using points' distances to each state node
 
@@ -112,7 +139,7 @@ class trajectory:
 			ans[xi]=t1[np.isfinite(t1)].max()
 		return ans
 	@classmethod
-	def fromdist(cls,edges,dists):
+	def fromdist(cls,edges:npt.NDArray,dists:npt.NDArray)->trajectory:
 		"""
 		Create trajectory object from distance matrix betwen sample points and state nodes. Only supports fully connected tree trajectory.
 
@@ -124,7 +151,7 @@ class trajectory:
 			Distance matrix between each sample point on the graph and each node
 		"""
 		return cls(edges,cls.len_edge(dists,edges))
-	def topoint(self):
+	def topoint(self)->point:
 		"""
 		Convert trajectory object to point object on this trajectory.
 
@@ -134,7 +161,7 @@ class trajectory:
 			Point object converted.
 		"""
 		return point.fromnodes(self)
-	def conform_locs(self,locs,edges,rel_err=1E-7):
+	def conform_locs(self,locs:npt.NDArray,edges:npt.NDArray,rel_err:float=1E-7)->npt.NDArray:
 		"""
 		Conform point locations by clipping small deviations under float precision.
 
@@ -156,7 +183,7 @@ class trajectory:
 			raise ValueError(f'Some locs are beyond relative error {rel_err}.')
 		locs=np.clip(locs,0,self.lens[edges])
 		return locs
-	def linspace(self,start,end,n):
+	def linspace(self,start:int,end:int,n:int)->point:
 		"""
 		Find evenly spaced points on a path like np.linspace
 
@@ -179,7 +206,7 @@ class trajectory:
 		path=self.path(start,end)
 		locs=np.linspace(0,self.lens[[self.edgedict[path[x],path[x+1]][0] for x in range(len(path)-1)]].sum(),n)
 		return self.path_points(start,end,locs)
-	def path_points(self,start,end,lengths):
+	def path_points(self,start:int,end:int,lengths:npt.ArrayLike)->point:
 		"""
 		Find points at specific lengths on a path.
 
@@ -189,7 +216,7 @@ class trajectory:
 			Start nodes' IDs to indicate the path
 		end:	int
 			End nodes' IDs to indicate the path
-		lengths:	int
+		lengths:	numpy.ndarray(dtype=float)
 			Lengths of movement from the starting node towards the ending node as numpy.ndarray. Each length correspond to an output point.
 			For lengths greater than total length of path, point at the end node will be returned.
 
@@ -223,7 +250,7 @@ class trajectory:
 		ans_steps[aorder]=steps
 		ans_lengths[aorder]=lengths
 		return point(self,ans_steps,ans_lengths)
-	def path(self,start,end):
+	def path(self,start:int,end:int)->npt.NDArray:
 		"""
 		Find path from start to end node as list of node IDs
 
@@ -245,7 +272,7 @@ class trajectory:
 		assert 0<=end<self.nn
 		assert start!=end
 		return np.array(nx.shortest_path(self.g,start,end))		
-	def smoothened(self,data,*a,axis=-1,nodes=None,nodes_path=None,**ka):
+	def smoothened(self,data:npt.NDArray,*a,axis:int=-1,nodes:Union[list,None]=None,nodes_path:Union[Tuple[int,int],None]=None,**ka)->npt.NDArray:
 		"""
 		Create a smoothened/interpolated function of given data on trajectory nodes that computes values at provided points.
 
@@ -285,7 +312,7 @@ class trajectory:
 			data=data.swapaxes(axis,0)[nodes].swapaxes(axis,0)
 		assert data.shape[axis]==len(pts)
 		return pts.smoothened(data,*a,axis=axis,**ka)
-	def terminal_nodes(self):
+	def terminal_nodes(self)->npt.NDArray:
 		"""
 		Finds the terminal nodes (degree=1).
 
@@ -301,7 +328,7 @@ class trajectory:
 		return ans
 	#I/O
 	@classmethod
-	def from_fileobj(cls,f):
+	def from_fileobj(cls,f)->trajectory:
 		"""
 		Load object from file object
 
@@ -319,7 +346,7 @@ class trajectory:
 		params=[np.array(f['edges']),np.array(f['lens'])]
 		return cls(*params)
 	@classmethod
-	def from_file(cls,path):
+	def from_file(cls,path:str)->trajectory:
 		"""
 		Load object from file
 
@@ -338,7 +365,7 @@ class trajectory:
 			return cls.from_fileobj(path)
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(f)
-	def to_fileobj(self,f,compression="gzip",**ka):
+	def to_fileobj(self,f,compression:str="gzip",**ka)->None:
 		"""
 		Save object to file object
 
@@ -359,7 +386,7 @@ class trajectory:
 		p['compression']=compression
 		p['data']=self.edges
 		f.create_dataset('edges',**p)
-	def to_file(self,path,**ka):
+	def to_file(self,path:str,**ka)->None:
 		"""
 		Save object to file
 
@@ -377,7 +404,7 @@ class trajectory:
 			return self.to_fileobj(f,**ka)
 
 class point:
-	def __init__(self,traj,edges,locs,dist=None):
+	def __init__(self,traj:trajectory,edges:npt.NDArray,locs:npt.NDArray,dist:Union[npt.NDArray,None]=None):
 		"""
 		Point list on trajectory.
 
@@ -409,7 +436,7 @@ class point:
 		assert (dist>=0).all()
 		self.dist=dist
 	@classmethod
-	def from_dist(cls,traj,edges,dist):
+	def from_dist(cls,traj:trajectory,edges:npt.NDArray,dist:npt.NDArray)->point:
 		"""
 		Class conctructor from edges and distance to all nodes of each point.
 
@@ -433,7 +460,7 @@ class point:
 		locs=dist[np.arange(len(edges)),traj.edges[edges,0]]
 		return cls(traj,edges,locs,dist=dist)
 	@classmethod
-	def fromnodes(cls,traj):
+	def fromnodes(cls,traj:trajectory)->point:
 		"""
 		Convert trajectory nodes to points on the trajectory
 
@@ -455,9 +482,9 @@ class point:
 		locs=np.zeros(traj.nn,dtype=traj.lens.dtype)
 		locs[nodes]=indices[1]*traj.lens[edges]
 		return cls(traj,edges,locs,dist=traj.dist)
-	def copy(self):
+	def copy(self)->point:
 		return self.__class__(self.p,self.edges,self.locs,dist=self.dist)
-	def __sub__(self,other):
+	def __sub__(self,other:point)->npt.NDArray:
 		"""
 		Subtraction computes the distance matrix between all point pairs in two point lists.
 
@@ -504,7 +531,7 @@ class point:
 		assert ans.shape==(self.npt,other.npt)
 		assert (ans>=0).all()
 		return ans
-	def compute_dist(self):
+	def compute_dist(self)->npt.NDArray:
 		"""
 		Compute distance to every node on trajectory given locs
 
@@ -514,7 +541,7 @@ class point:
 			Distance matrix
 		"""
 		return self-self.fromnodes(self.p)
-	def perturb(self,scale=1):
+	def perturb(self,scale:float=1)->None:
 		"""
 		Perturb locations of points without changing order of points and nodes in the list. Overlapping points will have random order.
 
@@ -578,7 +605,7 @@ class point:
 			perturb_amount[xi]=np.random.rand(len(xi))*(bound[1]-bound[0])*scale+bound[0]
 		self.locs=self.p.conform_locs(self.locs+perturb_amount,self.edges)
 		self.dist=self.compute_dist()
-	def path_loc(self,nstart,nend,distpath=None):
+	def path_loc(self,nstart:int,nend:int,distpath:Union[npt.NDArray,None]=None)->npt.NDArray:
 		"""
 		Computes points' locations on a given path. Locations are computed after mapping each point to the path. Distances in branches away from the path are ignored (set to 0).
 
@@ -621,7 +648,7 @@ class point:
 	# 	t2=(loc[1]>=distpath)&(loc[1]>loc[0])&~t2
 	# 	ans[t2]*=-1
 	# 	return ans
-	def filter_path(self,nstart,nend):
+	def filter_path(self,nstart:int,nend:int)->npt.NDArray:
 		"""
 		Filters points to retain only those on the given path.
 
@@ -857,7 +884,7 @@ class point:
 	# 	assert (ans_nodegraph.sum(axis=0)>=1).all()
 	# 	assert not np.diag(ans_nodegraph).any()
 	# 	return ans_edges,ans_locs,ans_radius,ans_subsets,ans_nodegraph,ansname_subsets
-	def subsets(self,ncell,noverlap,dmax):
+	def subsets(self,ncell:int,noverlap:int,dmax:float)->Tuple[npt.NDArray,npt.NDArray,npt.NDArray,npt.NDArray,npt.NDArray]:
 		"""Constructs overlapping cell subsets as moving window for network reconstruction on each subset. Points in self should be cells.
 
 		Parameters
@@ -984,8 +1011,8 @@ class point:
 			t1[ans_subsets[xi],xi]=True
 		ans_subsets=t1
 		ansn_subsets=np.array([f'Subset{x+1}' for x in range(n)])
-		return [ans_edges,ans_locs,ans_subsets,ans_neighbors,ansn_subsets]
-	def subtraj(self,edges=None):
+		return (ans_edges,ans_locs,ans_subsets,ans_neighbors,ansn_subsets)
+	def subtraj(self,edges:Union[npt.NDArray,None]=None)->trajectory:
 		"""
 		Convert list of points to a finer trajectory by treating each point as a trajectory node.
 		Each terminal and branching node of trajectory must have one corresponding point.
@@ -1014,38 +1041,40 @@ class point:
 		if not isinstance(key,slice) and not hasattr(key,'__len__'):
 			raise TypeError('Key must be iterable with __len__.')
 		return self.__class__(self.p,self.edges[key],self.locs[key],dist=self.dist[key])
-	def __len__(self):
+	def __len__(self)->int:
 		return self.npt
-	def weight_linear(self,other):
-		"""
-		Smoothing function to compute data on other points with data on current (self's) points with linear interpolation between points.
+	# def weight_linear(self,other):
+	# 	"""
+	# 	Smoothing function to compute data on other points with data on current (self's) points with linear interpolation between points.
 
-		Parameters
-		----------
-		other: dictys.traj.point
-			Points to compute data for
+	# 	Parameters
+	# 	----------
+	# 	other: dictys.traj.point
+	# 		Points to compute data for
 
-		Returns
-		----------
-		numpy.ndarray(shape=[len(self),len(other)])
-			Weight of self's points on other's points.
-		"""
-		import numpy as np
-		n=len(other)
-		d=self-other
-		t1=np.argpartition(d,1,axis=0)[:2]
-		t2=np.array([d[t1[1],np.arange(n)],d[t1[0],np.arange(n)]])
-		t2=t2[0]/t2.sum(axis=0)
-		w=np.zeros((len(self),n),dtype=float)
-		w[t1[0],np.arange(n)]=t2[0]
-		w[t1[1],np.arange(n)]=1-t2[0]
-		return w
-	def weight_conv(self,other,radius,cut=0):
+	# 	Returns
+	# 	----------
+	# 	numpy.ndarray(shape=[len(self),len(other)])
+	# 		Weight of self's points on other's points.
+	# 	"""
+	# 	import numpy as np
+	# 	n=len(other)
+	# 	d=self-other
+	# 	t1=np.argpartition(d,1,axis=0)[:2]
+	# 	t2=np.array([d[t1[1],np.arange(n)],d[t1[0],np.arange(n)]])
+	# 	t2=t2[0]/t2.sum(axis=0)
+	# 	w=np.zeros((len(self),n),dtype=float)
+	# 	w[t1[0],np.arange(n)]=t2[0]
+	# 	w[t1[1],np.arange(n)]=1-t2[0]
+	# 	return w
+	def weight_conv(self,other:point,radius:float,cut:float=0)->npt.NDArray:
 		"""
 		Smoothing function to compute data on other points with data on current (self's) points with Gaussian kernel smoothing.
 
 		Parameters
 		----------
+		other:	dictys.traj.point
+			Other points to compute weight for
 		radius:	float
 			Radius or sigma of gaussian filter as distance
 		cut:	float
@@ -1070,7 +1099,7 @@ class point:
 				t1=(w>0)&(w<cut)
 		assert (w>=0).all() and (w<=1).all()
 		return w
-	def smoothen(self,data,*a,points=None,axis=-1,func_name='linear',nan='ignore',**ka):
+	def smoothen(self,data:npt.NDArray,*a,points:point=None,axis:int=-1,func_name:str='linear',nan:str='ignore',**ka)->npt.NDArray:
 		"""
 		Function to compute smoothened/interpolated values of other points based on data at current points. Used by self.smoothened.
 
@@ -1120,7 +1149,7 @@ class point:
 		assert ans.shape[:axis]==data.shape[:axis]
 		assert ans.shape[axis+1]==data.shape[axis+1]
 		return ans
-	def smoothened(self,data,*a,**ka):
+	def smoothened(self,data:npt.NDArray,*a,**ka)->Callable[point,npt.NDArray]:
 		"""
 		Creates a smoothened/interpolated function on data of self's points that computes values at other points
 
@@ -1142,7 +1171,7 @@ class point:
 		return partial(self.smoothen,data,*a,**ka)
 	#I/O
 	@classmethod
-	def from_fileobj(cls,traj,f):
+	def from_fileobj(cls,traj:trajectory,f)->point:
 		"""
 		Load object from file object
 
@@ -1162,7 +1191,7 @@ class point:
 		params=[np.array(f['edges']),np.array(f['locs'])]
 		return cls(traj,*params)
 	@classmethod
-	def from_file(cls,traj,path):
+	def from_file(cls,traj:trajectory,path:str)->point:
 		"""
 		Load object from file
 
@@ -1183,7 +1212,7 @@ class point:
 			return cls.from_fileobj(traj,path)
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(traj,f)
-	def to_fileobj(self,f,compression="gzip",**ka):
+	def to_fileobj(self,f,compression:str="gzip",**ka)->None:
 		"""
 		Save object to file object
 
@@ -1204,7 +1233,7 @@ class point:
 		p['compression']=compression
 		p['data']=self.locs
 		f.create_dataset('locs',**p)
-	def to_file(self,path,**ka):
+	def to_file(self,path:str,**ka)->None:
 		"""
 		Save object to file
 

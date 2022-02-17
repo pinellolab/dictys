@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+"""
+Utility functions
+"""
+
 __all__=['parallel','shell']
 
 from . import *

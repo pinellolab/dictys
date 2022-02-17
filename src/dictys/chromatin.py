@@ -62,11 +62,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	
 	#Run script for macs2
 	cmd = scriptpath+f" cellnames.txt {fi_bam} {fo_bam} {fo_bai} {fo_bed} {genome_size} {qcut} {nth}"
-	d2 = shell.cmdfile(cmd,
-					   [],
-					   infiles={'cellnames.txt': namestxt},
-					   quiet=False,
-					   cd=True)
+	d2 = shell.cmdfile(cmd,[],infiles={'cellnames.txt': namestxt},quiet=False,cd=True)
 	if d2 is None or len(d2)>0 or not all(isfile(x) for x in [fo_bam,fo_bai,fo_bed]):
 		raise RuntimeError('Macs2 failed.')
 
@@ -124,10 +120,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Union[st
 	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_wellington.sh')
 	fi_bam,fi_bai,fi_bed,fo_bed=[abspath(x) for x in [fi_bam,fi_bai,fi_bed,fo_bed]]
 	cmd = scriptpath+f" {fi_bam} {fi_bai} {fi_bed} {fo_bed} {cut} {nth} {npeakmax} {fi_blacklist}"
-	d2 = shell.cmdfile(cmd,
-					   [],
-					   quiet=False,
-					   cd=True)
+	d2 = shell.cmdfile(cmd,[],quiet=False,cd=True)
 	if d2 is None or len(d2)>0 or not all(isfile(x) for x in [fo_bed]):
 		raise RuntimeError('Wellington failed.')
 
@@ -228,10 +221,8 @@ def homer(fi_bed:str,fi_motif:str,fo_bed:str,fo_wellington:str,fo_homer:str,geno
 	fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer]]
 	cmd = scriptpath+f" {fi_bed} {fi_motif} {genome} {spath} {nth}"
 	d2 = shell.cmdfile(cmd,
-					   ['19-w.tsv','19-h.tsv','16-long.bed'],
-					   quiet=False,
-					   cd=True,
-					   sizelimit=None)
+		['19-w.tsv','19-h.tsv','16-long.bed'],
+		quiet=False,cd=True,sizelimit=None)
 	return _motif_postproc(d2,fo_bed,fo_wellington,fo_homer)
 	
 

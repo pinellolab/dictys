@@ -1,3 +1,7 @@
+"""
+Command line executor
+"""
+
 from docstring2argparse import docstringrunner
 docstringrunner(__package__)
 

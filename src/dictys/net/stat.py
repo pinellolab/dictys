@@ -5,11 +5,14 @@
 Statistics of networks for data visualization and export.
 """
 
+from __future__ import annotations
 import abc
-import dictys.traj
+from typing import Union,Callable,Tuple
+import numpy.typing as npt
+from dictys.traj import point,trajectory
+from dictys.net import network
 
-
-def _getitem(key,v):
+def _getitem(key,v:npt.NDArray)->npt.NDArray:
 	"""
 	Get items from numpy.array
 	key:	iterable of keys. Each key is a iterable or individual value.
@@ -28,7 +31,10 @@ def _getitem(key,v):
 
 
 class base(metaclass=abc.ABCMeta):
-	def __init__(self,names=None,label=None):
+	"""
+	Abstract base class for stat of network.
+	"""
+	def __init__(self,names:Union[list[npt.ArrayLike[str]],None]=None,label:Union[str,None]=None):
 		"""
 		Base class for statistics for each gene
 		names:	List of names of each axis of output stat, except last axis which is always time. Default is obtained from default_names function.
@@ -44,7 +50,7 @@ class base(metaclass=abc.ABCMeta):
 		self.names=[np.array(x) for x in names]
 		self.ndict=[dict(zip(x,range(len(x)))) for x in names]
 	@abc.abstractmethod
-	def compute(self,pts):
+	def compute(self,pts:point)->npt.NDArray:
 		"""
 		Use this function to compute stat values at each state or point
 		pts:	Point list instance of dictys.traj.point, or state list as list of int
@@ -52,14 +58,14 @@ class base(metaclass=abc.ABCMeta):
 		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 	@abc.abstractmethod
-	def default_names(self):
+	def default_names(self)->list[npt.NDArray[str]]:
 		"""
 		Use this function to determine the default names for each axis.
 		Note that only names shared with other stats will be visualized.
 		Return:
 		List of list of names for each axis.
 		"""
-	def default_lims(self,pts=None,names=None,expansion=0.02):
+	def default_lims(self,pts:point=None,names:Union[list[npt.ArrayLike[str]],None]=None,expansion:float=0.02)->npt.ArrayLike:
 		"""
 		Use this function to determine the default limits of the stat.
 		This implementation uses min/max of stat values.
@@ -86,34 +92,34 @@ class base(metaclass=abc.ABCMeta):
 		t1=(ans[1]-ans[0])*expansion
 		return [ans[0]-t1,ans[1]+t1]
 	@abc.abstractmethod
-	def default_label(self):
+	def default_label(self)->str:
 		"""
 		Use this function to determine the label of this stat
 		Return:
 		Label as str
 		"""
 	#Arithmetic operations between stats
-	def __add__(self,other):
+	def __add__(self,other:base)->base:
 		from operator import add
 		if isinstance(other,base):
 			return function(add,[self,other],label=f'({self.label})+({other.label})')
 		raise NotImplementedError
-	def __sub__(self,other):
+	def __sub__(self,other:base)->base:
 		from operator import sub
 		if isinstance(other,base):
 			return function(sub,[self,other],label=f'({self.label})-({other.label})')
 		raise NotImplementedError
-	def __mul__(self,other):
+	def __mul__(self,other:base)->base:
 		from operator import mul
 		if isinstance(other,base):
 			return function(mul,[self,other],label=f'({self.label})*({other.label})')
 		raise NotImplementedError
-	def __truediv__(self,other):
+	def __truediv__(self,other:base)->base:
 		from operator import truediv
 		if isinstance(other,base):
 			return function(truediv,[self,other],label=f'({self.label})/({other.label})')
 		raise NotImplementedError
-	def __getitem__(self, key):
+	def __getitem__(self, key)->base:
 		"""Subset stat as a substat"""
 		from functools import partial
 		if not isinstance(key, tuple):
@@ -137,8 +143,11 @@ class base(metaclass=abc.ABCMeta):
 		return function(partial(_getitem,keys),[self],names=names,label=self.label)
 
 class const(base):
+	"""
+	Show constant(/state-invariant) value for stat.
+	"""
 	isconst=True
-	def __init__(self,val,names,label='Constant',**ka):
+	def __init__(self,val:npt.NDArray,names:list[npt.ArrayLike[str]],label:str='Constant',**ka):
 		"""
 		Show constant(/state-invariant) value for stat
 		val:	Value to show
@@ -146,21 +155,24 @@ class const(base):
 		label:	Label of stat
 		ka:		Keyword arguments passed to parent class
 		"""
-		assert val.shape==tuple([len(x) for x in names])
+		assert val.shape==tuple(len(x) for x in names)
 		self.val=val
 		self.default_names_=names
 		self.default_label_=label
 		super().__init__(**ka)
-	def default_names(self):
+	def default_names(self)->list[npt.ArrayLike[str]]:
 		return self.default_names_
-	def default_label(self):
+	def default_label(self)->str:
 		return self.default_label_
-	def compute(self,pts):
+	def compute(self,pts:point)->npt.NDArray:
 		import numpy as np
 		return np.repeat(self.val.reshape(*self.val.shape,1),len(pts),axis=-1)
 
 class function(base):
-	def __init__(self,func,stats,isconst=None,**ka):
+	"""
+	Stat that is a function of other stat(s)
+	"""
+	def __init__(self,func:Callable[Tuple[npt.NDArray,...],npt.NDArray],stats:list[base],isconst:Union[bool,None]=None,**ka):
 		"""
 		Stat that is a function of other stat(s)
 		func:	Function to combine other stats. Should have self.compute=func(*[x.compute(...) for x in stats]).
@@ -173,7 +185,7 @@ class function(base):
 		self.func=func
 		self.stats=stats
 		if isconst is None:
-			isconst=all([hasattr(x,'isconst') and x.isconst for x in stats])
+			isconst=all(hasattr(x,'isconst') and x.isconst for x in stats)
 		self.isconst=isconst
 		super().__init__(**ka)
 	def default_names(self):
@@ -182,7 +194,7 @@ class function(base):
 		"""
 		from functools import reduce
 		from operator import and_
-		if any([len(x.names)!=len(self.stats[0].names) for x in self.stats[1:]]):
+		if any(len(x.names)!=len(self.stats[0].names) for x in self.stats[1:]):
 			raise NotImplementedError
 		names=[[set(z) for z in y] for y in zip(*[x.names for x in self.stats])]
 		names=[sorted(list(reduce(and_,x))) for x in names]
@@ -198,14 +210,17 @@ class function(base):
 		"""
 		n=len(pts)
 		ans=[x.compute(pts) for x in self.stats]
-		assert all([ans[x].ndim==len(self.stats[x].names)+1 for x in range(self.n)])
-		assert all([ans[x].shape==tuple([len(y) for y in self.stats[x].names]+[n]) for x in range(self.n)])
+		assert all(ans[x].ndim==len(self.stats[x].names)+1 for x in range(self.n))
+		assert all(ans[x].shape==tuple([len(y) for y in self.stats[x].names]+[n]) for x in range(self.n))
 		ans2=self.func(*ans)
 		assert ans2.shape==tuple([len(x) for x in self.names]+[n])
 		return ans2
 
 class fsinglestat(const):
-	def __init__(self,func_stat,stat,pts,**ka):
+	"""
+	Show constant value for stat by combining different points.
+	"""	
+	def __init__(self,func_stat:Callable[Tuple[npt.NDArray,...],npt.NDArray],stat:list[base],pts:point,**ka):
 		"""
 		Show constant value for stat by combining different points.
 		func_stat:	Function to combine different points to one for the stat.
@@ -217,19 +232,19 @@ class fsinglestat(const):
 		ka1.update(ka)
 		super().__init__(val,stat.names,**ka1)
 
-def finitial(stat,pts,**ka):
+def finitial(stat:base,pts:point,**ka)->base:
 	"""
 	Using initial value as a constant stat.
 	"""
-	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]] if isinstance(pts,dictys.traj.point) else [pts[0]],**ka)
+	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]] if isinstance(pts,point) else [pts[0]],**ka)
 
-def fmean(stat,pts,**ka):
+def fmean(stat:base,pts:point,**ka)->base:
 	"""
 	Use mean value for stat.
 	"""
 	return fsinglestat(lambda x,y:((x*y).sum(axis=-1)/y.sum(axis=-1)),stat,pts,**ka)
 
-def fdiff(stat,stat_base,label=None,**ka):
+def fdiff(stat:base,stat_base:base,label:str=None)->base:
 	"""
 	Use value difference for stat: stat-stat_base
 	"""
@@ -241,7 +256,10 @@ def fdiff(stat,stat_base,label=None,**ka):
 	return s1
 
 class fsmooth(base):
-	def __init__(self,stat,pts,smoothen_func,**ka):
+	"""
+	Base class for statistics obtained from smoothing of their values at points/states
+	"""
+	def __init__(self,stat:base,pts:point,smoothen_func:Tuple[str,Tuple,dict],**ka):
 		"""
 		Base class for statistics obtained from smoothing of their values at points/states
 		stat:	Stat to smoothen
@@ -250,9 +268,9 @@ class fsmooth(base):
 		"""
 		import numpy as np
 		assert len(smoothen_func)==3
-		if isinstance(pts,dictys.traj.point):
+		if isinstance(pts,point):
 			n=len(pts)
-		elif isinstance(pts,dictys.traj.trajectory):
+		elif isinstance(pts,trajectory):
 			n=pts.nn
 		else:
 			raise TypeError('pts must be dictys.traj.trajectory or distys.traj.point')
@@ -270,14 +288,17 @@ class fsmooth(base):
 		Return:
 		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		if not isinstance(pts,dictys.traj.point):
+		if not isinstance(pts,point):
 			raise TypeError('Smooth function only available at points not states.')
 		ans=self.func_smooth(points=pts)
 		assert ans.shape==tuple([len(x) for x in self.names]+[len(pts)])
 		return ans
 
 class fbinarize(base):
-	def __init__(self,stat,*a,statmask=None,posrate=0.01,signed=True,**ka):
+	"""
+	Convert continuous network stat to binary network stat.
+	"""
+	def __init__(self,stat:base,*a,statmask:Union[base,None]=None,posrate:float=0.01,signed:bool=True,**ka):
 		"""
 		Convert continuous network stat to binary network stat.
 		stat:		Stat for continuous network as numpy.ndarray(shape=(n_reg,n_target),dtype=float)
@@ -324,7 +345,10 @@ class fbinarize(base):
 		return ans
 
 class pseudotime(base):
-	def __init__(self,d,pts,*a,traj=None,**ka):
+	"""
+	Statistic to output pseudotime
+	"""
+	def __init__(self,d:network,pts:point,*a,traj:Union[trajectory,None]=None,**ka):
 		"""
 		Statistic to output pseudotime
 		d:		Dataset object
@@ -352,7 +376,7 @@ class pseudotime(base):
 		pseudotime at each point as np.array(shape=[len(x) for x in self.names]+[len(pts)])
 		"""
 		import numpy as np
-		if not isinstance(pts,dictys.traj.point):
+		if not isinstance(pts,point):
 			pts=self.traj.topoint()[pts]
 		ans=(pts-self.pts[[0]]).T
 		ans=np.repeat(ans,len(self.names[0]),axis=0)
@@ -360,16 +384,19 @@ class pseudotime(base):
 		return ans
 
 class lcpm(base):
-	def __init__(self,d,*a,cut=0.01,const=1,**ka):
+	"""
+	LogCPM stat. Specifically: log2 (CPM+const)
+	"""
+	def __init__(self,d:network,*a,cut:float=0.01,constant:float=1,**ka):
 		"""
 		LogCPM stat. Specifically: log2 (CPM+const)
-		d:		Dataset object
-		const:	Constant to add to CPM before log.
-		cut:	CPM below cut will be hidden
+		d:			Dataset object
+		constant:	Constant to add to CPM before log.
+		cut:		CPM below cut will be hidden
 		"""
 		self.d=d
 		self.cut=cut
-		self.const=const
+		self.const=constant
 		super().__init__(*a,**ka)
 	def default_names(self):
 		return [self.d.nname]
@@ -381,7 +408,7 @@ class lcpm(base):
 		log2(CPM+const) as np.array(shape=(n_gene,len(pts)))
 		"""
 		import numpy as np
-		if isinstance(pts,dictys.traj.point):
+		if isinstance(pts,point):
 			raise ValueError('lcpm should not be computed at any point. Use existing states or wrap with smooth instead.')
 
 		t1=set(self.d.nname)
@@ -403,7 +430,10 @@ class lcpm(base):
 		return ans
 
 class sprop(base):
-	def __init__(self,d,ptype,pname,*a,names_pref=[],**ka):
+	"""
+	Base class of state dependent properties directly read from dataset object
+	"""
+	def __init__(self,d:network,ptype:str,pname:str,*a,names_pref:list[str]=[],**ka):
 		"""
 		Base class of state dependent properties directly read from dataset object
 		d:		Dataset object
@@ -424,7 +454,7 @@ class sprop(base):
 		t1=[d.prop[ptype][pname].ndim,len(names_pref)+len(names)+sid.sum()]
 		if t1[0]!=t1[1]:
 			raise ValueError("Incorrect prefix dimension for property {}. Final dimension: {}. Correct dimension: {}.".format(pname,t1[1],t1[0]))
-		t1=[d.prop[ptype][pname].shape[:len(names_pref)],tuple([len(x) for x in names_pref])]
+		t1=[d.prop[ptype][pname].shape[:len(names_pref)],tuple(len(x) for x in names_pref)]
 		if t1[0]!=t1[1]:
 			raise ValueError("Incorrect prefix shape for property {}. Final shape: {}. Correct shape: {}.".format(pname,t1[1],t1[0]))
 		names=names_pref+names
@@ -445,7 +475,7 @@ class sprop(base):
 		Networks as np.array(shape=(...,len(pts)))
 		"""
 		import numpy as np
-		if isinstance(pts,dictys.traj.point):
+		if isinstance(pts,point):
 			raise ValueError('Property should not be computed at any point. Use existing states or wrap with smooth instead.')
 		#Load individual networks for each node
 		ans=[]
@@ -454,13 +484,16 @@ class sprop(base):
 			for xj in self.sid[::-1]:
 				ans1=np.take(ans1,xi,axis=xj)
 			ans.append(ans1)
-		assert all([x.shape==ans[0].shape for x in ans[1:]])
+		assert all(x.shape==ans[0].shape for x in ans[1:])
 		ans=np.array(ans)
 		ans=ans.transpose(*list(range(1,ans.ndim)),0)
 		return ans
 
 class net(sprop):
-	def __init__(self,d,*a,varname='w',**ka):
+	"""
+	Compute all edge weights of whole network with binarization if specified.
+	"""
+	def __init__(self,d:network,*a,varname:str='w',**ka):
 		"""
 		Compute all edge weights of whole network with binarization if specified.
 		varname:	Variable name used for network
@@ -469,7 +502,10 @@ class net(sprop):
 		super().__init__(d,'es',varname,*a,label='Network edge strength',**ka)
 
 class fcentrality_base(base):
-	def __init__(self,statnet,func,directed=False,roleaxis=0,label=None):
+	"""
+	Base class for centrality measure from network stat
+	"""
+	def __init__(self,statnet:base,func:Callable,directed:bool=False,roleaxis:int=0,label:Union[str,None]=None):
 		"""
 		Base class for centrality measure from network stat
 		statnet:	Stat for network
@@ -514,8 +550,10 @@ class fcentrality_base(base):
 		return ans
 
 class fcentrality_degree(base):
-	"""Use roleaxis=0 for outdegree and =1 for indegree."""
-	def __init__(self,statnet,statmask=None,roleaxis=0):
+	"""
+	Degree centrality stat for network.
+	"""
+	def __init__(self,statnet:base,statmask:Union[base,None]=None,roleaxis:int=0):
 		"""
 		Degree centrality stat for network.
 		statnet:	stat for network
@@ -546,14 +584,14 @@ class fcentrality_degree(base):
 		assert dynet.shape==(len(self.names[0]),len(pts))
 		return dynet
 
-def fcentrality_eigenvector(statnet,label='Eigenvalue centrality',**ka):
+def fcentrality_eigenvector(statnet:base,label:str='Eigenvalue centrality',**ka)->base:
 	"""
 	Eigenvalue centrality stat
 	statnet:	stat for network
 	"""
 	import networkx as nx
 	return fcentrality_base(statnet,nx.eigenvector_centrality,label=label,**ka)
-def fcentrality_betweenness(statnet,label='Betweenness centrality',**ka):
+def fcentrality_betweenness(statnet:base,label:str='Betweenness centrality',**ka)->base:
 	"""
 	Betweenness centrality stat
 	statnet:	stat for network
@@ -561,7 +599,7 @@ def fcentrality_betweenness(statnet,label='Betweenness centrality',**ka):
 	import networkx as nx
 	print('Betweenness centrality: very slow!')
 	return fcentrality_base(statnet,nx.betweenness_centrality,label=label,**ka)
-def fcentrality_closeness(statnet,label='Closeness centrality',**ka):
+def fcentrality_closeness(statnet:base,label:str='Closeness centrality',**ka)->base:
 	"""
 	Closeness centrality stat
 	statnet:	stat for network
@@ -570,17 +608,20 @@ def fcentrality_closeness(statnet,label='Closeness centrality',**ka):
 	print('Closeness centrality: very slow!')
 	return fcentrality_base(statnet,nx.closeness_centrality,label=label,**ka)
 
-def flnneighbor(statnet,label='Log2 (Outdegree + 1)',const=1,**ka):
+def flnneighbor(statnet:base,label:str='Log2 (Outdegree + 1)',constant:float=1,**ka)->base:
 	"""
 	Log2 outdegree centrality stat. Specifically, Log2 (Outdegree + const)
 	statnet:	stat for network
-	const:		Constant to add before log2.
+	constant:	Constant to add before log2.
 	"""
 	import numpy as np
-	return function(lambda x:np.log2(x+const),[fcentrality_degree(statnet,**ka)],label=label)
+	return function(lambda x:np.log2(x+constant),[fcentrality_degree(statnet,**ka)],label=label)
 
 class flayout_base(base):
-	def __init__(self,statnet,layout_func,ndim=2,pts=None,netscale=1,**ka):
+	"""
+	Compute layout coordinates of nodes from network.
+	"""
+	def __init__(self,statnet:base,layout_func:Callable[npt.NDArray,npt.NDArray],ndim:int=2,pts:point=None,netscale:float=1,**ka):
 		"""
 		Compute layout coordinates of nodes from network.
 		statnet:	stat of network edge weight
@@ -613,7 +654,7 @@ class flayout_base(base):
 		return self.default_names_
 	def default_label(self):
 		return 'Coordinates'
-	def init_pos(self,m,sep=1,always=[]):
+	def init_pos(self,m:npt.NDArray,sep:float=1,always:list[int]=[])->npt.NDArray:
 		"""
 		Initialize node positions for the initial network.
 		m:	Directed network edge matrix as numpy.array(shape=(n_node,n_node))
@@ -659,12 +700,12 @@ class flayout_base(base):
 		for xi in range(2):
 			ans[nids]=self.func(m1,ans[nids])
 		return ans
-	def compute_all(self,nodrop_reg=False,abs=True,scale='size',rand_expand=0.1):		# noqa: C901
+	def compute_all(self,nodrop_reg:bool=False,sabs:bool=True,scale:str='size',rand_expand:float=0.1)->None:		# noqa: C901
 		"""
 		Compute node locations for all time points.
 
 		nodrop_reg:	Whether to keep regulators even if they do not have any edge
-		abs:		Whether to use the absolute value of edge strength. If not, uses raw value where negative values are weaker than positive.
+		sabs:		Whether to use the absolute value of edge strength. If not, uses raw value where negative values are weaker than positive.
 		scale:		How to scale network layout coordindates. Accepts:
 			none:	No scaling
 			size:	Use fixed average distance from figure center
@@ -677,7 +718,7 @@ class flayout_base(base):
 		tmap0=None
 
 		stat=self.stat.compute(self.pts)
-		if abs:
+		if sabs:
 			stat=np.abs(stat)
 		namemap=[[self.ndict[0][x] for x in self.stat.names[y]] for y in range(2)]
 		m=np.zeros((n,n,len(self.pts)),dtype=float)
@@ -746,18 +787,17 @@ class flayout_base(base):
 			ans2[tmap]=ans1
 			ans.append(ans2)
 		self.pos=np.array(ans).transpose(1,2,0)
-	def ptsmap(self,pts):
+	def ptsmap(self,pts:point)->npt.NDArray:
 		"""
 		Maps points to known points.
 		"""
 		import numpy as np
-		if isinstance(pts,dictys.traj.point):
-			#Map given points
-			t1=[np.nonzero(x)[0] for x in pts-self.pts==0]
-			t1=np.array([x[0] for x in t1 if len(x)>0])
-			return t1
-		else:
+		if not isinstance(pts,point):
 			return None
+		#Map given points
+		t1=[np.nonzero(x)[0] for x in pts-self.pts==0]
+		t1=np.array([x[0] for x in t1 if len(x)>0])
+		return t1
 	def compute(self,pts):
 		"""
 		Computes node coordinates from the provided layout for states or known points
@@ -765,7 +805,7 @@ class flayout_base(base):
 		Return:
 		Node coordindates as numpy.array(shape=(n,n_dim,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		if isinstance(pts,dictys.traj.point):
+		if isinstance(pts,point):
 			#Map given points to self.pts
 			pts2=self.ptsmap(pts)
 			if pts2 is None or len(pts2)!=len(pts):

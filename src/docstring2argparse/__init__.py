@@ -1,3 +1,7 @@
+"""
+Converts docstring and typing to command-line interface
+"""
+
 import argparse
 
 class function_parser_base:
@@ -34,8 +38,8 @@ class function_parser_base:
 		assert isinstance(ans[0],str) or ans[0] is None
 		assert isinstance(ans[1],str) or ans[1] is None
 		assert isinstance(ans[2],list) or ans[2] is None
-		assert all([x is None or (isinstance(x,tuple) and len(x)==4 and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None) and ((isinstance(x[3],tuple) and len(x[3])==2 and (x[3][0] is None or isinstance(x[3][0],bool) and (x[3][1] is None or x[3][0]==True))) or x[3] is None)) for x in ans[2]])
-		assert ans[3] is None or (isinstance(ans[3],tuple) and len(ans[3])==3 and (isinstance(ans[3][0],str) or ans[3][0] is None) and (isinstance(ans[3][2],str) or ans[3][2] is None)) or all([x is None or (isinstance(x,tuple) and len(x) in {3,4} and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None)) for x in ans[3]])
+		assert all(x is None or (isinstance(x,tuple) and len(x)==4 and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None) and ((isinstance(x[3],tuple) and len(x[3])==2 and (x[3][0] is None or isinstance(x[3][0],bool) and (x[3][1] is None or x[3][0] is True))) or x[3] is None)) for x in ans[2])
+		assert ans[3] is None or (isinstance(ans[3],tuple) and len(ans[3])==3 and (isinstance(ans[3][0],str) or ans[3][0] is None) and (isinstance(ans[3][2],str) or ans[3][2] is None)) or all(x is None or (isinstance(x,tuple) and len(x) in {3,4} and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None)) for x in ans[3])
 		return ans
 	def _parse(self,func):
 		"""
@@ -89,8 +93,6 @@ class function_parser_docstring_numpy(function_parser_base):
 		return document
 	@classmethod
 	def _parse(cls,func):
-		from os import linesep
-		import numpy as np
 		from textwrap import dedent
 		#Return buffer
 		ans=[None,None,None,None]
@@ -103,12 +105,13 @@ class function_parser_docstring_numpy(function_parser_base):
 		#Sections to ignore
 		secs_hide={'yields','receives'}
 		#Extract needed sections
-		secs={x:list(filter(lambda y:y.tagname=='section' and y['names'][0]==x,d)) for x in secs}
+		secs={x:list(filter(lambda y:y.tagname=='section' and y['names'][0]==x,d)) for x in secs}		# pylint: disable=W0640
 		secs={x:y for x,y in secs.items() if len(y)>0}
-		assert all([len(x)==1 for x in secs.values()])
+		assert all(len(x)==1 for x in secs.values())
 		#Remove sections
 		t1=list(filter(lambda x:x.tagname=='section' and x['names'][0] in set(secs)|secs_hide,d))
-		[d.remove(x) for x in t1]
+		for xi in t1:
+			d.remove(xi)
 		#Short description
 		t1=list(filter(lambda x:x.tagname=='paragraph',d))
 		if len(t1)>0:
@@ -131,10 +134,10 @@ class function_parser_docstring_numpy(function_parser_base):
 			d=d[0]
 			assert [x.tagname for x in d]==['title','definition_list']
 			d=d[1]
-			assert all([x.tagname=='definition_list_item' for x in d])
-			assert all([[y.tagname for y in x]==['term', 'definition'] for x in d])
+			assert all(x.tagname=='definition_list_item' for x in d)
+			assert all([y.tagname for y in x]==['term', 'definition'] for x in d)
 			d=[[y.astext().strip() for y in x] for x in d]
-			assert all([len(x[0].split(':'))==2 for x in d])
+			assert all(len(x[0].split(':'))==2 for x in d)
 			d=[[x[0].split(':')[0].strip(),x[0].split(':')[1].strip(),x[1],None] for x in d]
 			d=[tuple(x) if len(x[1])>0 else tuple([x[0],None]+x[2:]) for x in d]
 			ans[2+xi[1]]=d
@@ -145,7 +148,7 @@ class function_parser_union(function_parser_base):
 	Function parser that combines parsed results from multiple parsers. Complement results are combined. Conflicts are not allowed.
 	"""
 	def __init__(self,parsers):
-		assert all([isinstance(x,function_parser_base) for x in parsers])
+		assert all(isinstance(x,function_parser_base) for x in parsers)
 		self.parsers=parsers
 	@classmethod
 	def union(cls,val):
@@ -153,19 +156,19 @@ class function_parser_union(function_parser_base):
 		if len(v1)==0:
 			#No known values
 			return None
-		elif len(v1)==1:
+		if len(v1)==1:
 			#Single known value
 			return v1[0]
 		#Confirm identical types
 		t1=type(v1[0])
-		assert all([type(x)==t1 for x in v1[1:]])
-		if all([x==v1[0] for x in v1[1:]]):
+		assert all(type(x)==t1 for x in v1[1:])		# pylint: disable=C0123
+		if all(x==v1[0] for x in v1[1:]):
 			#Identical values
 			return v1[0]
 		#Identical lengths
-		assert all([hasattr(x,'__len__') for x in v1])
+		assert all(hasattr(x,'__len__') for x in v1)
 		t1=len(v1[0])
-		assert all([len(x)==t1 for x in v1[1:]])
+		assert all(len(x)==t1 for x in v1[1:])
 		#Recursive union
 		return type(v1[0])([cls.union(x) for x in zip(*v1)])
 	def _parse(self,func):
@@ -245,14 +248,13 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 	argparse.ArgumentParser
 		Command line argument parser for module
 	"""
-	import argparse
 	from os import linesep
 	#Find functions & modules
 	f,m=get_functions(pkgname,parser,**ka)
 	#Parsers
-	p=dict()
+	p={}
 	#Subparsers
-	ps=dict()
+	ps={}
 	p[pkgname]=argparse.ArgumentParser(prog=pkgname,description=m[pkgname],**ka_argparse)
 	ps[pkgname]=p[pkgname].add_subparsers(help='sub-commands',dest='subcommand',required=True)
 
@@ -269,7 +271,7 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 			tka=dict(ka_argparse)
 			if m[t2] is not None:
 				tka['help']=m[t2]
-			p[t2]=ps[t3].add_parser(t2.split('.')[-1],**tka)
+			p[t2]=ps[t3].add_parser(t2.rsplit('.',maxsplit=1)[-1],**tka)
 			ps[t2]=p[t2].add_subparsers(help='sub-commands',dest='subcommand',required=True)
 		#Add subparser for this function
 		t2='.'.join(t1[:-1])

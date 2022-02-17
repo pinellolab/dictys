@@ -1,22 +1,22 @@
 #!/usr/bin/python3
 
+"""
+Module for parallel processing
+"""
+
 import multiprocessing
 
 autocount = multiprocessing.cpu_count
 
 
 def autopooler_caller(a):
+	"""
+	Caller for pool function
+	"""
 	return a[0](*a[1], **a[2])
 
 
-def autopooler(n,
-			   it,
-			   *a,
-			   chunksize=1,
-			   dummy=False,
-			   return_iter=False,
-			   unordered=False,
-			   **ka):
+def autopooler(n,it,*a,chunksize=1,dummy=False,return_iter=False,unordered=False,**ka):
 	"""Uses multiprocessing.Pool or multiprocessing.dummy.Pool to run iterator in parallel.
 
 	Parameters
@@ -44,12 +44,11 @@ def autopooler(n,
 		Results returned by function(\*tuple,\*\*dict), in same order of the iterator if not unordered.
 
 	"""
-	import multiprocessing
 	import logging
 	if dummy:
 		import multiprocessing.dummy as m
 	else:
-		import multiprocessing as m
+		m=multiprocessing
 	if n == 0:
 		n = autocount()
 		logging.info('Using {} threads'.format(n))
