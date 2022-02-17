@@ -6,9 +6,8 @@ Visualization panels of networks
 """
 
 import abc
-from dictys.net import stat
 from typing import Union
-from collections.abc import Sequence
+from dictys.net import stat
 
 class base(metaclass=abc.ABCMeta):
 	def __init__(self,ax,pts):
@@ -66,7 +65,7 @@ class overlay(base):
 			Panel objects to draw on the same panel
 		"""
 		assert len(panels)>=1
-		assert all([isinstance(x,base) for x in panels])
+		assert all(isinstance(x,base) for x in panels)
 		self.panels=panels
 		super().__init__(ax,pts)
 	def init(self):
@@ -80,8 +79,8 @@ class overlay(base):
 
 class statscatter(base):
 	def __init__(self,ax,pts,statx,staty,names:Union[list[str],None]=None,annotate:Union[list[str],dict[str,str]]=[],
-			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict=dict(),statka:dict=dict(),
-				staty2=None,scatterka2:dict=dict(),aspect:Union[float,None]=None):
+			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict={},statka:dict={},
+			staty2=None,scatterka2:dict={},aspect:Union[float,None]=None):
 		"""
 		Draw scatter plots from two stats.
 
@@ -124,11 +123,11 @@ class statscatter(base):
 		from functools import reduce
 		from operator import and_
 		super().__init__(ax,pts)
-		if not all([isinstance(x,stat.base) for x in statka.values()]):
+		if not all(isinstance(x,stat.base) for x in statka.values()):
 			raise TypeError('All values of statka must be a stat.')
-		if any([x is not None and len(x.names)!=1 for x in [statx,staty,staty2]]):
+		if any(x is not None and len(x.names)!=1 for x in [statx,staty,staty2]):
 			raise ValueError('Stat locations must be 1-dimensional.')
-		if any([len(x.names)<1 for x in statka.values()]):
+		if any(len(x.names)<1 for x in statka.values()):
 			raise ValueError('Stat parameters must be at least 1-dimensional.')
 		#Dot names and annotations
 		t1=set(statx.names[0])&set(staty.names[0])
@@ -152,7 +151,7 @@ class statscatter(base):
 		t1=np.nonzero([x not in self.namesdict for x in annotate])[0]
 		if len(t1)>0:
 			raise ValueError('TF(s) not found: {}'.format(','.join([annotate[x] for x in t1])))
-		if type(annotate) is dict:
+		if isinstance(annotate,dict):
 			self.annotate={self.namesdict[x]:y for x,y in annotate.items()}
 		else:
 			self.annotate={self.namesdict[x]:x for x in annotate}
@@ -161,7 +160,7 @@ class statscatter(base):
 		if staty2 is not None:
 			#Second Y
 			self.stats.append(staty2)
-		assert all([isinstance(x,stat.base) for x in self.stats])
+		assert all(isinstance(x,stat.base) for x in self.stats)
 		self.scatterka=scatterka
 		self.statka=statka
 		self.aspect=aspect
@@ -179,8 +178,8 @@ class statscatter(base):
 		import numpy as np
 		#Prepare autolimits
 		lim=[self.stats[x].default_lims(pts=self.pts,names=[self.names]) for x in range(self.ny+1)]
-		assert len(lim)==self.ny+1 and all([len(x)==2 for x in lim])
-		for xi in range(len(lim)):
+		assert len(lim)==self.ny+1 and all(len(x)==2 for x in lim)
+		for xi in range(len(lim)):		# pylint: disable=C0200
 			if np.isnan(lim[xi]).any() or lim[xi][0]==lim[xi][1]:
 				lim[xi]=[0,1]
 		lim=np.array(lim)
@@ -251,23 +250,23 @@ class statscatter(base):
 		"""
 		#Compute values at point from nodes
 		import numpy as np
-		if force or not all([hasattr(x,'isconst') and x.isconst for x in self.stats]):
+		if force or not all(hasattr(x,'isconst') and x.isconst for x in self.stats):
 			data=[self.stats[x].compute(pts) for x in range(self.ny+1)]
-			assert all([data[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1)])
+			assert all(data[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1))
 			data=[data[x][[self.stats[x].ndict[0][y] for y in self.names]] for x in range(self.ny+1)]
-			assert all([x.shape==data[0].shape for x in data[1:]])
+			assert all(x.shape==data[0].shape for x in data[1:])
 			data=np.array(data)
 		else:
 			data=None
 
 		#Compute stat based parameters
 		param={x:y.compute(pts) for x,y in self.statka.items() if force or not (hasattr(y,'isconst') and y.isconst)}
-		assert all([param[x].shape==tuple([len(y) for y in self.statka[x].names]+[pts.npt]) for x in param])
+		assert all(param[x].shape==tuple([len(y) for y in self.statka[x].names]+[pts.npt]) for x in param)
 		param={x:param[x][[self.statka[x].ndict[0][y] for y in self.names]] for x in param}
 		if data is not None:
-			assert all([x.shape[0]==data[0].shape[0] for x in param.values()])
+			assert all(x.shape[0]==data[0].shape[0] for x in param.values())
 		return [data,param]
-	def draw(self,t,force=False):
+	def draw(self,t,force=False):		# pylint: disable=W0221
 		"""Draws the changing part of given frame at given trajectory location.
 
 		Parameters
@@ -314,7 +313,7 @@ class statscatter(base):
 		return objs
 
 class statplot_static(statscatter):
-	def __init__(self,ax,pts,statx,staty,colors,annotate=[],plotka=dict(),plotka2=dict(),**ka):
+	def __init__(self,ax,pts,statx,staty,colors,annotate=[],plotka={},plotka2={},**ka):
 		"""
 		Draw constant line plots from two stats. This is a static plot and no redraw takes place.
 
@@ -348,7 +347,7 @@ class statplot_static(statscatter):
 		# lim=self.autolimits()
 		#Prepare curve data
 		ans=[]
-		data,param=self.get_data(self.pts,force=True)
+		data,_=self.get_data(self.pts,force=True)
 		isshow=np.isfinite(data)
 		isshow=isshow[1:]&isshow[0]
 		#Draw curves as initial panel and prepare pointers
@@ -377,11 +376,11 @@ class statplot_static(statscatter):
 		if self.ax.spines['top'].get_visible():
 			self.ax.tick_params(top=True,which='both')
 		return []
-	def draw(self,*a,**ka):
+	def draw(self,*a,**ka):		# pylint: disable=W0613
 		return []
 
 class statplot(overlay):
-	def __init__(self,ax,pts,statx,staty,names,cmap='tab10',pointer=True,plotka=dict(),pointerka={'s':20,'zorder':99}):
+	def __init__(self,ax,pts,statx,staty,names,cmap='tab10',pointer=True,plotka={},pointerka={'s':20,'zorder':99}):
 		"""
 		Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
 
@@ -422,7 +421,7 @@ class statplot(overlay):
 		return super().__init__(ax,pts,panels[::-1])
 
 class cellscatter_scatter(statscatter):
-	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka=dict(),aspect=1,**ka):
+	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka={},aspect=1,**ka):
 		"""
 		Draw scatter plots of cells.
 
@@ -459,7 +458,7 @@ class cellscatter_scatter(statscatter):
 		ctypelist=sorted(list(set(ctype)))
 		nctype=len(ctypelist)
 		if isinstance(cmap,dict):
-			assert all([x in cmap for x in ctypelist])
+			assert all(x in cmap for x in ctypelist)
 		elif nctype>1:
 			cmap=dict(zip(ctypelist,get_cmap(cmap,nctype)))
 		else:
@@ -502,9 +501,6 @@ class cellscatter_pointer(statscatter):
 		ka:			dict
 			Keyword arguments scatterka for drawing average cell pointer with dictys.plot.panel.statscatter
 		"""
-		import numpy as np
-		from dictys.plot import get_cmap
-		#X&Y coordindates
 		statx,staty=[stat.function(lambda *x:((x[0]*x[1]).sum(axis=0)/x[1].sum(axis=0)).reshape(1,-1),[y,statw],names=[['pointer']]) for y in [statx,staty]]
 		super().__init__(ax,pts,statx,staty,scatterka=ka)
 
@@ -532,7 +528,6 @@ class cellscatter(overlay):
 		pointerka:	dict
 			Keyword arguments for ax.scatter for pointers.
 		"""
-		import numpy as np
 		#X&Y coordindates
 		statx=stat.const(d.prop['c']['coord'][0],[d.cname],label='Dim1')
 		staty=stat.const(d.prop['c']['coord'][1],[d.cname],label='Dim2')
@@ -547,7 +542,7 @@ class cellscatter(overlay):
 		return super().__init__(ax,pts,panels[::-1])
 
 class statheatmap(base):
-	def __init__(self,ax,pts,stat,names=None,annotate=[None,None],lim=None,cmap_sym=True,**ka):
+	def __init__(self,ax,pts,stat1,names=None,annotate=[None,None],lim=None,cmap_sym=True,**ka):
 		"""
 		Draw dynamic heatmap for a single stat.
 
@@ -557,7 +552,7 @@ class statheatmap(base):
 			Axes to draw on
 		pts:		dictys.traj.point
 			Points of path to visualize network
-		stat:		dictys.net.stat.base
+		stat1:		dictys.net.stat.base
 			Stat instance to draw. Must be two-dimensional.
 		names:		[list of str,list of str] or None
 			Names to show. Defaults to all.
@@ -572,15 +567,15 @@ class statheatmap(base):
 		"""
 		import numpy as np
 		super().__init__(ax,pts)
-		self.stat=stat
+		self.stat=stat1
 		#Rows & columns to show
 		if names is None:
 			names=[None,None]
-		assert len(stat.names)==2
+		assert len(stat1.names)==2
 		for xi in range(2):
 			if names[xi] is None:
-				names[xi]=stat.names[xi]
-		t1=[np.nonzero([x not in stat.ndict[y] for x in names[y]])[0] for y in range(2)]
+				names[xi]=stat1.names[xi]
+		t1=[np.nonzero([x not in stat1.ndict[y] for x in names[y]])[0] for y in range(2)]
 		if len(t1[0])>0:
 			raise ValueError('Regulator(s) not found: {}'.format(','.join([names[0][x] for x in t1[0]])))
 		if len(t1[1])>0:
@@ -599,7 +594,7 @@ class statheatmap(base):
 			raise ValueError('Target(s) to annotate not found: {}'.format(','.join([annotate[1][x] for x in t1[1]])))
 		self.annotate=annotate
 		if lim is None:
-			lim=stat.default_lims(pts)
+			lim=stat1.default_lims(pts)
 			if cmap_sym:
 				lim=np.abs(lim).max()
 				lim=[-lim,lim]
@@ -612,7 +607,6 @@ class statheatmap(base):
 		# else:
 		# 	self.g_ann={self.nametdict[x]:x for x in g_ann}
 	def get_data(self,pts):
-		import numpy as np
 		data=self.stat.compute(pts)
 		data=data[[self.stat.ndict[0][x] for x in self.names[0]]][:,[self.stat.ndict[1][x] for x in self.names[1]]]
 		return data
@@ -695,7 +689,8 @@ class network_edge_old(base):
 			# t3=[self.statloc.ndict[0][self.statnet.names[x][t1[x][xi]]] for x in range(2)]
 			self.objs[xi].set_data(x=loc[t3[0],0],y=loc[t3[0],1],dx=loc[t3[1],0]-loc[t3[0],0],dy=loc[t3[1],1]-loc[t3[0],1])
 			self.objs[xi].set_alpha(1)
-		[x.set_alpha(0) for x in self.objs[len(t1[0]):]]
+		for xi in self.objs[len(t1[0]):]:
+			xi.set_alpha(0)
 		return self.objs
 
 class network_edge(base):
@@ -740,16 +735,16 @@ class network_edge(base):
 				self.objs.append(self.ax.arrow(loc[t3[0],0],loc[t3[0],1],loc[t3[1],0]-loc[t3[0],0],loc[t3[1],1]-loc[t3[0],1],**self.ka))
 		#Use last frame arrow count to determin objects for redraw
 		if len(t1[0])<self.nlast:
-			[x.set_alpha(0) for x in self.objs[len(t1[0]):self.nlast]]
+			for xi in self.objs[len(t1[0]):self.nlast]:
+				xi.set_alpha(0)
 			t2=self.nlast
 			self.nlast=len(t1[0])
 			return self.objs[:t2]
-		else:
-			self.nlast=len(t1[0])
-			return self.objs[:self.nlast]
+		self.nlast=len(t1[0])
+		return self.objs[:self.nlast]
 
 class network(overlay):
-	def __init__(self,ax,pts,statloc,statnet,nodeka=dict(),edgeka=dict()):
+	def __init__(self,ax,pts,statloc,statnet,nodeka={},edgeka={}):
 		"""
 		Draws overlay plot of network.
 
@@ -772,7 +767,7 @@ class network(overlay):
 		"""
 		panels=[]
 		#Scatter
-		nodeka0={'scatterka':dict()}
+		nodeka0={'scatterka':{}}
 		if 'scatterka' in nodeka:
 			nodeka=dict(nodeka)
 			nodeka0['scatterka'].update(nodeka['scatterka'])
@@ -802,7 +797,7 @@ class animate_generic:
 		panels:	list of dictys.plots.panel.base
 			Panels to animate
 		"""
-		assert all([isinstance(x,base) for x in panels])
+		assert all(isinstance(x,base) for x in panels)
 		self.panels=panels
 		self.fig=fig
 		self.hasinit=False
@@ -816,12 +811,10 @@ class animate_generic:
 		list of artists
 			Artists that may be redrawn in the future frames
 		"""
-		from contextlib import suppress
 		if self.hasinit:
 			return []
 		objs=[]
-		for xi0 in range(len(self.panels)):
-			xi=self.panels[xi0]
+		for xi in self.panels:
 			objs+=xi.init()
 		self.hasinit=True
 		return objs

@@ -24,7 +24,7 @@ def selects_rna(fi_reads:str,fi_table:str,fo_reads:str,col:str,val:str)->None:
 	import pandas as pd
 	d=pd.read_csv(fi_reads,index_col=0,header=0,sep='\t')
 	dt=pd.read_csv(fi_table,index_col=0,header=0,sep='\t')
-	if any([len(x.index)!=len(set(x.index)) for x in [d,dt]]):
+	if any(len(x.index)!=len(set(x.index)) for x in [d,dt]):
 		raise ValueError('Duplicate indices detected.')
 	ind=dt.index[dt[col]==val]
 	if len(ind)==0:
@@ -52,7 +52,7 @@ def selects_atac(fi_table:str,fo_list:str,col:str,val:str)->None:
 	import pandas as pd
 	from os import linesep
 	dt=pd.read_csv(fi_table,index_col=0,header=0,sep='\t')
-	if any([len(x.index)!=len(set(x.index)) for x in [dt]]):
+	if any(len(x.index)!=len(set(x.index)) for x in [dt]):
 		raise ValueError('Duplicate indices detected.')
 	ind=dt.index[dt[col]==val]
 	if len(ind)==0:
@@ -61,7 +61,7 @@ def selects_atac(fi_table:str,fo_list:str,col:str,val:str)->None:
 	with open(fo_list,'w') as f:
 		f.write(ind)
 	
-def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float, n_cell:int, nt_cell:int, ntp_cell:float)->None:
+def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float, n_cell:int, nt_cell:int, ntp_cell:float)->None:		# noqa: C901
 	"""
 	Quality control by bounding read counts.
 

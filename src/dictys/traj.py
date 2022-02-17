@@ -8,6 +8,35 @@ Classes for trajectory and points on trajectory
 
 _docstring2argparse_ignore_=['trajectory','point']
 
+def argpartition(a,kth,axis=-1,draw_order='undefined'):
+	import numpy as np
+	assert draw_order in {'undefined','original','random','inverse','error'}
+	shape=a.shape
+	a2=np.swapaxes(a,axis,0)
+	shape2=a2.shape
+	a2=a2.reshape(shape2[0],np.prod(shape2[1:],dtype=type(shape[0])))
+	ans=np.argpartition(a2,kth,axis=0)
+	if draw_order=='undefined':
+		ans=np.swapaxes(ans.reshape(*shape2),axis,0)
+		return ans
+	if draw_order=='random':
+		t1=a2==a2[ans[kth],np.arange(ans.shape[1])]
+		t1=[np.nonzero(x)[0] for x in t1.T]
+		for xi in filter(lambda x:len(t1[x])>1,range(ans.shape[1])):
+			t2=t1[xi].copy()
+			np.random.shuffle(t2)
+			ans[t1[xi],xi]=ans[t2,xi]
+	elif draw_order=='error':
+		t1=a2==a2[ans[kth],np.arange(ans.shape[1])]
+		t1=[np.nonzero(x)[0] for x in t1.T]
+		t1=list(filter(lambda x:len(t1[x])>1,range(ans.shape[1])))
+		if len(t1)>0:
+			raise RuntimeError('Found duplicate values at the partition point.')
+	else:
+		raise NotImplementedError
+	ans=np.swapaxes(ans.reshape(*shape2),axis,0)
+	return ans
+
 class trajectory:
 	def __init__(self,edges,lens):
 		"""
@@ -103,7 +132,7 @@ class trajectory:
 		----------
 		dictys.traj.point
 			Point object converted.
-		"""		
+		"""
 		return point.fromnodes(self)
 	def conform_locs(self,locs,edges,rel_err=1E-7):
 		"""
@@ -171,7 +200,7 @@ class trajectory:
 		"""
 		import numpy as np
 		n=len(lengths)
-		lengths0=lengths
+		# lengths0=lengths
 		aorder=np.argsort(lengths)
 		lengths=lengths[aorder]
 		path=self.path(start,end)
@@ -212,8 +241,8 @@ class trajectory:
 		"""
 		import networkx as nx
 		import numpy as np
-		assert start>=0 and start<self.nn
-		assert end>=0 and end<self.nn
+		assert 0<=start<self.nn
+		assert 0<=end<self.nn
 		assert start!=end
 		return np.array(nx.shortest_path(self.g,start,end))		
 	def smoothened(self,data,*a,axis=-1,nodes=None,nodes_path=None,**ka):
@@ -305,7 +334,7 @@ class trajectory:
 			Loaded class object
 		"""
 		import h5py
-		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
+		if isinstance(path,(h5py.File,h5py.Group)):
 			return cls.from_fileobj(path)
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(f)
@@ -342,7 +371,7 @@ class trajectory:
 			Keyword arguments passed to self.to_fileobj
 		"""
 		import h5py
-		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
+		if isinstance(path,(h5py.File,h5py.Group)):
 			return self.to_fileobj(path,**ka)
 		with h5py.File(path,'w') as f:
 			return self.to_fileobj(f,**ka)
@@ -363,7 +392,6 @@ class point:
 		dist:	numpy.ndarray(shape=(n_point,n_node))
 			Distance matrix between each point and each node. Automatically computed if not provided.
 		"""
-		import numpy as np
 		if locs is None and dist is None:
 			raise TypeError('At least one of locs and dist must be specified')
 		assert edges.ndim==1
@@ -497,7 +525,6 @@ class point:
 		import numpy as np
 		from collections import defaultdict
 		import itertools
-		import networkx as nx
 		assert scale<=1
 
 		dist=self.dist
@@ -515,7 +542,7 @@ class point:
 			for xj in t2:
 				t3[xj[0]].append(xj[1])
 				t3[xj[1]].append(xj[0])
-			t3=list(set([frozenset(x[1]+[x[0]]) for x in t3.items()]))
+			t3=list({frozenset(x[1]+[x[0]]) for x in t3.items()})
 			t1+=t3
 		grp=[list(x) for x in t1]
 		t1=list(itertools.chain.from_iterable(grp))
@@ -610,7 +637,7 @@ class point:
 		"""
 		import numpy as np
 		p=self.p.path(nstart,nend)
-		edges=set([self.p.edgedict[p[x],p[x+1]][0] for x in range(len(p)-1)])
+		edges={self.p.edgedict[p[x],p[x+1]][0] for x in range(len(p)-1)}
 		#Point on the edge
 		t1=np.array([x in edges for x in self.edges])
 		#Point at the terminal node of edge
@@ -866,13 +893,10 @@ class point:
 
 		"""
 		import numpy as np
-		import logging
-		from collections import Counter
-		import itertools
 		ns=self.npt
 		nn=self.p.nn
 		ne=self.p.ne
-		assert noverlap<ncell and noverlap>=0
+		assert 0<=noverlap<ncell
 		assert dmax>=0
 
 		s=self.copy()
@@ -992,60 +1016,6 @@ class point:
 		return self.__class__(self.p,self.edges[key],self.locs[key],dist=self.dist[key])
 	def __len__(self):
 		return self.npt
-	def weight_linear(self):
-		"""
-		Smoothing function to compute data on points with data on nodes with linear interpolation between nodes.
-		Return:
-		numpy.ndarray(shape=[len(self),len(self.p)])
-			Weight of each node on each point.
-		"""
-		import numpy as np
-		w=self.locs/self.p.lens[self.edges]
-		assert (w>=0).all() and (w<=1).all()
-		ans_w=np.zeros((self.npt,self.p.nn),dtype=float)
-		ans_w[np.arange(self.npt),self.p.edges[self.edges,0]]=1-w
-		ans_w[np.arange(self.npt),self.p.edges[self.edges,1]]=w
-		return ans_w
-	def weight_conv(self,radius,cut=0,nodes=None,nodes_path=None):
-		"""
-		Smoothing function to compute data on points with data on nodes with Gaussian kernel smoothing.
-
-		Parameters
-		----------
-		radius:	float
-			Radius or sigma of gaussian filter as distance
-		cut:	float
-			Set node weight to 0 if below this threshold
-		nodes:	list or None
-			Set of nodes to use for convolution. Defaults to all.
-		nodes_path: (int,int)
-			[start,end] node IDs whose shortest path defines the nodes to use for convolution. Disabled by default.
-
-		Returns
-		----------
-		numpy.ndarray(shape=[len(self),len(self.p)])
-			Weight of each node on each point.
-		"""
-		import numpy as np
-		w=np.exp(-((self.dist/radius)**2)/2)
-		if nodes_path is not None:
-			assert nodes is None
-			assert len(nodes_path)==2
-			nodes=self.p.path(*nodes_path)
-		if nodes is not None:
-			assert np.min(nodes)>=0 and np.max(nodes)<self.p.nn
-			nodes=set(nodes)
-			nodes=np.array([x in nodes for x in range(self.p.nn)])
-			w[:,~nodes]=0
-		w=(w.T/w.sum(axis=1)).T
-		if cut>0:
-			t1=(w>0)&(w<cut)
-			while t1.any():
-				w[t1]=0
-				w=(w.T/w.sum(axis=1)).T
-				t1=(w>0)&(w<cut)
-		assert (w>=0).all() and (w<=1).all()
-		return w
 	def weight_linear(self,other):
 		"""
 		Smoothing function to compute data on other points with data on current (self's) points with linear interpolation between points.
@@ -1209,7 +1179,7 @@ class point:
 			Loaded class object
 		"""
 		import h5py
-		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
+		if isinstance(path,(h5py.File,h5py.Group)):
 			return cls.from_fileobj(traj,path)
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(traj,f)
@@ -1246,7 +1216,7 @@ class point:
 			Keyword arguments passed to self.to_fileobj
 		"""
 		import h5py
-		if isinstance(path,h5py.File) or isinstance(path,h5py.Group):
+		if isinstance(path,(h5py.File,h5py.Group)):
 			return self.to_fileobj(path,**ka)
 		with h5py.File(path,'w') as f:
 			return self.to_fileobj(f,**ka)

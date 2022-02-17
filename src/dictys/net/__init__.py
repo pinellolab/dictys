@@ -6,6 +6,7 @@ _docstring2argparse_ignore_=['stat','network','binarize']
 
 from . import *
 
+
 class network:
 	"""
 	Class for context-specific and dynamic networks
@@ -83,7 +84,7 @@ class network:
 		self.nns=np.array([len(x) for x in self.nids])
 		if not hasattr(self,'traj'):
 			self.traj=None
-			self.point=dict()
+			self.point={}
 		#Validation
 		self.check()
 	def check(self):
@@ -92,18 +93,18 @@ class network:
 		"""
 		import numpy as np
 		from dictys.traj import trajectory
-		if not all([x[0]>0 and x[1].shape==(x[0],) and len(np.unique(x[1]))==x[0] and len(x[2])==x[0] and all([y in x[2] for y in x[1]]) for x in [[self.cn,self.cname,self.cdict],[self.sn,self.sname,self.sdict],[self.nn,self.nname,self.ndict]]]):
+		if not all(x[0]>0 and x[1].shape==(x[0],) and len(np.unique(x[1]))==x[0] and len(x[2])==x[0] and all(y in x[2] for y in x[1]) for x in [[self.cn,self.cname,self.cdict],[self.sn,self.sname,self.sdict],[self.nn,self.nname,self.ndict]]):
 			raise ValueError('Cell/state/node names must be non-empty, unique, and matching their counts exactly.')
 		for xi in self.prop:
 			t1=tuple(np.concatenate([self._get_prop_shape_(x) for x in xi]))
-			if not all([x.shape[-len(t1):]==t1 for x in self.prop[xi].values()]):
+			if not all(x.shape[-len(t1):]==t1 for x in self.prop[xi].values()):
 				raise ValueError('Cell/node/edge properties and their cross properties must have the correct dimensionality.')
-		assert len(self.nids)==2 and all([len(np.unique(x))==len(x) for x in self.nids])
-		assert all([(x>=0).all() and (x<self.nn).all() for x in self.nids])
+		assert len(self.nids)==2 and all(len(np.unique(x))==len(x) for x in self.nids)
+		assert all((x>=0).all() and (x<self.nn).all() for x in self.nids)
 		assert (self.nns==[len(x) for x in self.nids]).all() and (self.nns>0).all()
 		assert self.traj is None or isinstance(self.traj,trajectory)
 		assert (self.traj is None and len(self.point)==0) or (self.traj is not None and frozenset(self.point)==frozenset({'c','s'}))
-		assert all([len(self.point[x])==getattr(self,x+'n') for x in self.point])
+		assert all(len(self.point[x])==getattr(self,x+'n') for x in self.point)
 	#I/O
 	@classmethod
 	def from_file(cls,path):
@@ -124,7 +125,7 @@ class network:
 		from dictys.traj import trajectory,point
 		import numpy as np
 		import h5py
-		params=dict()
+		params={}
 		with h5py.File(path,'r') as f:
 			for xi in filter(lambda x:x not in {'prop','traj'},f):
 				params[xi]=np.array(f[xi])
@@ -140,7 +141,7 @@ class network:
 				params['traj']=trajectory.from_fileobj(f['traj'])
 			if 'point' in f:
 				assert 'traj' in params
-				params['point']=dict()
+				params['point']={}
 				for xi in f['point']:
 					params['point'][xi]=point.from_fileobj(params['traj'],f['point'][xi])
 		params['nids']=[params['nids1'],params['nids2']]

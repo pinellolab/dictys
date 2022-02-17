@@ -4,7 +4,6 @@
 """
 
 from typing import Union
-import numpy as np
 
 ################################################################
 # Peak calling
@@ -68,7 +67,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 					   infiles={'cellnames.txt': namestxt},
 					   quiet=False,
 					   cd=True)
-	if d2 is None or len(d2)>0 or not all([isfile(x) for x in [fo_bam,fo_bai,fo_bed]]):
+	if d2 is None or len(d2)>0 or not all(isfile(x) for x in [fo_bam,fo_bai,fo_bed]):
 		raise RuntimeError('Macs2 failed.')
 
 	if nmax>0:
@@ -129,7 +128,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Union[st
 					   [],
 					   quiet=False,
 					   cd=True)
-	if d2 is None or len(d2)>0 or not all([isfile(x) for x in [fo_bed]]):
+	if d2 is None or len(d2)>0 or not all(isfile(x) for x in [fo_bed]):
 		raise RuntimeError('Wellington failed.')
 
 ################################################################

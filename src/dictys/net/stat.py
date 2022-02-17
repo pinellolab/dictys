@@ -18,13 +18,14 @@ def _getitem(key,v):
 	"""
 	import numpy as np
 	sid=0
-	for xi in range(len(key)):
-		if hasattr(key[xi],'__len__'):
-			v=v.swapaxes(sid,0)[key[xi]].swapaxes(sid,0)
+	for xi in key:
+		if hasattr(xi,'__len__'):
+			v=v.swapaxes(sid,0)[xi].swapaxes(sid,0)
 			sid+=1
 		else:
-			v=np.take(v,key[xi],axis=sid)
+			v=np.take(v,xi,axis=sid)
 	return v
+
 
 class base(metaclass=abc.ABCMeta):
 	def __init__(self,names=None,label=None):
@@ -74,7 +75,7 @@ class base(metaclass=abc.ABCMeta):
 		ans=self.compute(pts)
 		if names is not None:
 			assert len(names)==len(self.names)
-			assert all([all([y in self.ndict[x] for y in names[x]]) for x in range(len(self.names))])
+			assert all(all(y in self.ndict[x] for y in names[x]) for x in range(len(self.names)))
 			for xi in range(len(names)):
 				ans=ans.swapaxes(0,xi)[[self.ndict[xi][x] for x in names[xi]]].swapaxes(0,xi)
 		t1=np.isfinite(ans)
@@ -90,32 +91,28 @@ class base(metaclass=abc.ABCMeta):
 		Use this function to determine the label of this stat
 		Return:
 		Label as str
-		"""	
+		"""
 	#Arithmetic operations between stats
 	def __add__(self,other):
 		from operator import add
 		if isinstance(other,base):
-			return function(add,[self,other],label='({})+({})'.format(self.label,other.label))
-		else:
-			raise NotImplementedError
+			return function(add,[self,other],label=f'({self.label})+({other.label})')
+		raise NotImplementedError
 	def __sub__(self,other):
 		from operator import sub
 		if isinstance(other,base):
-			return function(sub,[self,other],label='({})-({})'.format(self.label,other.label))
-		else:
-			raise NotImplementedError
+			return function(sub,[self,other],label=f'({self.label})-({other.label})')
+		raise NotImplementedError
 	def __mul__(self,other):
-		from operator import truediv
+		from operator import mul
 		if isinstance(other,base):
-			return function(mul,[self,other],label='({})*({})'.format(self.label,other.label))
-		else:
-			raise NotImplementedError
+			return function(mul,[self,other],label=f'({self.label})*({other.label})')
+		raise NotImplementedError
 	def __truediv__(self,other):
 		from operator import truediv
 		if isinstance(other,base):
-			return function(truediv,[self,other],label='({})/({})'.format(self.label,other.label))
-		else:
-			raise NotImplementedError
+			return function(truediv,[self,other],label=f'({self.label})/({other.label})')
+		raise NotImplementedError
 	def __getitem__(self, key):
 		"""Subset stat as a substat"""
 		from functools import partial
@@ -199,7 +196,6 @@ class function(base):
 		Return:
 		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		import numpy as np
 		n=len(pts)
 		ans=[x.compute(pts) for x in self.stats]
 		assert all([ans[x].ndim==len(self.stats[x].names)+1 for x in range(self.n)])
@@ -288,7 +284,7 @@ class fbinarize(base):
 		statmask:	Stat for network mask indicating which edges are tested in the continuous network,
 					as numpy.ndarray(shape=(n_reg,n_target),dtype=bool)
 		posrate:	Proportion of significant edges when converting to binary network.
-		signed:		Whether continuous network is signed. 
+		signed:		Whether continuous network is signed.
 					If so, larger absolute values indicate stronger edge.
 					If not, larger values indicate stronger edge.
 		a,
@@ -541,7 +537,6 @@ class fcentrality_degree(base):
 		Return:
 		Centrality as numpy.array(shape=(n,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		import numpy as np
 		dynet=self.stat.compute(pts)
 		if self.mask is None:
 			dynet=dynet.sum(axis=1-self.roleaxis)
@@ -600,7 +595,7 @@ class flayout_base(base):
 				none:	No scaling
 				size:	Use fixed average distance from figure center
 				length:	Use fixed average length of each edge
-			rand_expand:	Extra distance to put newly added nodes from the existing network 
+			rand_expand:	Extra distance to put newly added nodes from the existing network
 		"""
 		assert len(statnet.names)==2
 		names=sorted(list(set(statnet.names[0])|set(statnet.names[1])))
@@ -664,16 +659,17 @@ class flayout_base(base):
 		for xi in range(2):
 			ans[nids]=self.func(m1,ans[nids])
 		return ans
-	def compute_all(self,nodrop_reg=False,abs=True,scale='size',rand_expand=0.1):
+	def compute_all(self,nodrop_reg=False,abs=True,scale='size',rand_expand=0.1):		# noqa: C901
 		"""
 		Compute node locations for all time points.
+
 		nodrop_reg:	Whether to keep regulators even if they do not have any edge
 		abs:		Whether to use the absolute value of edge strength. If not, uses raw value where negative values are weaker than positive.
 		scale:		How to scale network layout coordindates. Accepts:
 			none:	No scaling
 			size:	Use fixed average distance from figure center
 			length:	Use fixed average length of each edge
-		rand_expand:	Extra distance to put newly added nodes from the existing network 
+		rand_expand:	Extra distance to put newly added nodes from the existing network
 		"""
 		import numpy as np
 		n=len(self.names[0])
@@ -684,7 +680,7 @@ class flayout_base(base):
 		if abs:
 			stat=np.abs(stat)
 		namemap=[[self.ndict[0][x] for x in self.stat.names[y]] for y in range(2)]
-		m=np.zeros((len(self.names[0]),len(self.names[0]),len(self.pts)),dtype=float)
+		m=np.zeros((n,n,len(self.pts)),dtype=float)
 		for xi in range(len(self.stat.names[0])):
 			m[namemap[0][xi],namemap[1]]=stat[xi]
 		if self.netscale is not None:
@@ -699,7 +695,7 @@ class flayout_base(base):
 			t1[namemap[0]]=True
 			tmap|=t1
 		self.names[0]=self.names[0][tmap]
-		self.ndict[0]=dict(zip(self.names[0],range(len(self.names[0]))))
+		self.ndict[0]=dict(zip(self.names[0],range(n)))
 		namemap=[[self.ndict[0][x] for x in self.stat.names[y] if x in self.ndict[0]] for y in range(2)]
 		m0=m[tmap][:,tmap]
 		#Initialize positions
@@ -756,7 +752,7 @@ class flayout_base(base):
 		"""
 		import numpy as np
 		if isinstance(pts,dictys.traj.point):
-			#Map given points to 
+			#Map given points
 			t1=[np.nonzero(x)[0] for x in pts-self.pts==0]
 			t1=np.array([x[0] for x in t1 if len(x)>0])
 			return t1
@@ -769,7 +765,6 @@ class flayout_base(base):
 		Return:
 		Node coordindates as numpy.array(shape=(n,n_dim,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		import numpy as np
 		if isinstance(pts,dictys.traj.point):
 			#Map given points to self.pts
 			pts2=self.ptsmap(pts)
