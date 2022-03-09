@@ -9,8 +9,8 @@ from __future__ import annotations
 import abc
 from typing import Union,Callable,Tuple
 import numpy.typing as npt
-from dictys.traj import point,trajectory
-from dictys.net import network
+import dictys.traj
+import dictys.net
 
 def _getitem(key,v:npt.NDArray)->npt.NDArray:
 	"""
@@ -50,7 +50,7 @@ class base(metaclass=abc.ABCMeta):
 		self.names=[np.array(x) for x in names]
 		self.ndict=[dict(zip(x,range(len(x)))) for x in names]
 	@abc.abstractmethod
-	def compute(self,pts:point)->npt.NDArray:
+	def compute(self,pts:dictys.traj.point)->npt.NDArray:
 		"""
 		Use this function to compute stat values at each state or point
 		pts:	Point list instance of dictys.traj.point, or state list as list of int
@@ -65,7 +65,7 @@ class base(metaclass=abc.ABCMeta):
 		Return:
 		List of list of names for each axis.
 		"""
-	def default_lims(self,pts:point=None,names:Union[list[npt.ArrayLike[str]],None]=None,expansion:float=0.02)->npt.ArrayLike:
+	def default_lims(self,pts:dictys.traj.point=None,names:Union[list[npt.ArrayLike[str]],None]=None,expansion:float=0.02)->npt.ArrayLike:
 		"""
 		Use this function to determine the default limits of the stat.
 		This implementation uses min/max of stat values.
@@ -164,7 +164,7 @@ class const(base):
 		return self.default_names_
 	def default_label(self)->str:
 		return self.default_label_
-	def compute(self,pts:point)->npt.NDArray:
+	def compute(self,pts:dictys.traj.point)->npt.NDArray:
 		import numpy as np
 		return np.repeat(self.val.reshape(*self.val.shape,1),len(pts),axis=-1)
 
@@ -220,7 +220,7 @@ class fsinglestat(const):
 	"""
 	Show constant value for stat by combining different points.
 	"""	
-	def __init__(self,func_stat:Callable[Tuple[npt.NDArray,...],npt.NDArray],stat:list[base],pts:point,**ka):
+	def __init__(self,func_stat:Callable[Tuple[npt.NDArray,...],npt.NDArray],stat:list[base],pts:dictys.traj.point,**ka):
 		"""
 		Show constant value for stat by combining different points.
 		func_stat:	Function to combine different points to one for the stat.
@@ -232,13 +232,13 @@ class fsinglestat(const):
 		ka1.update(ka)
 		super().__init__(val,stat.names,**ka1)
 
-def finitial(stat:base,pts:point,**ka)->base:
+def finitial(stat:base,pts:dictys.traj.point,**ka)->base:
 	"""
 	Using initial value as a constant stat.
 	"""
-	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]] if isinstance(pts,point) else [pts[0]],**ka)
+	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]] if isinstance(pts,dictys.traj.point) else [pts[0]],**ka)
 
-def fmean(stat:base,pts:point,**ka)->base:
+def fmean(stat:base,pts:dictys.traj.point,**ka)->base:
 	"""
 	Use mean value for stat.
 	"""
@@ -259,7 +259,7 @@ class fsmooth(base):
 	"""
 	Base class for statistics obtained from smoothing of their values at points/states
 	"""
-	def __init__(self,stat:base,pts:point,smoothen_func:Tuple[str,Tuple,dict],**ka):
+	def __init__(self,stat:base,pts:Union[dictys.traj.trajectory,dictys.traj.point],smoothen_func:Tuple[str,Tuple,dict],**ka):
 		"""
 		Base class for statistics obtained from smoothing of their values at points/states
 		stat:	Stat to smoothen
@@ -268,9 +268,9 @@ class fsmooth(base):
 		"""
 		import numpy as np
 		assert len(smoothen_func)==3
-		if isinstance(pts,point):
+		if isinstance(pts,dictys.traj.point):
 			n=len(pts)
-		elif isinstance(pts,trajectory):
+		elif isinstance(pts,dictys.traj.trajectory):
 			n=pts.nn
 		else:
 			raise TypeError('pts must be dictys.traj.trajectory or distys.traj.point')
@@ -288,7 +288,7 @@ class fsmooth(base):
 		Return:
 		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		if not isinstance(pts,point):
+		if not isinstance(pts,dictys.traj.point):
 			raise TypeError('Smooth function only available at points not states.')
 		ans=self.func_smooth(points=pts)
 		assert ans.shape==tuple([len(x) for x in self.names]+[len(pts)])
@@ -348,7 +348,7 @@ class pseudotime(base):
 	"""
 	Statistic to output pseudotime
 	"""
-	def __init__(self,d:network,pts:point,*a,traj:Union[trajectory,None]=None,**ka):
+	def __init__(self,d:dictys.net.network,pts:dictys.traj.point,*a,traj:Union[dictys.traj.trajectory,None]=None,**ka):
 		"""
 		Statistic to output pseudotime
 		d:		Dataset object
@@ -376,7 +376,7 @@ class pseudotime(base):
 		pseudotime at each point as np.array(shape=[len(x) for x in self.names]+[len(pts)])
 		"""
 		import numpy as np
-		if not isinstance(pts,point):
+		if not isinstance(pts,dictys.traj.point):
 			pts=self.traj.topoint()[pts]
 		ans=(pts-self.pts[[0]]).T
 		ans=np.repeat(ans,len(self.names[0]),axis=0)
@@ -387,7 +387,7 @@ class lcpm(base):
 	"""
 	LogCPM stat. Specifically: log2 (CPM+const)
 	"""
-	def __init__(self,d:network,*a,cut:float=0.01,constant:float=1,**ka):
+	def __init__(self,d:dictys.net.network,*a,cut:float=0.01,constant:float=1,**ka):
 		"""
 		LogCPM stat. Specifically: log2 (CPM+const)
 		d:			Dataset object
@@ -408,7 +408,7 @@ class lcpm(base):
 		log2(CPM+const) as np.array(shape=(n_gene,len(pts)))
 		"""
 		import numpy as np
-		if isinstance(pts,point):
+		if isinstance(pts,dictys.traj.point):
 			raise ValueError('lcpm should not be computed at any point. Use existing states or wrap with smooth instead.')
 
 		t1=set(self.d.nname)
@@ -433,7 +433,7 @@ class sprop(base):
 	"""
 	Base class of state dependent properties directly read from dataset object
 	"""
-	def __init__(self,d:network,ptype:str,pname:str,*a,names_pref:list[str]=[],**ka):
+	def __init__(self,d:dictys.net.network,ptype:str,pname:str,*a,names_pref:list[str]=[],**ka):
 		"""
 		Base class of state dependent properties directly read from dataset object
 		d:		Dataset object
@@ -475,7 +475,7 @@ class sprop(base):
 		Networks as np.array(shape=(...,len(pts)))
 		"""
 		import numpy as np
-		if isinstance(pts,point):
+		if isinstance(pts,dictys.traj.point):
 			raise ValueError('Property should not be computed at any point. Use existing states or wrap with smooth instead.')
 		#Load individual networks for each node
 		ans=[]
@@ -493,7 +493,7 @@ class net(sprop):
 	"""
 	Compute all edge weights of whole network with binarization if specified.
 	"""
-	def __init__(self,d:network,*a,varname:str='w',**ka):
+	def __init__(self,d:dictys.net.network,*a,varname:str='w',**ka):
 		"""
 		Compute all edge weights of whole network with binarization if specified.
 		varname:	Variable name used for network
@@ -621,7 +621,7 @@ class flayout_base(base):
 	"""
 	Compute layout coordinates of nodes from network.
 	"""
-	def __init__(self,statnet:base,layout_func:Callable[npt.NDArray,npt.NDArray],ndim:int=2,pts:point=None,netscale:float=1,**ka):
+	def __init__(self,statnet:base,layout_func:Callable[npt.NDArray,npt.NDArray],ndim:int=2,pts:dictys.traj.point=None,netscale:float=1,**ka):
 		"""
 		Compute layout coordinates of nodes from network.
 		statnet:	stat of network edge weight
@@ -667,7 +667,10 @@ class flayout_base(base):
 		import networkx as nx
 		g=nx.Graph()
 		if self.netscale is not None:
-			m=m*(self.netscale/np.sqrt((m[(~np.isnan(m))&(m!=0)]**2).mean()))
+			t1=m[(~np.isnan(m))&(m!=0)]
+			if not t1.any():
+				return np.ones((m.shape[0],self.ndim),dtype=float)*np.nan
+			m=m*(self.netscale/np.sqrt((t1**2).mean()))			
 
 		t1=m!=0
 		t1=np.nonzero(t1|t1.T)
@@ -725,7 +728,10 @@ class flayout_base(base):
 		for xi in range(len(self.stat.names[0])):
 			m[namemap[0][xi],namemap[1]]=stat[xi]
 		if self.netscale is not None:
-			m*=self.netscale/np.sqrt((m[(~np.isnan(m))&(m!=0)]**2).mean())
+			t1=m[(~np.isnan(m))&(m!=0)]
+			if not t1.any():
+				return np.ones((m.shape[0],self.ndim),dtype=float)*np.nan
+			m=m*(self.netscale/np.sqrt((t1**2).mean()))
 
 		del stat
 		#Prefilter nodes to show
@@ -758,12 +764,15 @@ class flayout_base(base):
 				continue
 			m=m[tmap][:,tmap]
 			#Initial positions for new nodes
-			vrange=[pos0.min(axis=0),pos0.max(axis=0)]
+			posinit=np.ones((len(tmap),self.ndim),dtype=float)*np.nan
+			if tmap0 is not None:
+				posinit[tmap0]=pos0
+				vrange=[pos0.min(axis=0),pos0.max(axis=0)]
+			else:
+				vrange=[np.zeros(self.ndim),np.ones(self.ndim)]
+			posinit=posinit[tmap]
 			vrange=[(vrange[1]+vrange[0])/2,(vrange[1]-vrange[0]).max()/2+rand_expand]
 			vrange=[vrange[0]-vrange[1],vrange[0]+vrange[1]]
-			posinit=np.ones((len(tmap),self.ndim),dtype=float)*np.nan
-			posinit[tmap0]=pos0
-			posinit=posinit[tmap]
 			t1=np.isnan(posinit).any(axis=1)
 			posinit[t1]=np.random.rand(t1.sum(),self.ndim)*(vrange[1]-vrange[0])+vrange[0]
 			assert not np.isnan(posinit).any()
@@ -787,12 +796,12 @@ class flayout_base(base):
 			ans2[tmap]=ans1
 			ans.append(ans2)
 		self.pos=np.array(ans).transpose(1,2,0)
-	def ptsmap(self,pts:point)->npt.NDArray:
+	def ptsmap(self,pts:dictys.traj.point)->npt.NDArray:
 		"""
 		Maps points to known points.
 		"""
 		import numpy as np
-		if not isinstance(pts,point):
+		if not isinstance(pts,dictys.traj.point):
 			return None
 		#Map given points
 		t1=[np.nonzero(x)[0] for x in pts-self.pts==0]
@@ -805,7 +814,7 @@ class flayout_base(base):
 		Return:
 		Node coordindates as numpy.array(shape=(n,n_dim,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		if isinstance(pts,point):
+		if isinstance(pts,dictys.traj.point):
 			#Map given points to self.pts
 			pts2=self.ptsmap(pts)
 			if pts2 is None or len(pts2)!=len(pts):
@@ -854,3 +863,4 @@ class flayout_base(base):
 
 
 #
+

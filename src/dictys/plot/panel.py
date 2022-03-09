@@ -79,6 +79,7 @@ class overlay(base):
 
 class statscatter(base):
 	def __init__(self,ax,pts,statx,staty,names:Union[list[str],None]=None,annotate:Union[list[str],dict[str,str]]=[],
+			annotate_err:bool=True,
 			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict={},statka:dict={},
 			staty2=None,scatterka2:dict={},aspect:Union[float,None]=None):
 		"""
@@ -86,19 +87,21 @@ class statscatter(base):
 
 		Parameters
 		----------
-		ax:			matplotlib.pyplot.axes
+		ax:				matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:			dictys.traj.point
 			Points of path to visualize network
-		statx:		dictys.net.stat.base
+		statx:			dictys.net.stat.base
 			Stat instance for X axis. Must be one-dimensional.
-		staty:		dictys.net.stat.base
+		staty:			dictys.net.stat.base
 			Stat instance for Y axis. Must be one-dimensional.
-		names:		list of str or None
+		names:			list of str or None
 			Names to show. Defaults to all.
-		annotate:	list of str or {str:str}
+		annotate:		list of str or {str:str}
 			Names to annotate on scatter plot. Use 'all' for all names. Use dict to rename annotation as {name:annotation}.
-		lim:		Union
+		annotate_err:	bool
+			Whether to report error if any node to annotate is not found.
+		lim:			Union
 			Limits of X and Y axes. Takes several formats.
 			* [[xmin,xmax],[ymin,ymax],[y2min,y2max] if y2 is present]. This exactly specifies lims. Each [min,max] can be None to be determined automatically with `default_lims` method of each stat.
 
@@ -110,13 +113,13 @@ class statscatter(base):
 
 				- 'min': All axes use the min of min limits of all axes. If unset, all axes use their respective min limits.
 
-		scatterka:	dict
+		scatterka:		dict
 			Keyword arguments for ax.scatter.
-		statka:		dict
+		statka:			dict
 			Keyword arguments for ax.scatter whose values are stats. Keys must be settable in matplotlib.collections.PathCollection.set.
-		staty2:		dictys.net.stat.base or None
+		staty2:			dictys.net.stat.base or None
 			Stat instance for a second Y axis on right side. Must be one-dimensional. Defaults to staty2=None to disable.
-		scatterka2:	dict
+		scatterka2:		dict
 			Keyword arguments for ax.scatter for second Y.
 		"""
 		import numpy as np
@@ -150,7 +153,11 @@ class statscatter(base):
 		#Dots to annotate. Defaults to none
 		t1=np.nonzero([x not in self.namesdict for x in annotate])[0]
 		if len(t1)>0:
-			raise ValueError('TF(s) not found: {}'.format(','.join([annotate[x] for x in t1])))
+			if annotate_err:
+				raise ValueError('TF(s) not found: {}'.format(','.join([annotate[x] for x in t1])))
+			else:
+				t1=list(filter(lambda x:x in self.namesdict,annotate))
+				annotate={x:annotate[x] for x in t1} if isinstance(annotate,dict) else t1
 		if isinstance(annotate,dict):
 			self.annotate={self.namesdict[x]:y for x,y in annotate.items()}
 		else:
@@ -574,7 +581,7 @@ class statheatmap(base):
 		assert len(stat1.names)==2
 		for xi in range(2):
 			if names[xi] is None:
-				names[xi]=stat1.names[xi]
+				names[xi]=list(stat1.names[xi])
 		t1=[np.nonzero([x not in stat1.ndict[y] for x in names[y]])[0] for y in range(2)]
 		if len(t1[0])>0:
 			raise ValueError('Regulator(s) not found: {}'.format(','.join([names[0][x] for x in t1[0]])))
@@ -584,9 +591,10 @@ class statheatmap(base):
 		self.namesdict=[dict(zip(x,range(len(x)))) for x in self.names]
 		#Rows & columns to annotate
 		assert len(annotate)==2
+		annotate=list(annotate)
 		for xi in range(2):
 			if annotate[xi] is None:
-				annotate[xi]=names[xi]
+				annotate[xi]=list(names[xi])
 		t1=[np.nonzero([x not in self.namesdict[y] for x in names[y]])[0] for y in range(2)]
 		if len(t1[0])>0:
 			raise ValueError('Regulator(s) to annotate not found: {}'.format(','.join([annotate[0][x] for x in t1[0]])))
@@ -779,7 +787,6 @@ class network(overlay):
 	def init(self):
 		self.ax.axis('off')
 		return super().init()
-
 
 class animate_generic:
 	"""

@@ -15,20 +15,19 @@ def get_cmap(cmap,n):
 	c=plt.get_cmap(cmap)
 	if n<c.N:
 		return c(np.linspace(0,1,c.N)[:n])
-	else:
-		return c(np.linspace(0,1,n))
+	return c(np.linspace(0,1,n))
 
 def colorlegend(ax,
-				loc,
-				labels,
-				colors,
-				horizontalalignment='left',
-				verticalalignment='top',
-				spacex=0,
-				spacey=0.15,
-				space=None,
-				ncol=1,
-				**ka):
+		loc,
+		labels,
+		colors,
+		horizontalalignment='left',
+		verticalalignment='top',
+		spacex=0,
+		spacey=0.15,
+		space=None,
+		ncol=1,
+		**ka):
 	"""Draw legends using colored texts
 	ax:		axis
 	loc:	Location of first line
@@ -56,12 +55,12 @@ def colorlegend(ax,
 		widthmax=0
 		for xj in range(len(cid[xi])):
 			text = ax.text(*loc,
-						   labels[cid[xi][xj]],
-						   color=colors[cid[xi][xj]],
-						   transform=t,
-						   horizontalalignment=horizontalalignment,
-						   verticalalignment=verticalalignment,
-						   **ka)
+				labels[cid[xi][xj]],
+				color=colors[cid[xi][xj]],
+				transform=t,
+				horizontalalignment=horizontalalignment,
+				verticalalignment=verticalalignment,
+				**ka)
 			# Need to draw to update the text position.
 			text.draw(canvas.get_renderer())
 			ex = text.get_window_extent()
@@ -76,25 +75,25 @@ def colorlegend(ax,
 				units='dots')
 
 def heatmap(d,
-			optimal_ordering=True,
-			method='ward',
-			metric='euclidean',
-			dshow=None,
-			fig=None,
-			cmap='coolwarm',
-			aspect=0.1,
-			figscale=0.02,
-			dtop=0.3,
-			dright=0,
-			colorbar=0.03,
-			wedge=0.03,
-			xselect=None,
-			yselect=None,
-			xtick=False,
-			ytick=True,
-			vmin=None,
-			vmax=None,
-			inverty=True):
+		optimal_ordering=True,
+		method='ward',
+		metric='euclidean',
+		dshow=None,
+		fig=None,
+		cmap='coolwarm',
+		aspect=0.1,
+		figscale=0.02,
+		dtop=0.3,
+		dright=0,
+		colorbar=0.03,
+		wedge=0.03,
+		xselect=None,
+		yselect=None,
+		xtick=False,
+		ytick=True,
+		vmin=None,
+		vmax=None,
+		inverty=True):
 	"""
 	Draw 2-D hierachical clustering of pandas.DataFrame, with optional hierachical clustering on both axes.
 	X/Y axis of figure corresponds to columns/rows of the dataframe.
@@ -131,19 +130,17 @@ def heatmap(d,
 	import matplotlib.pyplot as plt
 	from scipy.cluster.hierarchy import dendrogram, linkage
 	import numpy as np
-	assert type(xtick) is bool or (type(xtick) is list and
-								   len(xtick) == d.shape[1])
-	assert type(ytick) is bool or (type(ytick) is list and
-								   len(ytick) == d.shape[0])
-	if type(method) is str:
+	assert isinstance(xtick,bool) or (isinstance(xtick,list) and len(xtick) == d.shape[1])
+	assert isinstance(ytick,bool) or (isinstance(ytick,list) and len(ytick) == d.shape[0])
+	if isinstance(method,str):
 		method=[method,method]
 	if len(method)!=2:
 		raise ValueError('Parameter "method" must have size 2 for x and y respectively.')
-	if type(metric) is str:
+	if isinstance(metric,str):
 		metric=[metric,metric]
 	if metric is not None and len(metric)!=2:
 		raise ValueError('Parameter "metric" must have size 2 for x and y respectively.')
-	elif metric is None:
+	if metric is None:
 		assert d.ndim==2 and d.shape[0]==d.shape[1]
 		assert (d.index==d.columns).all()
 		assert method[0]==method[1]
@@ -155,8 +152,8 @@ def heatmap(d,
 	if dshow is None:
 		dshow=d
 	assert dshow.shape==d.shape and (dshow.index==d.index).all() and (dshow.columns==d.columns).all()
-	xt0 = d.columns if type(xtick) is bool else xtick
-	yt0 = d.index if type(ytick) is bool else ytick
+	xt0 = d.columns if isinstance(xtick,bool) else xtick
+	yt0 = d.index if isinstance(ytick,bool) else ytick
 	# Genes to highlight
 	d2 = d.copy()
 	if xselect is not None:
@@ -197,9 +194,7 @@ def heatmap(d,
 
 		# Top dendrogram
 		if dtop > 0:
-			ax2 = fig.add_axes([
-				wedge, 1 - wedge - wtop, 1 - wedge *
-				(2 + iscolorbar) - wright - colorbar, wtop])
+			ax2 = fig.add_axes([wedge, 1 - wedge - wtop, 1 - wedge * (2 + iscolorbar) - wright - colorbar, wtop])
 			tl2 = linkage(d2.T, method=method[0], metric=metric[0], optimal_ordering=optimal_ordering)
 			td2 = dendrogram(tl2)
 			ax2.set_xticks([])
@@ -225,9 +220,7 @@ def heatmap(d,
 				td1=None
 			# Top dendrogram
 			if dtop > 0:
-				ax2 = fig.add_axes([
-					wedge, 1 - wedge - wtop, 1 - wedge *
-					(2 + iscolorbar) - wright - colorbar, wtop])
+				ax2 = fig.add_axes([wedge, 1 - wedge - wtop, 1 - wedge * (2 + iscolorbar) - wright - colorbar, wtop])
 				td2 = dendrogram(tl1)
 				ax2.set_xticks([])
 				ax2.set_yticks([])
@@ -246,14 +239,14 @@ def heatmap(d,
 	if vmax is not None:
 		ka['vmax'] = vmax
 	im = axmatrix.matshow(d3, **ka)
-	if type(xtick) is not bool or xtick:
+	if not isinstance(xtick,bool) or xtick:
 		t1 = list(zip(range(d3.shape[1]), xt0))
 		t1 = list(zip(*list(filter(lambda x: x[1] is not None, t1))))
 		axmatrix.set_xticks(t1[0])
 		axmatrix.set_xticklabels(t1[1], minor=False, rotation=90)
 	else:
 		axmatrix.set_xticks([])
-	if type(ytick) is not bool or ytick:
+	if not isinstance(ytick,bool)or ytick:
 		t1 = list(zip(range(d3.shape[0]), yt0))
 		t1 = list(zip(*list(filter(lambda x: x[1] is not None, t1))))
 		axmatrix.set_yticks(t1[0])
@@ -262,13 +255,13 @@ def heatmap(d,
 		axmatrix.set_yticks([])
 
 	axmatrix.tick_params(top=False,
-						 bottom=True,
-						 labeltop=False,
-						 labelbottom=True,
-						 left=True,
-						 labelleft=True,
-						 right=False,
-						 labelright=False)
+		bottom=True,
+		labeltop=False,
+		labelbottom=True,
+		left=True,
+		labelleft=True,
+		right=False,
+		labelright=False)
 	if inverty:
 		if ax1 is not None:
 			ax1.set_ylim(ax1.get_ylim()[::-1])
@@ -296,7 +289,6 @@ def dotplot(ds,dc,fig=None,figsize=0.2,size_transform=lambda x:x,sizes=None,vran
 	fig:			plt.Figure drawn on
 	ax:				matplotlib.axes._subplots.AxesSubplot drawn on
 	"""
-	import pandas as pd
 	import numpy as np
 	import matplotlib.pyplot as plt
 	import matplotlib
