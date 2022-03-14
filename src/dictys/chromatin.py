@@ -94,7 +94,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional
 		Path of output bed file of footprints
 	fi_blacklist:
 		Path of input bed file of blacklisted genome regions to be removed
-	cut:		
+	cut:
 		Cutoff for wellington score
 	nth:		
 		Number of threads

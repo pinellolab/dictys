@@ -43,7 +43,7 @@ def autopooler(n,it,*a,chunksize=1,dummy=False,return_iter=False,unordered=False
 	list (or iterator if return_iter) of any
 		Results returned by function(\*tuple,\*\*dict), in same order of the iterator if not unordered.
 
-	"""
+	""" 	# noqa: W605
 	import logging
 	if dummy:
 		import multiprocessing.dummy as m

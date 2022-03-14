@@ -13,31 +13,6 @@ import h5py
 
 _docstring2argparse_ignore_=['argpartition','trajectory','point']
 
-def median_weighted(v:npt.NDArray,w:npt.NDArray)->Any:
-	"""
-	Weighted median.
-
-	Parameters
-	----------
-	v:		numpy.ndarray in 1-dimension
-		Array of values to find median
-	w:		numpy.ndarray in 1-dimension
-		Weight of each value in the same shape as `v`
-
-	Returns
-	-------
-	any
-		Median value
-	"""
-	import numpy as np
-	assert v.ndim==1 and v.shape==w.shape
-	assert np.isfinite(v).all() and np.isfinite(w).all()
-	assert (w>=0).all()
-	t1=v.argsort()
-	v,w=[x[t1] for x in [v,w]]
-	ws=w.cumsum()
-	return v[ws.searchsorted(ws[-1]/2)]
-
 def argpartition(a:npt.NDArray,kth:int,axis:int=-1,draw_order:str='undefined')->npt.NDArray:
 	"""
 	Performs numpy.argpartition with options to specify how to handle ties.
@@ -602,7 +577,7 @@ class point:
 			Distance matrix
 		"""
 		import numpy as np
-		from lwang.utils.numpy import groupby
+		from dictys.utils.numpy import groupby
 		assert isinstance(other,self.__class__)
 		p=self.p
 		assert other.p==p
@@ -978,6 +953,7 @@ class point:
 
 		"""
 		import numpy as np
+		from dictys.utils.numpy import median
 		if w is None:
 			w=np.ones(len(self))
 		assert w.shape[-1]==len(self)
@@ -1003,7 +979,7 @@ class point:
 				#Convert to weighted median problem
 				v=np.r_[0,self.locs[p1],self.p.lens[edge]]
 				w2=np.r_[w[xi,p2[0]].sum(),w[xi,p1],w[xi,p2[1]].sum()]
-				v=median_weighted(v,w2)
+				v=median(v,w=w2)
 				ans1.append(self.__class__(self.p,np.array([edge]),np.array([v])))
 			#Find minimum across all edges
 			t1=((self.concat(ans1)-self)@w[xi])

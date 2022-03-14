@@ -4,7 +4,7 @@
 Utility functions
 """
 
-__all__=['parallel','shell']
+__all__=['parallel','shell','numpy']
 
 from . import *
 
