@@ -256,7 +256,7 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 	#Subparsers
 	ps={}
 	p[pkgname]=argparse.ArgumentParser(prog=pkgname,description=m[pkgname],**ka_argparse)
-	ps[pkgname]=p[pkgname].add_subparsers(help='sub-commands',dest='subcommand',required=True)
+	ps[pkgname]=p[pkgname].add_subparsers(help='sub-commands',dest='subcommand_1',required=True)
 
 	for xi in f:
 		#Iteratively add parsers for functions
@@ -272,7 +272,7 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 			if m[t2] is not None:
 				tka['help']=m[t2]
 			p[t2]=ps[t3].add_parser(t2.rsplit('.',maxsplit=1)[-1],**tka)
-			ps[t2]=p[t2].add_subparsers(help='sub-commands',dest='subcommand',required=True)
+			ps[t2]=p[t2].add_subparsers(help='sub-commands',dest=f'subcommand_{xj}',required=True)
 		#Add subparser for this function
 		t2='.'.join(t1[:-1])
 		tka=dict(ka_argparse)
@@ -290,16 +290,32 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 			else:
 				#Required arguments
 				p[xi].add_argument(xj[0],type=xj[1],help=xj[2],action='store')
-	return p[pkgname]
-	
+	return (p[pkgname],f)
+
+def run_args(pkgname,funcs,args):
+	from importlib import import_module
+	func=import_module(pkgname)
+	fullname=[pkgname]
+	lv=1
+	while hasattr(args,f'subcommand_{lv}'):
+		t1=f'subcommand_{lv}'
+		fullname.append(getattr(args,t1))
+		func=getattr(func,fullname[-1])
+		lv+=1
+	fullname='.'.join(fullname)
+	a=[getattr(args,x[0]) for x in funcs[fullname][2] if not x[3][0]]
+	ka={x[0]:getattr(args,x[0]) for x in funcs[fullname][2] if x[3][0]}
+	return func(*a,**ka)
+
 def docstringrunner(pkgname):
 	import sys
 	parser_func=function_parser_union([function_parser_signature(),function_parser_docstring_numpy()])
-	parser_arg=docstringparser(pkgname,parser_func)
+	parser_arg,funcs=docstringparser(pkgname,parser_func)
 	if len(sys.argv) == 1:
 		parser_arg.print_help(sys.stderr)
 		sys.exit(1)
 	args=parser_arg.parse_args()
+	run_args(pkgname,funcs,args)
 
 
 

@@ -48,7 +48,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	if not isdir(fi_bam):
 		raise FileNotFoundError(fi_bam)
 	
-	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_macs2.sh')
+	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_macs2.sh')
 	fi_names,fi_bam,fo_bam,fo_bai,fo_bed=[abspath(x) for x in [fi_names,fi_bam,fo_bam,fo_bai,fo_bed]]
 	
 	#Load sample names
@@ -117,7 +117,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional
 		if not isfile(xi):
 			raise FileNotFoundError(xi)
 	
-	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_wellington.sh')
+	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_wellington.sh')
 	fi_bam,fi_bai,fi_bed,fo_bed=[abspath(x) for x in [fi_bam,fi_bai,fi_bed,fo_bed]]
 	cmd = scriptpath+f" {fi_bam} {fi_bai} {fi_bed} {fo_bed} {cut} {nth} {npeakmax} {fi_blacklist}"
 	d2 = shell.cmdfile(cmd,[],quiet=False,cd=True)
