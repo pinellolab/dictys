@@ -3,7 +3,7 @@
 """Chromatin accessibility analyses
 """
 
-from typing import Union
+from typing import Union,Optional
 
 ################################################################
 # Peak calling
@@ -78,7 +78,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 # TF footprinting
 ################################################################
 
-def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Union[str,None]=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
+def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional[str]=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
 	"""
 	TF Footprinting with wellington.
 	
@@ -128,102 +128,102 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Union[st
 # Motif scan
 ################################################################
 
-def _motif_postproc(dret,fo_bed,fo_wellington,fo_homer):
-	"""Postprocess motif discovery results from HOMER.
-	d:		Original dataset object
-	dret:	Return tuple of HOMER call
-	Return:
-	Processed and copied new data object with motif results"""
-	import numpy as np
-	import pandas as pd
-	from io import StringIO
-	if dret is None or len(dret)!=3:
-		raise RuntimeError('Homer failed.')
-	with StringIO(dret[0].decode()) as f:
-		dw = pd.read_csv(f, header=0, index_col=0, sep='\t')
-	with StringIO(dret[1].decode()) as f:
-		dh = pd.read_csv(f, header=0, index_col=0, sep='\t')
-	with StringIO(dret[2].decode()) as f:
-		try:
-			dmotif = pd.read_csv(f, header=None, index_col=None, sep='\t')
-		except pd.errors.EmptyDataError:
-			dmotif=None
-	if dmotif is None:
-		raise RuntimeError('No motif found.')
-	assert dw.shape==dh.shape
-	assert (dw.columns==dh.columns).all()
-	assert (dw.index==dh.index).all()
-	assert dmotif.shape[1]==7
-	if dmotif.shape[0]==0:
-		raise RuntimeError('No motif found.')
+# def _motif_postproc(dret,fo_bed,fo_wellington,fo_homer):
+# 	"""Postprocess motif discovery results from HOMER.
+# 	d:		Original dataset object
+# 	dret:	Return tuple of HOMER call
+# 	Return:
+# 	Processed and copied new data object with motif results"""
+# 	import numpy as np
+# 	import pandas as pd
+# 	from io import StringIO
+# 	if dret is None or len(dret)!=3:
+# 		raise RuntimeError('Homer failed.')
+# 	with StringIO(dret[0].decode()) as f:
+# 		dw = pd.read_csv(f, header=0, index_col=0, sep='\t')
+# 	with StringIO(dret[1].decode()) as f:
+# 		dh = pd.read_csv(f, header=0, index_col=0, sep='\t')
+# 	with StringIO(dret[2].decode()) as f:
+# 		try:
+# 			dmotif = pd.read_csv(f, header=None, index_col=None, sep='\t')
+# 		except pd.errors.EmptyDataError:
+# 			dmotif=None
+# 	if dmotif is None:
+# 		raise RuntimeError('No motif found.')
+# 	assert dw.shape==dh.shape
+# 	assert (dw.columns==dh.columns).all()
+# 	assert (dw.index==dh.index).all()
+# 	assert dmotif.shape[1]==7
+# 	if dmotif.shape[0]==0:
+# 		raise RuntimeError('No motif found.')
 
-	namet=d.dim['nt']
-	#Set na as or function
-	t1=(pd.isna(dw)|pd.isna(dh)).values
-	dw.fillna(0,inplace=True)
-	dh.fillna(0,inplace=True)
-	#Extract dimensions
-	namep=np.array([str(x) for x in dw.index])
-	namem=np.array(['_'.join([x.split('_')[0]]+x.split('.')[-2:]) for x in dw.columns])
-	#Set data values
-	dw,dh=[x.values.astype(ftype0) for x in [dw,dh]]
-	dw[t1]=0
-	dh[t1]=0
-	#Get motif to gene map
-	dmt=[x.split('_')[0] for x in namem]
-	t1=dict(zip([x.upper() for x in namet],range(len(namet))))
-	dmt=np.array([t1[x.upper()] if x.upper() in t1 else -1 for x in dmt],dtype='i8')
-	#Remove empty motifs
-	t1=dmt>=0
-	dw,dh=[x[:,t1] for x in [dw,dh]]
-	namem,dmt=[x[t1] for x in [namem,dmt]]
-	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
-	assert np.isfinite(dw).all() and np.isfinite(dh).all()
-	assert (dw>=0).all() and (dh>=0).all()
-	#Output
-	dmotif.to_csv(fo_bed,header=False,index=False)
-	dw=pd.DataFrame(dw,index=namep,header=namem)
-	dw.to_csv(fo_wellington,header=True,index=True)
-	dh=pd.DataFrame(dh,index=namep,header=namem)
-	dh.to_csv(fo_homer,header=True,index=True)
+# 	namet=d.dim['nt']
+# 	#Set na as or function
+# 	t1=(pd.isna(dw)|pd.isna(dh)).values
+# 	dw.fillna(0,inplace=True)
+# 	dh.fillna(0,inplace=True)
+# 	#Extract dimensions
+# 	namep=np.array([str(x) for x in dw.index])
+# 	namem=np.array(['_'.join([x.split('_')[0]]+x.split('.')[-2:]) for x in dw.columns])
+# 	#Set data values
+# 	dw,dh=[x.values.astype(ftype0) for x in [dw,dh]]
+# 	dw[t1]=0
+# 	dh[t1]=0
+# 	#Get motif to gene map
+# 	dmt=[x.split('_')[0] for x in namem]
+# 	t1=dict(zip([x.upper() for x in namet],range(len(namet))))
+# 	dmt=np.array([t1[x.upper()] if x.upper() in t1 else -1 for x in dmt],dtype='i8')
+# 	#Remove empty motifs
+# 	t1=dmt>=0
+# 	dw,dh=[x[:,t1] for x in [dw,dh]]
+# 	namem,dmt=[x[t1] for x in [namem,dmt]]
+# 	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
+# 	assert np.isfinite(dw).all() and np.isfinite(dh).all()
+# 	assert (dw>=0).all() and (dh>=0).all()
+# 	#Output
+# 	dmotif.to_csv(fo_bed,header=False,index=False)
+# 	dw=pd.DataFrame(dw,index=namep,header=namem)
+# 	dw.to_csv(fo_wellington,header=True,index=True)
+# 	dh=pd.DataFrame(dh,index=namep,header=namem)
+# 	dh.to_csv(fo_homer,header=True,index=True)
 
-def homer(fi_bed:str,fi_motif:str,fo_bed:str,fo_wellington:str,fo_homer:str,genome:str,nth:int=1)->None:
-	"""
-	Motif scan with homer.
+# def homer(fi_bed:str,fi_motif:str,fo_bed:str,fo_wellington:str,fo_homer:str,genome:str,nth:int=1)->None:
+# 	"""
+# 	Motif scan with homer.
 	
-	Parameters
-	------------
-	fi_bed:	
-		Path of input bed file of regions
-	fi_motif:
-		Path of input motif PWM file in homer format
-	fo_bed:	
-		Path of output bed file of detected motifs
-	fo_wellington:
-		Path of output tsv file of wellington scores in shape (region,motif)
-	fo_homer:
-		Path of output tsv file of homer scores in shape (region,motif)
-	genome:	
-		Reference genome for homer (e.g. hg19, mm10)
-	nth:	
-		Number of threads
+# 	Parameters
+# 	------------
+# 	fi_bed:	
+# 		Path of input bed file of regions
+# 	fi_motif:
+# 		Path of input motif PWM file in homer format
+# 	fo_bed:	
+# 		Path of output bed file of detected motifs
+# 	fo_wellington:
+# 		Path of output tsv file of wellington scores in shape (region,motif)
+# 	fo_homer:
+# 		Path of output tsv file of homer scores in shape (region,motif)
+# 	genome:	
+# 		Reference genome for homer (e.g. hg19, mm10)
+# 	nth:	
+# 		Number of threads
 
-	"""
-	from os.path import dirname, basename, abspath, isfile
-	from os.path import join as pjoin
-	from .utils import shell
-	for xi in [fi_bed,fi_motif]:
-		if not isfile(xi):
-			raise FileNotFoundError(xi)
+# 	"""
+# 	from os.path import dirname, basename, abspath, isfile
+# 	from os.path import join as pjoin
+# 	from .utils import shell
+# 	for xi in [fi_bed,fi_motif]:
+# 		if not isfile(xi):
+# 			raise FileNotFoundError(xi)
 	
-	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_homer.sh')
-	spath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_homer.py')
-	fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer]]
-	cmd = scriptpath+f" {fi_bed} {fi_motif} {genome} {spath} {nth}"
-	d2 = shell.cmdfile(cmd,
-		['19-w.tsv','19-h.tsv','16-long.bed'],
-		quiet=False,cd=True,sizelimit=None)
-	return _motif_postproc(d2,fo_bed,fo_wellington,fo_homer)
+# 	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_homer.sh')
+# 	spath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_homer.py')
+# 	fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer]]
+# 	cmd = scriptpath+f" {fi_bed} {fi_motif} {genome} {spath} {nth}"
+# 	d2 = shell.cmdfile(cmd,
+# 		['19-w.tsv','19-h.tsv','16-long.bed'],
+# 		quiet=False,cd=True,sizelimit=None)
+# 	return _motif_postproc(d2,fo_bed,fo_wellington,fo_homer)
 	
 
 

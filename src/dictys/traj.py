@@ -7,13 +7,28 @@ Classes for trajectory and points on trajectory
 """
 
 from __future__ import annotations
-from typing import Union,Tuple,Callable
+from typing import Union,Tuple,Callable,Any,Optional
 import numpy.typing as npt
 import h5py
 
 _docstring2argparse_ignore_=['argpartition','trajectory','point']
 
-def median_weighted(v,w):
+def median_weighted(v:npt.NDArray,w:npt.NDArray)->Any:
+	"""
+	Weighted median.
+
+	Parameters
+	----------
+	v:		numpy.ndarray in 1-dimension
+		Array of values to find median
+	w:		numpy.ndarray in 1-dimension
+		Weight of each value in the same shape as `v`
+
+	Returns
+	-------
+	any
+		Median value
+	"""
 	import numpy as np
 	assert v.ndim==1 and v.shape==w.shape
 	assert np.isfinite(v).all() and np.isfinite(w).all()
@@ -75,6 +90,9 @@ def argpartition(a:npt.NDArray,kth:int,axis:int=-1,draw_order:str='undefined')->
 	return ans
 
 class trajectory:
+	"""
+	Class for trajectory of cell state transitions on low dimension
+	"""
 	def __init__(self,edges:npt.NDArray,lens:npt.NDArray)->None:
 		"""
 		Create state trajectory object. Only supports fully connected tree trajectory.
@@ -85,6 +103,21 @@ class trajectory:
 			Start and end state node IDs for each edge
 		lens:	numpy.ndarray(shape=(n_edge,))
 			Length of each edge
+
+		Attributes
+		----------
+		nn:			int
+			Node count
+		ne:			int
+			Edge count
+		edgedict:	dict
+			Dictionary that converts node pairs to [edge ID,direction]
+		g:			networkx.Graph
+			Networkx graph
+		dist:		numpy.ndarray(shape=(nn,nn))
+			Distance between nodes
+		deg:		numpy.ndarray(shape=(nn,))
+			Node degrees
 		"""
 		import networkx as nx
 		import numpy as np
@@ -283,7 +316,7 @@ class trajectory:
 		assert 0<=end<self.nn
 		assert start!=end
 		return np.array(nx.shortest_path(self.g,start,end))
-	def smoothened(self,data:npt.NDArray,*a,axis:int=-1,nodes:Union[list,None]=None,nodes_path:Union[Tuple[int,int],None]=None,criterion_path:str='strict',**ka)->npt.NDArray:
+	def smoothened(self,data:npt.NDArray,*a,axis:int=-1,nodes:Optional[list]=None,nodes_path:Optional[Tuple[int,int]]=None,criterion_path:str='strict',**ka)->npt.NDArray:
 		"""
 		Create a smoothened/interpolated function of given data on trajectory nodes that computes values at provided points.
 
@@ -430,7 +463,10 @@ class trajectory:
 			return self.to_fileobj(f,**ka)
 
 class point:
-	def __init__(self,traj:trajectory,edges:npt.NDArray,locs:npt.NDArray,dist:Union[npt.NDArray,None]=None):
+	"""
+	Class for points on a trajectory on low dimension
+	"""
+	def __init__(self,traj:trajectory,edges:npt.NDArray,locs:npt.NDArray,dist:Optional[npt.NDArray]=None):
 		"""
 		Point list on trajectory.
 
@@ -444,6 +480,15 @@ class point:
 			Distance from the starting node on its edge for each point
 		dist:	numpy.ndarray(shape=(n_point,n_node))
 			Distance matrix between each point and each node. Automatically computed if not provided.
+
+		Attributes
+		----------
+		npt:	int
+			Number of points
+		p:		dictys.traj.trajectory
+			Same as `traj`
+		dist:	numpy.ndarray(shape=(npt,p.nn))
+			Distance between each point and each node of the trajectory
 		"""
 		if locs is None and dist is None:
 			raise TypeError('At least one of locs and dist must be specified')
@@ -509,6 +554,14 @@ class point:
 		locs[nodes]=indices[1]*traj.lens[edges]
 		return cls(traj,edges,locs,dist=traj.dist)
 	def copy(self)->point:
+		"""
+		Copy of self
+
+		Returns
+		-------
+		dictys.traj.point
+			Copied object
+		"""
 		return self.__class__(self.p,self.edges,self.locs,dist=self.dist)
 	@classmethod
 	def concat(cls,pts:list[point])->point:
@@ -655,62 +708,62 @@ class point:
 			perturb_amount[xi]=np.random.rand(len(xi))*(bound[1]-bound[0])*scale+bound[0]
 		self.locs=self.p.conform_locs(self.locs+perturb_amount,self.edges)
 		self.dist=self.compute_dist()
-	def linspace(self,start:int,end:int,n:int)->point:
-		"""
-		Find evenly spaced points on a path like np.linspace
+	# def linspace(self,start:int,end:int,n:int)->point:
+	# 	"""
+	# 	Find evenly spaced points on a path like np.linspace
 
-		Parameters
-		----------
-		start:	int
-			Start point's IDs to indicate the path
-		end:	int
-			End point's IDs to indicate the path
-		n:		int
-			Number of points including terminal points
+	# 	Parameters
+	# 	----------
+	# 	start:	int
+	# 		Start point's IDs to indicate the path
+	# 	end:	int
+	# 		End point's IDs to indicate the path
+	# 	n:		int
+	# 		Number of points including terminal points
 
-		Returns
-		----------
-		dictys.traj.point
-			Instance of point class with points go from start to end nodes.
-		"""
-		import numpy as np
-		assert n>=2
-		path=self.path(start,end)
-		if len(path)>0:
-			dist=self.dist[start,path[0]]+self.lens[[self.p.edgedict[path[x],path[x+1]][0] for x in range(len(path)-1)]].sum()+self.dist[end,path[-1]]
-		else:
-			dist=np.abs(self.locs[start]-self.locs[end])
-		locs=np.linspace(0,dist,n)
-		return self.path_points(start,end,locs)
-	def path_points(self,start:int,end:int,lengths:npt.ArrayLike)->point:
-		"""
-		Find points at specific lengths on a path.
+	# 	Returns
+	# 	----------
+	# 	dictys.traj.point
+	# 		Instance of point class with points go from start to end nodes.
+	# 	"""
+	# 	import numpy as np
+	# 	assert n>=2
+	# 	path=self.path(start,end)
+	# 	if len(path)>0:
+	# 		dist=self.dist[start,path[0]]+self.lens[[self.p.edgedict[path[x],path[x+1]][0] for x in range(len(path)-1)]].sum()+self.dist[end,path[-1]]
+	# 	else:
+	# 		dist=np.abs(self.locs[start]-self.locs[end])
+	# 	locs=np.linspace(0,dist,n)
+	# 	return self.path_points(start,end,locs)
+	# def path_points(self,start:int,end:int,lengths:npt.ArrayLike)->point:
+	# 	"""
+	# 	Find points at specific lengths on a path.
 
-		Parameters
-		----------
-		start:	int
-			Start point's ID to indicate the path
-		end:	int
-			End point's ID to indicate the path
-		lengths:	numpy.ndarray(dtype=float)
-			Lengths of movement from the starting point towards the ending point as numpy.ndarray. Each length correspond to an output point.
-			For lengths with negative values, the start point will be returned.
-			For lengths greater than total length of path, the end point will be returned.
+	# 	Parameters
+	# 	----------
+	# 	start:	int
+	# 		Start point's ID to indicate the path
+	# 	end:	int
+	# 		End point's ID to indicate the path
+	# 	lengths:	numpy.ndarray(dtype=float)
+	# 		Lengths of movement from the starting point towards the ending point as numpy.ndarray. Each length correspond to an output point.
+	# 		For lengths with negative values, the start point will be returned.
+	# 		For lengths greater than total length of path, the end point will be returned.
 
-		Returns
-		----------
-		dictys.traj.point
-			Instance of point class with points go from start to end points.
-		"""
-		import numpy as np
-		n=len(lengths)
-		lengths=lengths.copy()
-		lengths[lengths<0]=0
-		t1=(self[[start]]-self[[end]]).ravel()[0]
-		lengths[lengths>t1]=t1
-		node_start=self.p.edges[self.edges[start]].sum()-path[0]
-		node_end=self.p.edges[self.edges[end]].sum()-path[-1]
-		return self.p.path_points(node_start,node_end,lengths+self.dist[start,path[0]])
+	# 	Returns
+	# 	----------
+	# 	dictys.traj.point
+	# 		Instance of point class with points go from start to end points.
+	# 	"""
+	# 	import numpy as np
+	# 	n=len(lengths)
+	# 	lengths=lengths.copy()
+	# 	lengths[lengths<0]=0
+	# 	t1=(self[[start]]-self[[end]]).ravel()[0]
+	# 	lengths[lengths>t1]=t1
+	# 	node_start=self.p.edges[self.edges[start]].sum()-path[0]
+	# 	node_end=self.p.edges[self.edges[end]].sum()-path[-1]
+	# 	return self.p.path_points(node_start,node_end,lengths+self.dist[start,path[0]])
 	def path(self,start:int,end:int)->npt.NDArray:
 		"""
 		Find path from start to end points as list of node IDs
@@ -742,8 +795,7 @@ class point:
 		g.remove_edges_from([tuple(self.p.edges[self.edges[start]]),tuple(self.p.edges[self.edges[end]])])
 		#Find path
 		return np.array(nx.shortest_path(g,self.p.nn,self.p.nn+1))[1:-1]
-
-	def path_loc(self,nstart:int,nend:int,distpath:Union[float,None]=None)->npt.NDArray:
+	def path_loc(self,nstart:int,nend:int,distpath:Optional[float]=None)->npt.NDArray:
 		"""
 		Computes points' locations on a given path. Locations are computed after mapping each point to the path. Distances in branches away from the path are ignored (set to 0).
 
@@ -913,7 +965,7 @@ class point:
 		ans_subsets=t1
 		ansn_subsets=np.array([f'Subset{x+1}' for x in range(n)])
 		return (ans_edges,ans_locs,ans_subsets,ans_neighbors,ansn_subsets)
-	def nearest(self,w:Union[npt.NDArray,None]=None)->point:
+	def nearest(self,w:Optional[npt.NDArray]=None)->point:
 		"""
 		Find the point on the trajectory with shortest average distance to all current points.
 		Parameters
@@ -930,7 +982,7 @@ class point:
 			w=np.ones(len(self))
 		assert w.shape[-1]==len(self)
 		if w.ndim==1:
-			ww=w.reshape(1,-1)
+			w=w.reshape(1,-1)
 		elif w.ndim>2:
 			raise ValueError('w must have at most 2 dimensions.')
 
@@ -959,7 +1011,7 @@ class point:
 			ans.append(ans1[t1])
 		ans=self.concat(ans)
 		return ans
-	def subtraj(self,edges:Union[npt.NDArray,None]=None)->trajectory:
+	def subtraj(self,edges:Optional[npt.NDArray]=None)->trajectory:
 		"""
 		Convert list of points to a finer trajectory by treating each point as a trajectory node.
 		Each terminal and branching node of trajectory must have one corresponding point.
@@ -1052,13 +1104,13 @@ class point:
 		w=np.exp(-((d/radius)**2)/2)
 		w/=w.sum(axis=0)
 		if cut>0:
-			raise NotImplementedError
-			t1=(w>0)&(w<cut)
-			while t1.any():
-				#TODO: Need to remove only the weakest if all weights removed for each point
-				w[t1]=0
-				w/=w.sum(axis=0)
-				t1=(w>0)&(w<cut)
+			raise NotImplementedError('cut>0')
+			#TODO: Need to remove only the weakest if all weights removed for each point
+			# t1=(w>0)&(w<cut)
+			# while t1.any():
+			# 	w[t1]=0
+			# 	w/=w.sum(axis=0)
+			# 	t1=(w>0)&(w<cut)
 		assert (w>=0).all() and (w<=1).all()
 		return w
 	def smoothen(self,data:npt.NDArray,*a,points:point=None,axis:int=-1,func_name:str='linear',nan:str='ignore',**ka)->npt.NDArray:

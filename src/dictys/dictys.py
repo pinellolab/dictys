@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+"""
+User interface modules
+"""
+
 from .qc import qc_reads, qc_outlier
 from .lcpm import lcpm, scaling_factor
 from .norm import normcov, compute_var, normvar

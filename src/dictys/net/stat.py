@@ -7,7 +7,7 @@ Statistics of networks for data visualization and export.
 
 from __future__ import annotations
 import abc
-from typing import Union,Callable,Tuple
+from typing import Union,Callable,Tuple,Optional
 import numpy.typing as npt
 import dictys.traj
 import dictys.net
@@ -34,7 +34,7 @@ class base(metaclass=abc.ABCMeta):
 	"""
 	Abstract base class for stat of network.
 	"""
-	def __init__(self,names:Union[list[npt.ArrayLike[str]],None]=None,label:Union[str,None]=None):
+	def __init__(self,names:Optional[list[npt.ArrayLike[str]]]=None,label:Optional[str]=None):
 		"""
 		Base class for statistics for each gene
 		names:	List of names of each axis of output stat, except last axis which is always time. Default is obtained from default_names function.
@@ -65,7 +65,7 @@ class base(metaclass=abc.ABCMeta):
 		Return:
 		List of list of names for each axis.
 		"""
-	def default_lims(self,pts:dictys.traj.point=None,names:Union[list[npt.ArrayLike[str]],None]=None,expansion:float=0.02)->npt.ArrayLike:
+	def default_lims(self,pts:dictys.traj.point=None,names:Optional[list[npt.ArrayLike[str]]]=None,expansion:float=0.02)->npt.ArrayLike:
 		"""
 		Use this function to determine the default limits of the stat.
 		This implementation uses min/max of stat values.
@@ -172,7 +172,7 @@ class function(base):
 	"""
 	Stat that is a function of other stat(s)
 	"""
-	def __init__(self,func:Callable[Tuple[npt.NDArray,...],npt.NDArray],stats:list[base],isconst:Union[bool,None]=None,**ka):
+	def __init__(self,func:Callable[Tuple[npt.NDArray,...],npt.NDArray],stats:list[base],isconst:Optional[bool]=None,**ka):
 		"""
 		Stat that is a function of other stat(s)
 		func:	Function to combine other stats. Should have self.compute=func(*[x.compute(...) for x in stats]).
@@ -298,7 +298,7 @@ class fbinarize(base):
 	"""
 	Convert continuous network stat to binary network stat.
 	"""
-	def __init__(self,stat:base,*a,statmask:Union[base,None]=None,posrate:float=0.01,signed:bool=True,**ka):
+	def __init__(self,stat:base,*a,statmask:Optional[base]=None,posrate:float=0.01,signed:bool=True,**ka):
 		"""
 		Convert continuous network stat to binary network stat.
 		stat:		Stat for continuous network as numpy.ndarray(shape=(n_reg,n_target),dtype=float)
@@ -348,7 +348,7 @@ class pseudotime(base):
 	"""
 	Statistic to output pseudotime
 	"""
-	def __init__(self,d:dictys.net.network,pts:dictys.traj.point,*a,traj:Union[dictys.traj.trajectory,None]=None,**ka):
+	def __init__(self,d:dictys.net.network,pts:dictys.traj.point,*a,traj:Optional[dictys.traj.trajectory]=None,**ka):
 		"""
 		Statistic to output pseudotime
 		d:		Dataset object
@@ -505,7 +505,7 @@ class fcentrality_base(base):
 	"""
 	Base class for centrality measure from network stat
 	"""
-	def __init__(self,statnet:base,func:Callable,directed:bool=False,roleaxis:int=0,label:Union[str,None]=None):
+	def __init__(self,statnet:base,func:Callable,directed:bool=False,roleaxis:int=0,label:Optional[str]=None):
 		"""
 		Base class for centrality measure from network stat
 		statnet:	Stat for network
@@ -553,7 +553,7 @@ class fcentrality_degree(base):
 	"""
 	Degree centrality stat for network.
 	"""
-	def __init__(self,statnet:base,statmask:Union[base,None]=None,roleaxis:int=0):
+	def __init__(self,statnet:base,statmask:Optional[base]=None,roleaxis:int=0):
 		"""
 		Degree centrality stat for network.
 		statnet:	stat for network
@@ -863,4 +863,3 @@ class flayout_base(base):
 
 
 #
-

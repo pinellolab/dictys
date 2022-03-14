@@ -10,6 +10,21 @@ __all__=['panel','population']
 from . import *
 
 def get_cmap(cmap,n):
+	"""
+	Get discrete colors from colormap in matplotlib
+
+	Parameters
+	----------
+	cmap:	str
+		Matplotlib color map name
+	n:		int
+		Number of colors needed
+
+	Return
+	------
+	numpy.ndarray(shape=(n,4))
+		n colors in RGBA format
+	"""
 	import numpy as np
 	import matplotlib.pyplot as plt
 	c=plt.get_cmap(cmap)

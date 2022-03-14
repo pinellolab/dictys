@@ -6,10 +6,13 @@ Visualization panels of networks
 """
 
 import abc
-from typing import Union
+from typing import Union,Optional
 from dictys.net import stat
 
 class base(metaclass=abc.ABCMeta):
+	"""
+	Abstract base class for dynamic network plotting panel
+	"""
 	def __init__(self,ax,pts):
 		"""
 		Base class to visualize single panel for dynamic network
@@ -51,6 +54,9 @@ class base(metaclass=abc.ABCMeta):
 		"""
 
 class overlay(base):
+	"""
+	Overlay class that draws several panel classes in the same panel.
+	"""
 	def __init__(self,ax,pts,panels):
 		"""
 		Overlay class that draws several panel classes in the same panel.
@@ -78,10 +84,13 @@ class overlay(base):
 		return list(itertools.chain.from_iterable(objs))
 
 class statscatter(base):
-	def __init__(self,ax,pts,statx,staty,names:Union[list[str],None]=None,annotate:Union[list[str],dict[str,str]]=[],
+	"""
+	Draw scatter plots from two stats.
+	"""
+	def __init__(self,ax,pts,statx,staty,names:Optional[list[str]]=None,annotate:Union[list[str],dict[str,str]]=[],
 			annotate_err:bool=True,
 			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict={},statka:dict={},
-			staty2=None,scatterka2:dict={},aspect:Union[float,None]=None):
+			staty2=None,scatterka2:dict={},aspect:Optional[float]=None):
 		"""
 		Draw scatter plots from two stats.
 
@@ -155,9 +164,8 @@ class statscatter(base):
 		if len(t1)>0:
 			if annotate_err:
 				raise ValueError('TF(s) not found: {}'.format(','.join([annotate[x] for x in t1])))
-			else:
-				t1=list(filter(lambda x:x in self.namesdict,annotate))
-				annotate={x:annotate[x] for x in t1} if isinstance(annotate,dict) else t1
+			t1=list(filter(lambda x:x in self.namesdict,annotate))
+			annotate={x:annotate[x] for x in t1} if isinstance(annotate,dict) else t1
 		if isinstance(annotate,dict):
 			self.annotate={self.namesdict[x]:y for x,y in annotate.items()}
 		else:
@@ -181,7 +189,14 @@ class statscatter(base):
 			raise ValueError('lim size ({}) must match the size of all axes ({}).'.format(len(lim),self.ny+1))
 		self.lim=lim
 	def autolimits(self):
-		#Determines limits of axes
+		"""
+		Determines limits of axes
+
+		Returns
+		-------
+		numpy.ndarray(shape=(self.ny+1,2))
+			Automatically determined limits of each axis
+		"""
 		import numpy as np
 		#Prepare autolimits
 		lim=[self.stats[x].default_lims(pts=self.pts,names=[self.names]) for x in range(self.ny+1)]
@@ -320,6 +335,9 @@ class statscatter(base):
 		return objs
 
 class statplot_static(statscatter):
+	"""
+	Draw constant line plots from two stats. This is a static plot and no redraw takes place.
+	"""
 	def __init__(self,ax,pts,statx,staty,colors,annotate=[],plotka={},plotka2={},**ka):
 		"""
 		Draw constant line plots from two stats. This is a static plot and no redraw takes place.
@@ -387,6 +405,9 @@ class statplot_static(statscatter):
 		return []
 
 class statplot(overlay):
+	"""
+	Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
+	"""
 	def __init__(self,ax,pts,statx,staty,names,cmap='tab10',pointer=True,plotka={},pointerka={'s':20,'zorder':99}):
 		"""
 		Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
@@ -428,6 +449,9 @@ class statplot(overlay):
 		return super().__init__(ax,pts,panels[::-1])
 
 class cellscatter_scatter(statscatter):
+	"""
+	Draw scatter plots of cells.
+	"""
 	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka={},aspect=1,**ka):
 		"""
 		Draw scatter plots of cells.
@@ -489,6 +513,9 @@ class cellscatter_scatter(statscatter):
 		return super().init()
 
 class cellscatter_pointer(statscatter):
+	"""
+	Draw pointer for average cell location.
+	"""
 	def __init__(self,ax,pts,statx,staty,statw,**ka):
 		"""
 		Draw pointer for average cell location.
@@ -512,6 +539,9 @@ class cellscatter_pointer(statscatter):
 		super().__init__(ax,pts,statx,staty,scatterka=ka)
 
 class cellscatter(overlay):
+	"""
+	Draws overlay plot of scatter plots of cells and average cell pointer.
+	"""
 	def __init__(self,ax,d,pts,traj,weightfunc,pointer=True,scatterka={'s':2,'lw':0},pointerka={'color':'k','s':20,'zorder':99}):
 		"""
 		Draws overlay plot of scatter plots of cells and average cell pointer.
@@ -549,6 +579,9 @@ class cellscatter(overlay):
 		return super().__init__(ax,pts,panels[::-1])
 
 class statheatmap(base):
+	"""
+	Draw dynamic heatmap for a single stat.
+	"""
 	def __init__(self,ax,pts,stat1,names=None,annotate=[None,None],lim=None,cmap_sym=True,**ka):
 		"""
 		Draw dynamic heatmap for a single stat.
@@ -615,6 +648,20 @@ class statheatmap(base):
 		# else:
 		# 	self.g_ann={self.nametdict[x]:x for x in g_ann}
 	def get_data(self,pts):
+		"""
+		Obtains stat needed for heatmap
+
+		Parameters
+		----------
+		pts:	dictys.traj.point
+			A single point to compute stat for
+
+		Returns
+		-------
+		numpy.ndarray
+			Stat values at the requested point
+		"""
+		assert len(pts)==1
 		data=self.stat.compute(pts)
 		data=data[[self.stat.ndict[0][x] for x in self.names[0]]][:,[self.stat.ndict[1][x] for x in self.names[1]]]
 		return data
@@ -638,6 +685,9 @@ class statheatmap(base):
 		return objs
 
 class network_node(statscatter):
+	"""
+	Draw network nodes with scatter plot.
+	"""
 	def __init__(self,ax,pts,statloc,*a,aspect=1,**ka):
 		"""
 		Draw network nodes with scatter plot.
@@ -660,6 +710,9 @@ class network_node(statscatter):
 		super().__init__(ax,pts,statx,staty,*a,aspect=aspect,**ka)
 
 class network_edge_old(base):
+	"""
+	Draw scatter plots from two stats of TFs.	
+	"""
 	def __init__(self,ax,pts,statloc,statnet,*a,nmax=1000,**ka):
 		"""Draw scatter plots from two stats of TFs.
 		statx,
@@ -702,6 +755,9 @@ class network_edge_old(base):
 		return self.objs
 
 class network_edge(base):
+	"""
+	Draw network edges.
+	"""
 	def __init__(self,ax,pts,statloc,statnet,**ka):
 		"""
 		Draw network edges.
@@ -752,6 +808,9 @@ class network_edge(base):
 		return self.objs[:self.nlast]
 
 class network(overlay):
+	"""
+	Draws overlay plot of network.
+	"""
 	def __init__(self,ax,pts,statloc,statnet,nodeka={},edgeka={}):
 		"""
 		Draws overlay plot of network.
