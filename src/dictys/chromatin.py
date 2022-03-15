@@ -3,7 +3,8 @@
 """Chromatin accessibility analyses
 """
 
-from typing import Union,Optional
+from typing import Optional
+import numpy.typing as npt
 
 ################################################################
 # Peak calling
@@ -11,12 +12,14 @@ from typing import Union,Optional
 
 def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:str,qcut:float=0.05,nth:int=1,nmax:int=0)->None:
 	"""
-	Peak calling using macs2, based on bam files for each cell in a given folder.
+	Peak calling using macs2.
+
+	Needs bam files for each cell in a given folder.
 	
 	Parameters
 	------------
 	fi_names:
-		Path of input file containing one sample/cell name per line for macs2 peak calling
+		Path of input text file containing one sample/cell name per line for macs2 peak calling
 	fi_bam:
 		Path of input folder that contains each cell's bam file by name in *fi_names*
 	fo_bam:
@@ -40,7 +43,8 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	from os import linesep
 	import numpy as np
 	import pandas as pd
-	from .utils import shell
+	import logging
+	from dictys.utils import shell
 	if qcut<=0 or qcut>=1:
 		raise ValueError('qcut must be between 0 and 1.')
 	if not isfile(fi_names):
@@ -52,6 +56,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	fi_names,fi_bam,fo_bam,fo_bai,fo_bed=[abspath(x) for x in [fi_names,fi_bam,fo_bam,fo_bai,fo_bed]]
 	
 	#Load sample names
+	logging.info(f'Reading file {fi_names}')
 	with open(fi_names,'r') as f:
 		names=f.readlines()
 	names=[x.strip() for x in names]
@@ -68,10 +73,12 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 
 	if nmax>0:
 		#Reduce size of peak bed file
+		logging.info(f'Reading file {fo_bed}')
 		d3=pd.read_csv(fo_bed,header=None,index_col=None,sep='\t')
 		if len(d3)>nmax:
 			d4=np.partition(d3[8].values,-nmax-1)[-nmax-1]
 			d3=d3[d3[8]>d4]
+			logging.info(f'Writing file {fo_bed}')
 			d3.to_csv(fo_bed,header=False,index=False,sep='\t')
 
 ################################################################
@@ -80,7 +87,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 
 def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional[str]=None,cut:float=10,nth:int=1,nmax:int=1000000000)->None:
 	"""
-	TF Footprinting with wellington.
+	TF footprinting with wellington.
 	
 	Parameters
 	------------
@@ -128,7 +135,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional
 # Motif scan
 ################################################################
 
-def _motif_postproc(dret,fi_exp,fo_bed,fo_wellington,fo_homer):
+def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->None:
 	"""
 	Postprocess motif discovery results from HOMER.
 	dret:	Return tuple of HOMER call
@@ -138,6 +145,7 @@ def _motif_postproc(dret,fi_exp,fo_bed,fo_wellington,fo_homer):
 	"""
 	import numpy as np
 	import pandas as pd
+	import logging
 	from io import StringIO
 	if dret is None or len(dret)!=3:
 		raise RuntimeError('Homer failed.')
@@ -173,7 +181,7 @@ def _motif_postproc(dret,fi_exp,fo_bed,fo_wellington,fo_homer):
 	dw[t1]=0
 	dh[t1]=0
 	#Remove motifs not mapped to TF
-	t1=set([x.upper() for x in namet])
+	t1=set(namet)
 	t1=np.array([x.split('_')[0] in t1 for x in namem])
 	dw,dh=[x[:,t1] for x in [dw,dh]]
 	namem,=[x[t1] for x in [namem]]
@@ -181,13 +189,16 @@ def _motif_postproc(dret,fi_exp,fo_bed,fo_wellington,fo_homer):
 	assert np.isfinite(dw).all() and np.isfinite(dh).all()
 	assert (dw>=0).all() and (dh>=0).all()
 	#Output
+	logging.info(f'Writing file {fo_bed}')
 	dmotif.to_csv(fo_bed,header=False,index=False,sep='\t')
 	dw=pd.DataFrame(dw,index=namep,columns=namem)
+	logging.info(f'Writing file {fo_wellington}')
 	dw.to_csv(fo_wellington,header=True,index=True,sep='\t')
 	dh=pd.DataFrame(dh,index=namep,columns=namem)
+	logging.info(f'Writing file {fo_homer}')
 	dh.to_csv(fo_homer,header=True,index=True,sep='\t')
 
-def homer(fi_bed:str,fi_motif:str,diri_genome:str,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str,nth:int=1)->None:
+def homer(fi_bed:str,fi_motif:str,dirio_genome:str,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str,nth:int=1)->None:
 	"""
 	Motif scan with homer.
 	
@@ -197,8 +208,8 @@ def homer(fi_bed:str,fi_motif:str,diri_genome:str,fi_exp:str,fo_bed:str,fo_welli
 		Path of input bed file of regions
 	fi_motif:
 		Path of input motif PWM file in homer format. Motifs must be named in format 'gene_whatever...' where gene matches gene names in fi_exp. Should not contain duplicates.
-	diri_genome:
-		Path of folder or file for reference genome for homer. A separate hard copy is recommended because homer may write into the folder to preparse genome.
+	dirio_genome:
+		Path of input & output folder or file for reference genome for homer. A separate hard copy is recommended because homer may write into the folder to preparse genome.
 	fi_exp:
 		Path of input expression matrix file in tsv format. Used for mapping motifs to genes.
 	fo_bed:	
@@ -216,13 +227,13 @@ def homer(fi_bed:str,fi_motif:str,diri_genome:str,fi_exp:str,fo_bed:str,fo_welli
 	for xi in [fi_bed,fi_motif]:
 		if not isfile(xi):
 			raise FileNotFoundError(xi)
-	if not (isfile(diri_genome) or isdir(diri_genome)):
-		raise FileNotFoundError(diri_genome)
+	if not (isfile(dirio_genome) or isdir(dirio_genome)):
+		raise FileNotFoundError(dirio_genome)
 	
 	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_homer.sh')
 	spath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_homer.py')
-	fi_bed,fi_motif,diri_genome,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,diri_genome,fo_bed,fo_wellington,fo_homer]]
-	cmd = scriptpath+f" {fi_bed} {fi_motif} {diri_genome} {spath} {nth}"
+	fi_bed,fi_motif,dirio_genome,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,dirio_genome,fo_bed,fo_wellington,fo_homer]]
+	cmd = scriptpath+f" {fi_bed} {fi_motif} {dirio_genome} {spath} {nth}"
 	d2 = shell.cmdfile(cmd,
 		['19-w.tsv','19-h.tsv','16-long.bed'],
 		quiet=False,cd=True,sizelimit=None)
@@ -232,7 +243,7 @@ def homer(fi_bed:str,fi_motif:str,diri_genome:str,fi_exp:str,fo_bed:str,fo_welli
 # Linking TFs to target genes
 ################################################################
 
-def _mergemotif_score(wellington,homer,dist,mode=7):
+def _linking_score(vw,vh,dist,mode:int=7):
 	"""Footprinting I score
 	mode:
 		Mode to compute final score. Accepts binary flags:
@@ -243,16 +254,16 @@ def _mergemotif_score(wellington,homer,dist,mode=7):
 	import numpy as np
 	ans=0
 	if mode&1:
-		ans=ans+np.log(wellington)
+		ans=ans+np.log(vw)
 	if mode&2:
-		ans=ans+np.log(homer)
+		ans=ans+np.log(vh)
 	if mode&4:
 		ans=ans-np.log(10)*np.abs(dist)/1E6
 	return ans
 
-def binding(fi_wellington:str,fi_homer:str,fi_exp:str,fo_bind:str,combine:str='max',cuth:float=0,cutw:float=0,cut:float=0,mode:int=3)->None:
+def binding(fi_wellington:str,fi_homer:str,fo_bind:str,cuth:float=0,cutw:float=0,cut:float=0,combine:str='max',mode:int=3)->None:
 	"""
-	Finds TF binding events.
+	Finding TF binding events.
 
 	Combines wellington and homer outputs to infer TF binding events by merging motifs to TFs.
 
@@ -262,18 +273,16 @@ def binding(fi_wellington:str,fi_homer:str,fi_exp:str,fo_bind:str,combine:str='m
 		Path of input tsv file of wellington output
 	fi_homer:
 		Path of input tsv file of homer output
-	fi_exp:
-		Path of input expression matrix file to obtain gene names
 	fo_bind:
-		Path of output binding event file
-	combine:
-		Method to combine scores of motifs of the same TF. Accepts: max, mean, sum.
+		Path of output tsv file of binding events
 	cuth:
 		Homer score cutoff
 	cutw:
 		Wellington score cutoff
 	cut:
 		Final score (integrating homer & wellington) cutoff
+	combine:
+		Method to combine scores of motifs of the same TF. Accepts: max, mean, sum.
 	mode:
 		Mode to compute final score. Accepts binary flags:
 
@@ -286,42 +295,40 @@ def binding(fi_wellington:str,fi_homer:str,fi_exp:str,fo_bind:str,combine:str='m
 	import numpy as np
 	import pandas as pd
 	from dictys.utils.numpy import groupby
+	import logging
 	if combine=='max':
-		combine=lambda x,**ka_x:x.max(**ka_x)
+		combine=np.max
 	elif combine=='sum':
-		combine=lambda x,**ka_x:x.sum(**ka_x)
+		combine=np.sum
 	elif combine=='mean':
-		combine=lambda x,**ka_x:x.mean(**ka_x)
+		combine=np.mean
 	else:
 		raise ValueError(f'Unknown combine method: {combine}')
 
 	# Read in files
+	logging.info(f'Reading file {fi_wellington}')
 	wellington_df=pd.read_csv(fi_wellington,header=0,index_col=0,sep='\t')
+	logging.info(f'Reading file {fi_homer}')
 	homer_df=pd.read_csv(fi_homer,header=0,index_col=0,sep='\t')
 	assert (wellington_df.index==homer_df.index).all()
 	assert (wellington_df.columns==homer_df.columns).all()
-	wellington=wellington_df.values
-	homer=homer_df.values
+	vw=wellington_df.values
+	vh=homer_df.values
 	namem=np.array(list(wellington_df.columns))
-	namet=np.array(list(pd.read_csv(fi_exp,header=0,index_col=0,sep='\t',usecols=[0]).index))
 	#Get motif to gene map
-	dmt=[x.split('_')[0] for x in namem]
-	t1=dict(zip([x.upper() for x in namet],range(len(namet))))
-	dmt=np.array([t1[x.upper()] if x.upper() in t1 else -1 for x in dmt],dtype='i8')
-	assert (dmt>=0).all()
-	dmt=groupby(dmt)
+	dmt=groupby([x.split('_')[0] for x in namem])
 
-	mask=(wellington>cutw)&(homer>cuth)
+	mask=(vw>cutw)&(vh>cuth)
 	binds=[]
 	for xi in dmt:
 		t1=np.nonzero(mask[:,dmt[xi]])
 		if len(t1)==0:
 			continue
 		t1=(t1[0],dmt[xi][t1[1]])
-		ds=_mergemotif_score(wellington[t1],homer[t1],None,mode=mode)
+		ds=_linking_score(vw[t1],vh[t1],None,mode=mode)
 		if cut is not None:
 			t2=ds>cut
-			t1=tuple([x[t2] for x in t1])
+			t1=tuple(x[t2] for x in t1)
 			if len(t1)==0:
 				continue
 			ds=ds[t2]
@@ -330,22 +337,277 @@ def binding(fi_wellington:str,fi_homer:str,fi_exp:str,fo_bind:str,combine:str='m
 			binds.append([xi,xj,combine(ds[t3[xj]])])
 	if len(binds)==0:
 		raise RuntimeError('No TF binding relation remains.')
+	binds=[list(x) for x in zip(*binds)]
 	ans=pd.DataFrame([])
 	ans['TF']=binds[0]
-	ans['loc']=binds[1]
+	ans['loc']=homer_df.index[binds[1]]
 	ans['score']=binds[2]
+	logging.info(f'Writing file {fo_bind}')
 	ans.to_csv(fo_bind,index=False,header=True,sep='\t')
 
+def tssdist(fi_exp:str,fi_wellington:str,fi_gff:str,fo_dist:str,cut:int=500000,nmin:int=1,nmax:int=10000000)->None:
+	"""
+	Annotating TF bond regions to target genes based on distance to TSS.
 
+	Parameters
+	----------
+	fi_exp:
+		Path of input expression matrix file in tsv format to obtain gene names
+	fi_wellington:
+		Path of input tsv file of wellington scores to obtain DNA regions
+	fi_gff:
+		Path of input GFF file that annotates gene regions with strand info
+	fo_dist:
+		Path of output tsv file of distance from TF-bond regions to TSS
+	cut:
+		Distance cutoff between DNA region and target gene TSS
+	nmin:
+		Minimal total number of links to recover
+	nmax:
+		Maximal total number of links to recover
+	"""
+	import numpy as np
+	import pandas as pd
+	import logging
+	from pybedtools import BedTool
+	assert nmin>0
+	if nmin>nmax:
+		raise ValueError('nmax must be greater than nmin.')
 
+	logging.info(f'Reading file {fi_exp}')
+	namet=np.array(list(pd.read_csv(fi_exp,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	logging.info(f'Reading file {fi_wellington}')
+	namep=np.array(list(pd.read_csv(fi_wellington,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	
+	#Produce peak bed file
+	peaks=pd.DataFrame([x.split(':') for x in namep],index=None,columns=None)
+	peaks=BedTool(peaks.to_csv(None,header=False,index=False,sep='\t'),from_string=True)
+	#Produce target gene bed file
+	logging.info(f'Reading file {fi_gff}')
+	genes=pd.read_csv(fi_gff,header=None,index_col=None,sep='\t')
+	t1=set(namet)
+	#Shrink to genes showed up
+	genes=genes[genes[1].isin(t1)]
+	if genes.shape[1]<6:
+		genes[6]='+'
+		signed=False
+	else:
+		signed=True
+	#Simplify to bed file
+	genes=genes[[0,3,4,6,2]].copy()
+	genes.rename({genes.columns[x]:x for x in range(len(genes.columns))},axis=1,inplace=True)
+	assert genes[3].isin({'+','-'}).all()
+	t1=genes.apply(lambda x:x[1] if x[3]=='+' else x[2],axis=1)
+	genes[1]=t1
+	genes[2]=t1
+	genes.drop_duplicates(inplace=True)
+	assert len(genes[4].unique())==len(genes)
+	genes=genes.to_csv(None,sep='\t',header=False,index=False)
+	genes=BedTool(genes,from_string=True)
 
+	#Filter pairs
+	ans=genes.window(peaks,w=cut)
+	try:
+		ans2=ans.to_dataframe(header=None,disable_auto_names=True)
+	except pd.errors.EmptyDataError:
+		ans2=[]
+	if len(ans2)<nmin:
+		raise RuntimeError('Too few region-target relations found: {}'.format(len(ans2)))
+	if len(ans2)>nmax:
+		raise RuntimeError('Too many region-target relations found: {}'.format(len(ans2)))
+	assert ans2[3].isin({'+','-'}).all()
+	if signed and ans2[3].size>=100 and np.abs((ans2[3]=='+').mean()-0.5)>0.4:
+		logging.warning('Heavily unbalanced strand found.')
+	#Simplify output
+	ans2['region']=ans2.apply(lambda x:'{}:{}:{}'.format(x[5],x[6],x[7]),axis=1)
+	ans2['target']=ans2[4]
+	ans2['dist1']=ans2.apply(lambda x:x[6]-x[1] if x[3]=='+' else x[2]-x[6],axis=1)
+	ans2['dist2']=ans2.apply(lambda x:x[7]-x[1] if x[3]=='+' else x[2]-x[7],axis=1)
+	t1=np.array([ans2['dist1'].values,ans2['dist2'].values])
+	t2=t1[np.argmin(np.abs(t1),axis=0),np.arange(t1.shape[1])]
+	t2[np.sign(t1).prod(axis=0)<=0]=0
+	ans2['dist']=-t2
+	ans2=ans2[['region','target','dist']].copy()
+	logging.info(f'Writing file {fo_dist}')
+	ans2.to_csv(fo_dist,header=True,index=False,sep='\t')
 
+def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int=4)->None:
+	"""
+	Linking regulators and targets with scores.
 
+	Parameters
+	----------
+	fi_binding:
+		Path of input tsv file of binding events
+	fi_dist:
+		Path of input tsv file of distance from TF-bond regions to TSS
+	fo_linking:
+		Path of output matrix file of TF to potential target gene link scores
+	combine:
+		Method to combine scores of motifs of the same TF. Accepts: max, mean, sum.
+	mode:
+		Mode to compute final score. Accepts binary flags:
 
+		* 4:	Subtract log(10)*(distance_to_tss)/1E6
+	"""
+	import numpy as np
+	import pandas as pd
+	import itertools
+	from dictys.utils.numpy import groupby
+	import logging
+	if combine=='max':
+		combine=np.max
+	elif combine=='sum':
+		combine=np.sum
+	elif combine=='mean':
+		combine=np.mean
+	else:
+		raise ValueError(f'Unknown combine method: {combine}')
 
+	logging.info(f'Reading file {fi_binding}')
+	db=pd.read_csv(fi_binding,header=0,index_col=None,sep='\t')
+	logging.info(f'Reading file {fi_dist}')
+	dd=pd.read_csv(fi_dist,header=0,index_col=None,sep='\t')
 
+	#Chain linking
+	links=[[db['TF'].values,db['loc'].values,db['score'].values],[dd['region'].values,dd['target'].values,_linking_score(None,None,dd['dist'].values,mode=mode&4) if mode&4 else np.zeros(len(dd))]]
+	#Compute regulator mask matrix using links
+	t1=[groupby(x[1]) for x in links]
+	#{target:[(source,strength),...]}
+	links=[{y:list(zip(x[0][0][x[1][y]],x[0][2][x[1][y]])) for y in x[1]} for x in zip(links,t1)]
+	while len(links)>1:
+		#Connect link steps sequentially
+		t2=links.pop()
+		t1={x:list(itertools.chain.from_iterable([[[z[0],z[1]+y[1]]for z in links[-1][y[0]]] for y in t2[x] if y[0] in links[-1]])) for x in t2}
+		t1={x[0]:[np.array(z) for z in zip(*x[1])] for x in t1.items() if len(x[1])>0}
+		t2={x:groupby(y[0]) for x,y in t1.items()}
+		links[-1]={x:[[y,combine(t1[x][1][t2[x][y]])] for y in t2[x]] for x in t2}
+		assert np.isfinite(np.concatenate([[y[1] for y in x] for x in links[-1].values()])).all()
+	links=links[0]
+	#Remove self links
+	links={x[0]:list(filter(lambda y:y[0]!=x[0],x[1])) for x in links.items()}		# pylint: disable=W0640
+	links=[[[x[0]]+y for y in x[1]] for x in links.items()]
+	
+	#Construct matrix
+	links=list(itertools.chain.from_iterable(links))
+	links=[list(x) for x in zip(*links)]
+	links=[links[1],links[0]]+links[2:]
+	#TF and target names
+	namelink=[]
+	namelink.append(sorted(list(set(links[0]))))
+	namelink.append(sorted(list(set(links[0])|set(links[1]))))
+	nlink=[len(x) for x in namelink]
+	dictlink=[dict(zip(x,range(y))) for x,y in zip(namelink,nlink)]
+	links=[[dictlink[0][x] for x in links[0]],[dictlink[1][x] for x in links[1]],links[2]]
+	ans=-np.ones(nlink,dtype=float)*np.inf
+	ans[links[0],links[1]]=links[2]
+	assert np.isfinite(ans).any() and not np.isnan(ans).any()
+	ans=pd.DataFrame(ans,index=namelink[0],columns=namelink[1])
+	logging.info(f'Writing file {fo_linking}')
+	ans.to_csv(fo_linking,index=True,header=True,sep='\t')
 
+def _binlinking_func(data:npt.NDArray,n:int,inf:str='never')->npt.NDArray:
+	"""
+	Actual function to convert regulator-target link scores to binary.
 
+	Parameters
+	----------
+	data:	numpy.ndarray(ndim=1,dtype=float)
+		Float vector to convert to binary vector
+	n:		int
+		Number of Trues to obtain in binary vector
+	inf:
+		Whether to select links with -inf score. Accepts: never.
+	
+	Returns
+	-------
+	numpy.ndarray(shape=data.shape,dtype=bool)
+		Converted binary vector
+	"""
+	import numpy as np
+	assert n>0 or n==-1
+	assert data.ndim==1 and data.size>0
+	if n==-1 or n>=data.size:
+		assert inf=='never'
+		return data>-np.inf
+	t1=np.argpartition(data,-n)
+	if data[t1[-n]]==-np.inf:
+		if inf=='never':
+			t1=np.nonzero(data>-np.inf)[0]
+		else:
+			raise NotImplementedError(f'Unknown inf {inf}.')
+	else:
+		t1=t1[-n:]
+	assert len(t1)<=n
+	ans=np.zeros(data.size,dtype=bool)
+	ans[t1]=True
+	return ans
+
+def binlinking(fi_linking:str,fo_binlinking:str,n:int,axis:Optional[int]=1,selfreg:str='error',inf:str='never')->None:
+	"""
+	Converting regulator-target link score matrix to binary.
+
+	Chooses the top regulator-target links, separately for each target gene by default.
+
+	Parameters
+	----------
+	fi_linking:
+		Path of input matrix file of TF to potential target gene link scores
+	fo_binlinking:
+		Path of output matrix file of TF to potential target gene links
+	n:
+		Number of regulator-target links. `n` strongest links (with highest scores) are selected along axis `axis`. If greater than the maximum links available, all links will be selected subject to `inf` parameter constraint. Value -1 selects all non-inf links.
+	axis:
+		Axis to choose the top links. If None, n links in total are selected among all regulator-target links. Defaults to 1, indicating n strongest links/regulators are selected for each target.
+	selfreg:
+		How to handle self regulation. Accepts:
+
+		* error: Raise ValueError if seen in `fi_linking`
+
+	inf:
+		Whether to select links with -inf score. Accepts: never.
+	"""
+	import numpy as np
+	import pandas as pd
+	import logging
+	#Loading input
+	logging.info(f'Reading file {fi_linking}')
+	dl=pd.read_csv(fi_linking,header=0,index_col=0,sep='\t')
+	if selfreg=='error':
+		tdict=dict(zip(dl.columns,range(len(dl.columns))))
+		t1=dl.values[np.arange(len(dl)),[tdict[x] for x in dl.index]]
+		assert t1.ndim==1
+		if (t1!=-np.inf).any():
+			raise ValueError(f'Input file {fi_linking} contains self-regulation.')
+	else:
+		raise ValueError(f'Unknown option {selfreg} for parameter selfreg')
+
+	#Selecting top regulators
+	if axis is None:
+		links=_binlinking_func(dl.values.ravel(),n,inf=inf).reshape(*dl.shape)
+	else:
+		t1=np.swapaxes(dl.values,0,axis)
+		t2=t1.shape
+		t1=t1.reshape(t2[0],-1)
+		links=np.array([_binlinking_func(x,n,inf=inf) for x in t1])
+		links=np.swapaxes(links.reshape(*t2),0,axis)
+	assert links.shape==dl.shape
+	links=pd.DataFrame(links,index=dl.index,columns=dl.columns)
+	if selfreg=='error':
+		tdict=dict(zip(links.columns,range(len(links.columns))))
+		t1=links.values[np.arange(len(links)),[tdict[x] for x in links.index]]
+		assert t1.ndim==1
+		assert not t1.any()
+
+	#Reduce matrix size
+	namelink=[links.index[links.values.any(axis=1)],links.columns[links.values.any(axis=0)]]
+	if len(namelink[0])==0:
+		raise RuntimeError('No link found.')
+	namelink[1]=sorted(list(set(namelink[0])|set(namelink[1])))
+	links=links.loc[namelink[0]][namelink[1]]
+	logging.info(f'Writing file {fo_binlinking}')
+	links.to_csv(fo_binlinking,header=True,index=True,sep='\t')
+	
 
 
 
