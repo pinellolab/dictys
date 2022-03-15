@@ -1,63 +1,36 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2018, 2019. All rights reserved.
+# Lingfei Wang, 2018-2022. All rights reserved.
 """Preprocessing
 """
 
-def selects_rna(fi_reads:str,fi_table:str,fo_reads:str,col:str,val:str)->None:
+def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	"""
-	Select samples/cells based on external table from RNA data.
-	
-	Parameters
-	----------
-	fi_reads:
-		Path of input tsv file of read count matrix
-	fi_table:
-		Path of input tsv file of table for selection criterion. Front column must be sample/cell name.
-	fo_reads:
-		Path of output tsv file of read count matrix after selection
-	col:
-		Name of column for selection
-	val:
-		Value of column for selection
-
-	"""
-	import pandas as pd
-	d=pd.read_csv(fi_reads,index_col=0,header=0,sep='\t')
-	dt=pd.read_csv(fi_table,index_col=0,header=0,sep='\t')
-	if any(len(x.index)!=len(set(x.index)) for x in [d,dt]):
-		raise ValueError('Duplicate indices detected.')
-	ind=dt.index[dt[col]==val]
-	if len(ind)==0:
-		raise RuntimeError('No cell selected.')
-	if len(set(ind)-set(dt.index))>0:
-		raise ValueError(f'Found cells missing in input table {fi_table}.')
-	d.loc[ind].to_csv(fo_reads,index=True,header=True,sep='\t',compress='gzip')
-	
-def selects_atac(fi_table:str,fo_list:str,col:str,val:str)->None:
-	"""
-	Select samples/cells based on external table from chromatin accessibility data.
+	Select chromatin accessibility samples/cells based on presence in expression matrix.
 	
 	Parameters
 	------------
-	fi_table:
-		Path of input tsv file of table for selection criterion. Front column must be sample/cell name.
+	fi_exp:
+		Path of input tsv file of expression. Column must be sample/cell name.
+	fi_list:
+		Path of input text file of selected cell names, one per line
 	fo_list:
 		Path of output text file of selected cell names, one per line
-	col:
-		Name of column for selection
-	val:
-		Value of column for selection
 
 	"""
 	import pandas as pd
 	from os import linesep
-	dt=pd.read_csv(fi_table,index_col=0,header=0,sep='\t')
-	if any(len(x.index)!=len(set(x.index)) for x in [dt]):
-		raise ValueError('Duplicate indices detected.')
-	ind=dt.index[dt[col]==val]
+	with open(fi_list,'r') as f:
+		ind=f.readlines()
+	ind=[x.strip() for x in ind]
+
+	dt=pd.read_csv(fi_exp,index_col=0,header=0,nrows=1,sep='\t')
+	if any(len(x.columns)!=len(set(x.columns)) for x in [dt]):
+		raise ValueError('Duplicate names detected.')
+	dt=set(dt.columns)
+	ind=list(filter(lambda x:len(x)>0 and x in dt,ind))
 	if len(ind)==0:
 		raise RuntimeError('No cell selected.')
-	ind=linesep.join(ind)
+	ind=linesep.join(ind)+linesep
 	with open(fo_list,'w') as f:
 		f.write(ind)
 	
@@ -70,7 +43,7 @@ def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float,
 	Parameters
 	-----------
 	fi_reads:
-		Path of input tsv file of read count matrix
+		Path of input tsv file of read count matrix. Rows are genes and columns are cells.
 	fo_reads:
 		Path of output tsv file of read count matrix after QC
 	n_gene:
@@ -143,5 +116,5 @@ def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float,
 		reads.shape[0] - len(st), reads.shape[0], reads.shape[1] - len(ss),
 		reads.shape[1]))
 	reads0=reads0.iloc[st,ss]
-	reads0.to_csv(fo_reads,header=True,index=True,sep='\t',compress='gzip')
+	reads0.to_csv(fo_reads,header=True,index=True,sep='\t',compression='gzip')
 	

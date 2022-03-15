@@ -12,10 +12,10 @@ class function_parser_base:
 		return self.parse(func)
 	def parse(self,func):
 		ans=self._parse(func)
-		self.check(ans)
+		self.check(ans,func.__name__)
 		return ans
 	@staticmethod
-	def check(ans):
+	def check(ans,name):
 		"""
 		Format check for self._parse
 
@@ -34,11 +34,14 @@ class function_parser_base:
 		AssertionError
 			If incorrectly formatted.
 		"""
+		from inspect import _empty
 		assert len(ans)==4
 		assert isinstance(ans[0],str) or ans[0] is None
 		assert isinstance(ans[1],str) or ans[1] is None
 		assert isinstance(ans[2],list) or ans[2] is None
 		assert all(x is None or (isinstance(x,tuple) and len(x)==4 and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None) and ((isinstance(x[3],tuple) and len(x[3])==2 and (x[3][0] is None or isinstance(x[3][0],bool) and (x[3][1] is None or x[3][0] is True))) or x[3] is None)) for x in ans[2])
+		if ans[3]==_empty:
+			raise TypeError(f"{name} function's output type is not annotated.")
 		assert ans[3] is None or (isinstance(ans[3],tuple) and len(ans[3])==3 and (isinstance(ans[3][0],str) or ans[3][0] is None) and (isinstance(ans[3][2],str) or ans[3][2] is None)) or all(x is None or (isinstance(x,tuple) and len(x) in {3,4} and (isinstance(x[0],str) or x[0] is None) and (isinstance(x[2],str) or x[2] is None)) for x in ans[3])
 		return ans
 	def _parse(self,func):

@@ -13,9 +13,9 @@
 
 set -eo pipefail
 
-bedfile="$1"
+bamfile="$1"
 baifile="$2"
-bamfile="$3"
+bedfile="$3"
 bedfile_out="$4"
 Wellington_cutoff=$5
 nodes="$6"

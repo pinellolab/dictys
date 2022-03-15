@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2018-2021. All rights reserved.
+# Lingfei Wang, 2018-2022. All rights reserved.
 """Chromatin accessibility analyses
 """
 
@@ -78,7 +78,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 # TF footprinting
 ################################################################
 
-def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional[str]=None,cut:float=10,nth:int=1,npeakmax:int=1000000000)->None:
+def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional[str]=None,cut:float=10,nth:int=1,nmax:int=1000000000)->None:
 	"""
 	TF Footprinting with wellington.
 	
@@ -96,9 +96,9 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional
 		Path of input bed file of blacklisted genome regions to be removed
 	cut:
 		Cutoff for wellington score
-	nth:		
+	nth:
 		Number of threads
-	npeakmax:	
+	nmax:	
 		Maximum number of footprints to retain, ordered by wellington score. Use 0 for no limit.
 		
 	"""
@@ -119,7 +119,7 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional
 	
 	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_wellington.sh')
 	fi_bam,fi_bai,fi_bed,fo_bed=[abspath(x) for x in [fi_bam,fi_bai,fi_bed,fo_bed]]
-	cmd = scriptpath+f" {fi_bam} {fi_bai} {fi_bed} {fo_bed} {cut} {nth} {npeakmax} {fi_blacklist}"
+	cmd = scriptpath+f" {fi_bam} {fi_bai} {fi_bed} {fo_bed} {cut} {nth} {nmax} {fi_blacklist}"
 	d2 = shell.cmdfile(cmd,[],quiet=False,cd=True)
 	if d2 is None or len(d2)>0 or not all(isfile(x) for x in [fo_bed]):
 		raise RuntimeError('Wellington failed.')
@@ -128,105 +128,213 @@ def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional
 # Motif scan
 ################################################################
 
-# def _motif_postproc(dret,fo_bed,fo_wellington,fo_homer):
-# 	"""Postprocess motif discovery results from HOMER.
-# 	d:		Original dataset object
-# 	dret:	Return tuple of HOMER call
-# 	Return:
-# 	Processed and copied new data object with motif results"""
-# 	import numpy as np
-# 	import pandas as pd
-# 	from io import StringIO
-# 	if dret is None or len(dret)!=3:
-# 		raise RuntimeError('Homer failed.')
-# 	with StringIO(dret[0].decode()) as f:
-# 		dw = pd.read_csv(f, header=0, index_col=0, sep='\t')
-# 	with StringIO(dret[1].decode()) as f:
-# 		dh = pd.read_csv(f, header=0, index_col=0, sep='\t')
-# 	with StringIO(dret[2].decode()) as f:
-# 		try:
-# 			dmotif = pd.read_csv(f, header=None, index_col=None, sep='\t')
-# 		except pd.errors.EmptyDataError:
-# 			dmotif=None
-# 	if dmotif is None:
-# 		raise RuntimeError('No motif found.')
-# 	assert dw.shape==dh.shape
-# 	assert (dw.columns==dh.columns).all()
-# 	assert (dw.index==dh.index).all()
-# 	assert dmotif.shape[1]==7
-# 	if dmotif.shape[0]==0:
-# 		raise RuntimeError('No motif found.')
+def _motif_postproc(dret,fi_exp,fo_bed,fo_wellington,fo_homer):
+	"""
+	Postprocess motif discovery results from HOMER.
+	dret:	Return tuple of HOMER call
+	fi_exp:	Expression matrix file path.
+	Return:
+	Processed and copied new data object with motif results
+	"""
+	import numpy as np
+	import pandas as pd
+	from io import StringIO
+	if dret is None or len(dret)!=3:
+		raise RuntimeError('Homer failed.')
+	with StringIO(dret[0].decode()) as f:
+		dw = pd.read_csv(f, header=0, index_col=0, sep='\t')
+	with StringIO(dret[1].decode()) as f:
+		dh = pd.read_csv(f, header=0, index_col=0, sep='\t')
+	with StringIO(dret[2].decode()) as f:
+		try:
+			dmotif = pd.read_csv(f, header=None, index_col=None, sep='\t')
+		except pd.errors.EmptyDataError:
+			dmotif=None
+	if dmotif is None:
+		raise RuntimeError('No motif found.')
+	assert dw.shape==dh.shape
+	assert (dw.columns==dh.columns).all()
+	assert (dw.index==dh.index).all()
+	assert dmotif.shape[1]==7
+	if dmotif.shape[0]==0:
+		raise RuntimeError('No motif found.')
 
-# 	namet=d.dim['nt']
-# 	#Set na as or function
-# 	t1=(pd.isna(dw)|pd.isna(dh)).values
-# 	dw.fillna(0,inplace=True)
-# 	dh.fillna(0,inplace=True)
-# 	#Extract dimensions
-# 	namep=np.array([str(x) for x in dw.index])
-# 	namem=np.array(['_'.join([x.split('_')[0]]+x.split('.')[-2:]) for x in dw.columns])
-# 	#Set data values
-# 	dw,dh=[x.values.astype(ftype0) for x in [dw,dh]]
-# 	dw[t1]=0
-# 	dh[t1]=0
-# 	#Get motif to gene map
-# 	dmt=[x.split('_')[0] for x in namem]
-# 	t1=dict(zip([x.upper() for x in namet],range(len(namet))))
-# 	dmt=np.array([t1[x.upper()] if x.upper() in t1 else -1 for x in dmt],dtype='i8')
-# 	#Remove empty motifs
-# 	t1=dmt>=0
-# 	dw,dh=[x[:,t1] for x in [dw,dh]]
-# 	namem,dmt=[x[t1] for x in [namem,dmt]]
-# 	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
-# 	assert np.isfinite(dw).all() and np.isfinite(dh).all()
-# 	assert (dw>=0).all() and (dh>=0).all()
-# 	#Output
-# 	dmotif.to_csv(fo_bed,header=False,index=False)
-# 	dw=pd.DataFrame(dw,index=namep,header=namem)
-# 	dw.to_csv(fo_wellington,header=True,index=True)
-# 	dh=pd.DataFrame(dh,index=namep,header=namem)
-# 	dh.to_csv(fo_homer,header=True,index=True)
+	namet=np.array(list(pd.read_csv(fi_exp,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	#Set na as or function
+	t1=(pd.isna(dw)|pd.isna(dh)).values
+	dw.fillna(0,inplace=True)
+	dh.fillna(0,inplace=True)
+	#Extract dimensions
+	namep=np.array([str(x) for x in dw.index])
+	# namem=np.array(['_'.join([x.split('_')[0]]+x.split('.')[-2:]) for x in dw.columns])
+	namem=np.array(list(dw.columns))
+	#Set data values
+	dw,dh=[x.values.astype(float) for x in [dw,dh]]
+	dw[t1]=0
+	dh[t1]=0
+	#Remove motifs not mapped to TF
+	t1=set([x.upper() for x in namet])
+	t1=np.array([x.split('_')[0] in t1 for x in namem])
+	dw,dh=[x[:,t1] for x in [dw,dh]]
+	namem,=[x[t1] for x in [namem]]
+	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
+	assert np.isfinite(dw).all() and np.isfinite(dh).all()
+	assert (dw>=0).all() and (dh>=0).all()
+	#Output
+	dmotif.to_csv(fo_bed,header=False,index=False,sep='\t')
+	dw=pd.DataFrame(dw,index=namep,columns=namem)
+	dw.to_csv(fo_wellington,header=True,index=True,sep='\t')
+	dh=pd.DataFrame(dh,index=namep,columns=namem)
+	dh.to_csv(fo_homer,header=True,index=True,sep='\t')
 
-# def homer(fi_bed:str,fi_motif:str,fo_bed:str,fo_wellington:str,fo_homer:str,genome:str,nth:int=1)->None:
-# 	"""
-# 	Motif scan with homer.
+def homer(fi_bed:str,fi_motif:str,diri_genome:str,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str,nth:int=1)->None:
+	"""
+	Motif scan with homer.
 	
-# 	Parameters
-# 	------------
-# 	fi_bed:	
-# 		Path of input bed file of regions
-# 	fi_motif:
-# 		Path of input motif PWM file in homer format
-# 	fo_bed:	
-# 		Path of output bed file of detected motifs
-# 	fo_wellington:
-# 		Path of output tsv file of wellington scores in shape (region,motif)
-# 	fo_homer:
-# 		Path of output tsv file of homer scores in shape (region,motif)
-# 	genome:	
-# 		Reference genome for homer (e.g. hg19, mm10)
-# 	nth:	
-# 		Number of threads
-
-# 	"""
-# 	from os.path import dirname, basename, abspath, isfile
-# 	from os.path import join as pjoin
-# 	from .utils import shell
-# 	for xi in [fi_bed,fi_motif]:
-# 		if not isfile(xi):
-# 			raise FileNotFoundError(xi)
+	Parameters
+	------------
+	fi_bed:	
+		Path of input bed file of regions
+	fi_motif:
+		Path of input motif PWM file in homer format. Motifs must be named in format 'gene_whatever...' where gene matches gene names in fi_exp. Should not contain duplicates.
+	diri_genome:
+		Path of folder or file for reference genome for homer. A separate hard copy is recommended because homer may write into the folder to preparse genome.
+	fi_exp:
+		Path of input expression matrix file in tsv format. Used for mapping motifs to genes.
+	fo_bed:	
+		Path of output bed file of detected motifs
+	fo_wellington:
+		Path of output tsv file of wellington scores in shape (region,motif)
+	fo_homer:
+		Path of output tsv file of homer scores in shape (region,motif)
+	nth:	
+		Number of threads
+	"""
+	from os.path import dirname, basename, abspath, isfile, isdir
+	from os.path import join as pjoin
+	from .utils import shell
+	for xi in [fi_bed,fi_motif]:
+		if not isfile(xi):
+			raise FileNotFoundError(xi)
+	if not (isfile(diri_genome) or isdir(diri_genome)):
+		raise FileNotFoundError(diri_genome)
 	
-# 	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_homer.sh')
-# 	spath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3],'chromatin_homer.py')
-# 	fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,fo_bed,fo_wellington,fo_homer]]
-# 	cmd = scriptpath+f" {fi_bed} {fi_motif} {genome} {spath} {nth}"
-# 	d2 = shell.cmdfile(cmd,
-# 		['19-w.tsv','19-h.tsv','16-long.bed'],
-# 		quiet=False,cd=True,sizelimit=None)
-# 	return _motif_postproc(d2,fo_bed,fo_wellington,fo_homer)
-	
+	scriptpath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_homer.sh')
+	spath=pjoin(abspath(dirname(__file__)),'scripts',basename(__file__)[:-3]+'_homer.py')
+	fi_bed,fi_motif,diri_genome,fo_bed,fo_wellington,fo_homer=[abspath(x) for x in [fi_bed,fi_motif,diri_genome,fo_bed,fo_wellington,fo_homer]]
+	cmd = scriptpath+f" {fi_bed} {fi_motif} {diri_genome} {spath} {nth}"
+	d2 = shell.cmdfile(cmd,
+		['19-w.tsv','19-h.tsv','16-long.bed'],
+		quiet=False,cd=True,sizelimit=None)
+	return _motif_postproc(d2,fi_exp,fo_bed,fo_wellington,fo_homer)
 
+################################################################
+# Linking TFs to target genes
+################################################################
 
+def _mergemotif_score(wellington,homer,dist,mode=7):
+	"""Footprinting I score
+	mode:
+		Mode to compute final score. Accepts binary flags:
+		* 1:	Add log(wellington score)
+		* 2:	Add log(homer score)
+		* 4:	Subtract log(10)*(distance_to_tss)/1E6
+	"""
+	import numpy as np
+	ans=0
+	if mode&1:
+		ans=ans+np.log(wellington)
+	if mode&2:
+		ans=ans+np.log(homer)
+	if mode&4:
+		ans=ans-np.log(10)*np.abs(dist)/1E6
+	return ans
+
+def binding(fi_wellington:str,fi_homer:str,fi_exp:str,fo_bind:str,combine:str='max',cuth:float=0,cutw:float=0,cut:float=0,mode:int=3)->None:
+	"""
+	Finds TF binding events.
+
+	Combines wellington and homer outputs to infer TF binding events by merging motifs to TFs.
+
+	Parameters
+	----------
+	fi_wellington:
+		Path of input tsv file of wellington output
+	fi_homer:
+		Path of input tsv file of homer output
+	fi_exp:
+		Path of input expression matrix file to obtain gene names
+	fo_bind:
+		Path of output binding event file
+	combine:
+		Method to combine scores of motifs of the same TF. Accepts: max, mean, sum.
+	cuth:
+		Homer score cutoff
+	cutw:
+		Wellington score cutoff
+	cut:
+		Final score (integrating homer & wellington) cutoff
+	mode:
+		Mode to compute final score. Accepts binary flags:
+
+		* 1:	Add log(wellington score)
+
+		* 2:	Add log(homer score)
+
+		* 4:	Subtract log(10)*(distance_to_tss)/1E6
+	"""
+	import numpy as np
+	import pandas as pd
+	from dictys.utils.numpy import groupby
+	if combine=='max':
+		combine=lambda x,**ka_x:x.max(**ka_x)
+	elif combine=='sum':
+		combine=lambda x,**ka_x:x.sum(**ka_x)
+	elif combine=='mean':
+		combine=lambda x,**ka_x:x.mean(**ka_x)
+	else:
+		raise ValueError(f'Unknown combine method: {combine}')
+
+	# Read in files
+	wellington_df=pd.read_csv(fi_wellington,header=0,index_col=0,sep='\t')
+	homer_df=pd.read_csv(fi_homer,header=0,index_col=0,sep='\t')
+	assert (wellington_df.index==homer_df.index).all()
+	assert (wellington_df.columns==homer_df.columns).all()
+	wellington=wellington_df.values
+	homer=homer_df.values
+	namem=np.array(list(wellington_df.columns))
+	namet=np.array(list(pd.read_csv(fi_exp,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	#Get motif to gene map
+	dmt=[x.split('_')[0] for x in namem]
+	t1=dict(zip([x.upper() for x in namet],range(len(namet))))
+	dmt=np.array([t1[x.upper()] if x.upper() in t1 else -1 for x in dmt],dtype='i8')
+	assert (dmt>=0).all()
+	dmt=groupby(dmt)
+
+	mask=(wellington>cutw)&(homer>cuth)
+	binds=[]
+	for xi in dmt:
+		t1=np.nonzero(mask[:,dmt[xi]])
+		if len(t1)==0:
+			continue
+		t1=(t1[0],dmt[xi][t1[1]])
+		ds=_mergemotif_score(wellington[t1],homer[t1],None,mode=mode)
+		if cut is not None:
+			t2=ds>cut
+			t1=tuple([x[t2] for x in t1])
+			if len(t1)==0:
+				continue
+			ds=ds[t2]
+		t3=groupby(t1[0])
+		for xj in t3:
+			binds.append([xi,xj,combine(ds[t3[xj]])])
+	if len(binds)==0:
+		raise RuntimeError('No TF binding relation remains.')
+	ans=pd.DataFrame([])
+	ans['TF']=binds[0]
+	ans['loc']=binds[1]
+	ans['score']=binds[2]
+	ans.to_csv(fo_bind,index=False,header=True,sep='\t')
 
 
 
