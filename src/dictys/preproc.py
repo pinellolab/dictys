@@ -1,7 +1,42 @@
 #!/usr/bin/python3
 # Lingfei Wang, 2018-2022. All rights reserved.
+
 """Preprocessing
 """
+
+def selects_rna(fi_reads:str,fi_names:str,fo_reads:str)->None:
+	"""
+	Select samples/cells based on external table for RNA data.
+	
+	Parameters
+	----------
+	fi_reads:
+		Path of input tsv file of full expression matrix
+	fi_names:
+		Path of input text file of sample/cell names to select
+	fo_reads:
+		Path of output tsv file of expression matrix of selected samples/cells
+	"""
+	import pandas as pd
+	import logging
+	#Loading data
+	logging.info(f'Reading file {fi_reads}.')
+	d=pd.read_csv(fi_reads,index_col=0,header=0,sep='\t')
+	logging.info(f'Reading file {fi_names}.')
+	with open(fi_names,'r') as f:
+		names=f.readlines()
+	names=[x.strip() for x in names]
+	names=set(list(filter(lambda x:len(x)>0,names)))
+
+	#Filtering 
+	t1=d.columns.isin(names)
+	d=d[d.columns[t1]]
+	if len(d)==0:
+		raise RuntimeError('No samples/cells found.')
+	t1=(d.values!=0).any(axis=1)
+	d=d[t1]
+	logging.info(f'Writing file {fo_reads}.')
+	d.to_csv(fo_reads,index=True,header=True,sep='\t')
 
 def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	"""
@@ -10,7 +45,7 @@ def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	Parameters
 	------------
 	fi_exp:
-		Path of input tsv file of expression. Column must be sample/cell name.
+		Path of input tsv file of expression matrix. Column must be sample/cell name.
 	fi_list:
 		Path of input text file of selected cell names, one per line
 	fo_list:
@@ -19,10 +54,14 @@ def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	"""
 	import pandas as pd
 	from os import linesep
+	import logging
+
+	logging.info(f'Reading file {fi_list}.')
 	with open(fi_list,'r') as f:
 		ind=f.readlines()
 	ind=[x.strip() for x in ind]
 
+	logging.info(f'Reading file {fi_exp}.')
 	dt=pd.read_csv(fi_exp,index_col=0,header=0,nrows=1,sep='\t')
 	if any(len(x.columns)!=len(set(x.columns)) for x in [dt]):
 		raise ValueError('Duplicate names detected.')
@@ -64,6 +103,7 @@ def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float,
 	import pandas as pd
 	import logging
 	
+	logging.info(f'Reading file {fi_reads}.')
 	reads0=pd.read_csv(fi_reads,header=0,index_col=0,sep='\t')
 	reads=reads0.values
 	if reads.ndim != 2:
@@ -116,5 +156,62 @@ def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float,
 		reads.shape[0] - len(st), reads.shape[0], reads.shape[1] - len(ss),
 		reads.shape[1]))
 	reads0=reads0.iloc[st,ss]
-	reads0.to_csv(fo_reads,header=True,index=True,sep='\t',compression='gzip')
+	logging.info(f'Writing file {fo_reads}.')
+	reads0.to_csv(fo_reads,header=True,index=True,sep='\t')
 	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#

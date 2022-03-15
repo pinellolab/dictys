@@ -400,6 +400,8 @@ class trajectory:
 		dictys.traj.trajectory
 			Loaded class object
 		"""
+		import logging
+		logging.info(f'Reading file {path}.')
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(f)
 	def to_fileobj(self,f:Union[h5py.File,h5py.Group],compression:str="gzip",**ka)->None:
@@ -434,6 +436,8 @@ class trajectory:
 		ka:			dict
 			Keyword arguments passed to self.to_fileobj
 		"""
+		import logging
+		logging.info(f'Writing file {path}.')
 		with h5py.File(path,'w') as f:
 			return self.to_fileobj(f,**ka)
 
@@ -1198,6 +1202,8 @@ class point:
 		dictys.traj.point
 			Loaded class object
 		"""
+		import logging
+		logging.info(f'Reading file {path}.')
 		with h5py.File(path,'r') as f:
 			return cls.from_fileobj(traj,f)
 	def to_fileobj(self,f:Union[h5py.File,h5py.Group],compression:str="gzip",**ka)->None:
@@ -1232,6 +1238,8 @@ class point:
 		ka:			dict
 			Keyword arguments passed to self.to_fileobj
 		"""
+		import logging
+		logging.info(f'Writing file {path}.')
 		with h5py.File(path,'w') as f:
 			return self.to_fileobj(f,**ka)
 

@@ -131,7 +131,9 @@ class network:
 		from dictys.traj import trajectory,point
 		import numpy as np
 		import h5py
+		import logging
 		params={}
+		logging.info(f'Reading file {path}.')
 		with h5py.File(path,'r') as f:
 			for xi in filter(lambda x:x not in {'prop','traj'},f):
 				params[xi]=np.array(f[xi])
@@ -167,10 +169,12 @@ class network:
 			Keyword arguments passed to h5py.File.create_dataset.
 		"""
 		import h5py
+		import logging
 		params={x:getattr(self,x) for x in 'cname,sname,nname,nids'.split(',')}
 		params['nids1']=params['nids'][0]
 		params['nids2']=params['nids'][1]
 		del params['nids']
+		logging.info(f'Writing file {path}.')
 		with h5py.File(path,'w') as f:
 			for xi in params:
 				p=dict(ka)
