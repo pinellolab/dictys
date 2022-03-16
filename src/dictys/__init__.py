@@ -5,10 +5,9 @@
 Dictys for dynamic gene regulatory network reconstruction from single-cell multi-omic data
 """
 
-# __all__=['chromatin','pyro','preproc','run','parallel','dictys','utils']
-__all__=['chromatin','net','plot','preproc','traj','utils']
+__all__=['preproc','chromatin','network','net','plot','traj','utils']
 
-_docstring2argparse_ignore_=['plot','utils','net','traj']
+_docstring2argparse_ignore_=['net','plot','traj','utils']
 
 from . import *
 

@@ -4,73 +4,124 @@
 Module for parallel processing
 """
 
-import multiprocessing
+from contextlib import contextmanager
 
-autocount = multiprocessing.cpu_count
-
-
-def autopooler_caller(a):
+def autocount(n):
+	"""Return the number of threads based on parameter n. Possible values:
+	n=0: 			All CPUs
+	n=other int:	n CPUs
+	1<n<0:			CPU count*n
 	"""
-	Caller for pool function
-	"""
-	return a[0](*a[1], **a[2])
-
-
-def autopooler(n,it,*a,chunksize=1,dummy=False,return_iter=False,unordered=False,**ka):
-	"""Uses multiprocessing.Pool or multiprocessing.dummy.Pool to run iterator in parallel.
-
-	Parameters
-	------------
-	n:				int
-		Number of parallel processes. Set to 0 to use auto detected CPU count.
-	it:				iterator of (function,tuple,dict)
-		Each iteration computes **function**\ (\*\ **tuple**\ ,\*\*\ **dict**\ ). **function** must be picklable, i.e. a base level function in a module or file.
-	a:				tuple
-		Arguments passed to Pool.
-	chunksize:		int
-		Number of iterations passed to each process each time.
-	dummy:			bool
-		Whether to use multiprocessing.dummy instead
-	return_iter:	bool
-		Not Implemented. Whether to return iterator of results instead. If not, return list of results.
-	unordered:		bool
-		Whether the order of output matters.
-	ka:				dict
-		Keyword arguments passed to Pool
-
-	Returns
-	----------
-	list (or iterator if return_iter) of any
-		Results returned by function(\*tuple,\*\*dict), in same order of the iterator if not unordered.
-
-	""" 	# noqa: W605
+	from multiprocessing import cpu_count
 	import logging
-	if dummy:
-		import multiprocessing.dummy as m
-	else:
-		m=multiprocessing
+	assert n >= 0
 	if n == 0:
-		n = autocount()
+		n = cpu_count()
 		logging.info('Using {} threads'.format(n))
-	if n == 1:
-		ans = map(autopooler_caller, it)
-		if not return_iter:
-			ans = list(ans)
-			assert len(ans) > 0
+	elif n < 1:
+		n = max(1, int(n * cpu_count()))
+		logging.info('Using {} threads'.format(n))
 	else:
-		import itertools
-		# Catches iterator errors (only if occurs at the first), and emptiness
-		it = itertools.chain([next(it)], it)
-		with m.Pool(n, *a, **ka) as p:
-			if unordered:
-				ans = p.imap_unordered(autopooler_caller, it, chunksize)
-			else:
-				ans = p.imap(autopooler_caller, it, chunksize)
-			if not return_iter:
-				ans = list(ans)
-			else:
-				raise NotImplementedError
+		n = int(n)
+	return n
+
+def set_num_threads(n):
+	"""Sets the number of threads in numerical calculations of external libraries through environmental variables.
+	Parameters:
+	n:	Number of threads allowed in external libraries
+	Return:
+	Dictionary of previous environmental values to allow recovery with function recover_num_threads.
+	"""
+	import os
+	keys = 'OMP_NUM_THREADS,MKL_NUM_THREADS,NUMEXPR_NUM_THREADS,OPENBLAS_NUM_THREADS,OMP_MAX_THREADS,MKL_MAX_THREADS,NUMEXPR_MAX_THREADS,OPENBLAS_MAX_THREADS,VECLIB_MAXIMUM_THREADS'.split(',')
+
+	n = str(n)
+	ans = {}
+	for xi in keys:
+		if xi not in os.environ:
+			ans[xi] = None
+		else:
+			ans[xi] = os.environ[xi]
+		os.environ[xi] = n
 	return ans
+
+def recover_num_threads(d)->None:
+	"""Recovers the previous environmental variables changed by function set_num_threads.
+	Parameters:
+	d:	Previous environmental values before setting with set_num_threads. Also return of set_num_threads.
+	"""
+	import os
+	import logging
+
+	t1 = list(filter(lambda x: x not in os.environ, d))
+	if len(t1) > 0:
+		logging.warning('Environmental variables not found: ' + ','.join(t1))
+	t1 = list(filter(lambda x: x in os.environ, d))
+	t2 = set(d[x] for x in t1)
+	if len(t2) > 1:
+		logging.warning('Environmental variables have different values.')
+	for xi in t1:
+		if d[xi] is None:
+			del os.environ[xi]
+		else:
+			os.environ[xi] = d[xi]
+
+@contextmanager
+def num_threads(n):
+	"""
+	Context manager for controlling CPU thread count.
+	"""
+	from threadpoolctl import threadpool_limits
+	from joblib import parallel_backend
+	n=autocount(n)
+	assert isinstance(n,int) and n>=1
+	n0=set_num_threads(n)
+	try:
+		with parallel_backend('threading', n_jobs=n):
+			with threadpool_limits(limits=n):
+				yield
+	finally:
+		recover_num_threads(n0)
 
 
 assert __name__ != "__main__"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#

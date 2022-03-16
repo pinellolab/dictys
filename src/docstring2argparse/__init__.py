@@ -171,7 +171,8 @@ class function_parser_union(function_parser_base):
 		#Identical lengths
 		assert all(hasattr(x,'__len__') for x in v1)
 		t1=len(v1[0])
-		assert all(len(x)==t1 for x in v1[1:])
+		if not all(len(x)==t1 for x in v1[1:]):
+			raise ValueError('Union failed with different parameter counts.')
 		#Recursive union
 		return type(v1[0])([cls.union(x) for x in zip(*v1)])
 	def _parse(self,func):
@@ -231,6 +232,19 @@ def get_functions(pkgname,parser,varname_ignore='_docstring2argparse_ignore_',fu
 	ans_m={x:y.strip() if y is not None else '' for x,y in ans_m.items()}
 	return (ans_f,ans_m)
 
+def totype(t):
+	"""
+	Convert typing.Optional to type.
+	"""
+	import typing
+	if isinstance(t,type):
+		return t
+	t1=[typing.get_origin(t),typing.get_args(t)]
+	if t1[0]==typing.Union and len(t1[1])==2 and sum(x==type(None) for x in t1[1])==1:		# pylint: disable=W0143
+		#typing.Optional
+		return list(filter(lambda x:x!=type(None),t1[1]))[0]
+	raise TypeError('Unknown type: '+repr(t))
+
 def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.ArgumentDefaultsHelpFormatter),**ka):
 	"""
 	Create argparse parser for module
@@ -289,10 +303,10 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 		for xj in f[xi][2]:
 			if xj[3][0]:
 				#Keyword arguments
-				p[xi].add_argument('--'+xj[0],type=xj[1],help=xj[2],default=xj[3][1],action='store')
+				p[xi].add_argument('--'+xj[0],type=totype(xj[1]),help=xj[2],default=xj[3][1],action='store')
 			else:
 				#Required arguments
-				p[xi].add_argument(xj[0],type=xj[1],help=xj[2],action='store')
+				p[xi].add_argument(xj[0],type=totype(xj[1]),help=xj[2],action='store')
 	return (p[pkgname],f)
 
 def run_args(pkgname,funcs,args):
