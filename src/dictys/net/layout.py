@@ -4,8 +4,7 @@
 """
 Statistics of networks
 """
-from networkx.drawing.layout import random_state
-
+import networkx
 
 def _fruchterman_reingold(
 	A,pos, k=None, fixed=None, iterations=50, threshold=1e-4, dim=2, pretendIterations = None, stop = None
@@ -150,7 +149,7 @@ def _sparse_fruchterman_reingold(
 			break
 	return pos
 
-@random_state(10)
+@networkx.drawing.layout.random_state(10)
 def fruchterman_reingold_layout(
 	G,
 	k=None,

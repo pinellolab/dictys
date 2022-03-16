@@ -71,15 +71,17 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	if d2 is None or len(d2)>0 or not all(isfile(x) for x in [fo_bam,fo_bai,fo_bed]):
 		raise RuntimeError('Macs2 failed.')
 
-	if nmax>0:
-		#Reduce size of peak bed file
-		logging.info(f'Reading file {fo_bed}')
-		d3=pd.read_csv(fo_bed,header=None,index_col=None,sep='\t')
-		if len(d3)>nmax:
-			d4=np.partition(d3[8].values,-nmax-1)[-nmax-1]
-			d3=d3[d3[8]>d4]
-			logging.info(f'Writing file {fo_bed}')
-			d3.to_csv(fo_bed,header=False,index=False,sep='\t')
+	if nmax==0:
+		return
+	#Reduce size of peak bed file
+	logging.info(f'Reading file {fo_bed}')
+	d3=pd.read_csv(fo_bed,header=None,index_col=None,sep='\t')
+	if len(d3)<=nmax:
+		return
+	d4=np.partition(d3[8].values,-nmax-1)[-nmax-1]
+	d3=d3[d3[8]>d4]
+	logging.info(f'Writing file {fo_bed}')
+	d3.to_csv(fo_bed,header=False,index=False,sep='\t')
 
 ################################################################
 # TF footprinting
