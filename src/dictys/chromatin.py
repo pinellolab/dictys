@@ -482,6 +482,8 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int
 		t2=links.pop()
 		t1={x:list(itertools.chain.from_iterable([[[z[0],z[1]+y[1]]for z in links[-1][y[0]]] for y in t2[x] if y[0] in links[-1]])) for x in t2}
 		t1={x[0]:[np.array(z) for z in zip(*x[1])] for x in t1.items() if len(x[1])>0}
+		if len(t1)==0:
+			raise RuntimeError('No link found.')
 		t2={x:groupby(y[0]) for x,y in t1.items()}
 		links[-1]={x:[[y,combine(t1[x][1][t2[x][y]])] for y in t2[x]] for x in t2}
 		assert np.isfinite(np.concatenate([[y[1] for y in x] for x in links[-1].values()])).all()

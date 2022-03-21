@@ -4,9 +4,10 @@
 Module for parallel processing
 """
 
+from typing import Optional
 from contextlib import contextmanager
 
-def autocount(n):
+def autocount(n:float)->int:
 	"""Return the number of threads based on parameter n. Possible values:
 	n=0: 			All CPUs
 	n=other int:	n CPUs
@@ -25,7 +26,7 @@ def autocount(n):
 		n = int(n)
 	return n
 
-def set_num_threads(n):
+def set_num_threads(n:int)->dict[str,Optional[str]]:
 	"""Sets the number of threads in numerical calculations of external libraries through environmental variables.
 	Parameters:
 	n:	Number of threads allowed in external libraries
@@ -45,7 +46,7 @@ def set_num_threads(n):
 		os.environ[xi] = n
 	return ans
 
-def recover_num_threads(d)->None:
+def recover_num_threads(d:dict[str,str])->None:
 	"""Recovers the previous environmental variables changed by function set_num_threads.
 	Parameters:
 	d:	Previous environmental values before setting with set_num_threads. Also return of set_num_threads.
@@ -67,7 +68,7 @@ def recover_num_threads(d)->None:
 			os.environ[xi] = d[xi]
 
 @contextmanager
-def num_threads(n):
+def num_threads(n:float):
 	"""
 	Context manager for controlling CPU thread count.
 	"""

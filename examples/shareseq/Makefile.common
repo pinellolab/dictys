@@ -1,0 +1,231 @@
+
+############################################################
+# Run environment settings
+############################################################
+#Singularity binary
+SINGULARITY=singularity
+#Custom parameteres for `singularity exec`. Can be used to fix symlinks of data files.
+SINGULARITY_PARAMS:=-B /data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/shareseq-origin2-np:/data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/shareseq-origin2-np:ro
+#Path to singularity image
+SINGULARITY_IMAGE=~/dictys2.sif
+#Custom temporary folder can be specified here, or in environmental variable TMPDIR
+TMPDIR?=/tmp
+#Maximum number of CPU threads for each job
+NTH=4
+#Device name for pyro/pytorch
+DEVICE=cuda:0
+
+############################################################
+# Dataset settings
+############################################################
+
+#Genome size for Macs2, accept shortcuts like mm & hs
+GENOME_MACS2=mm
+#Whether dataset is joint profiling of RNA & ATAC of same cell. Separate measurements of two modalities in different cells should set this to 0.
+JOINT=1
+
+############################################################
+# Parameters of each step
+############################################################
+
+PARAMS_QC_READS=200 100 0 50 10 0
+PARAMS_MACS2=$(GENOME_MACS2)
+PARAMS_BINLINKING=20
+KPARAMS_SELECTSC_RNA=
+KPARAMS_QC_READS=
+KPARAMS_SELECTSC_ATAC=
+KPARAMS_MACS2=--nth $(NTH)
+KPARAMS_WELLINGTON=--nth $(NTH)
+KPARAMS_HOMER=--nth $(NTH)
+KPARAMS_BINDING=
+KPARAMS_TSSDIST=
+KPARAMS_LINKING=
+KPARAMS_BINLINKING=
+KPARAMS_RECONSTRUCT=--device $(DEVICE) --nth $(NTH)
+KPARAMS_INDIRECT=
+KPARAMS_NORMALIZE=
+
+############################################################
+# Below should not be changed
+############################################################
+
+#Input data folder
+DIRI=data
+#Output data folder
+DIRO=output
+#File for cell subsets
+FILE_SUBSET?=$(DIRI)/subsets.txt
+#Conda environments in container
+ENV_MAIN=main
+ENV_PYRO=pyro
+#Packages to map from host to container
+#TODO: update container to remove networkx dependency
+PKGS_MAP=dictys docstring2argparse networkx
+#Parameters for singularity
+SINGULARITY_PARAMS+=-ec --nv
+SINGULARITY_PARAMS+=-B $(CURDIR)/.placeholder:/home/docker/.local/bin/.placeholder:ro -B $(CURDIR)/.placeholder:/home/docker/.cache/torch/kernels/.placeholder:ro
+SINGULARITY_PARAMS+=-B $(TMPDIR):/tmp:rw -B $(CURDIR):/dictys/work:rw
+SINGULARITY_PARAMS+=$(foreach p,$(PKGS_MAP),-B $(shell python -c "import $(p) as m;from os.path import dirname,abspath;print(dirname(abspath(m.__file__)))"):/dictys/lib/$(p):ro)
+#Command to run dictys in singularity
+SINGULARITY_CMD=$(SINGULARITY) exec $(SINGULARITY_PARAMS) $(SINGULARITY_IMAGE) /usr/bin/env HOME=/home/docker /home/docker/.local/bin/dictys_singularity
+
+PRODUCT_NAMES_CPU:=names_rna.txt names_atac0.txt names_atac.txt expression0.tsv.gz expression.tsv.gz names_atac.txt reads.bam reads.bai peaks.bed footprints.bed motifs.bed homer.tsv.gz wellington.tsv.gz binding.tsv.gz tssdist.tsv.gz linking.tsv.gz binlinking.tsv.gz net_nweight.tsv.gz net_iweight.tsv.gz net_inweight.tsv.gz
+PRODUCT_NAMES_GPU:=net_weight.tsv.gz net_meanvar.tsv.gz net_covfactor.tsv.gz net_loss.tsv.gz net_stats.tsv.gz
+DPRODUCT_NAMES=
+
+
+SHOW_CPU:=1
+SHOW_PYRO:=1
+
+SUBSETS:=$(shell cat $(FILE_SUBSET) 2> /dev/null | tr "\n" " ")
+ifeq (a$(SUBSETS),a)
+ifneq (a$(MAKECMDGOALS),asubset)
+$(error Missing subsets.txt. Run `make subset` first for dynamic network.)
+endif
+endif
+
+ifeq (a$(DEVICE),acpu)
+PRODUCT_NAMES_CPU+=$(PRODUCT_NAMES_GPU)
+PRODUCT_NAMES_GPU:=
+else
+ifneq (a$(firstword $(subst :, ,$(DEVICE))),acuda)
+$(error This pipeline only supports device cpu and cuda*)
+endif
+ifeq (a$(MAKECMDGOALS),agpu)
+SHOW_CPU:=0
+endif
+ifeq (a$(MAKECMDGOALS),acpu)
+SHOW_PYRO:=0
+endif
+endif
+
+PRODUCT_CPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_CPU),$(DIRT)/$(c)/$(p)))
+PRODUCT_GPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_GPU),$(DIRT)/$(c)/$(p)))
+DPRODUCT=$(foreach c,$(SUBSETS),$(foreach p,$(DPRODUCT_NAMES),$(DIRO)/$(c)/$(p))) .placeholder
+
+.PHONY: all cpu gpu t clean distclean subset
+
+all: cpu gpu
+
+cpu: $(PRODUCT_CPU) $(DPRODUCT)
+
+gpu: $(PRODUCT_GPU)
+
+subset: $(PRODUCT_SUBSET)
+
+t:
+	@echo $(TMPDIR)
+	@echo $(CURDIR)
+	@echo $(SUBSETS)
+	@echo $(SINGULARITY_CMD)
+
+clean:
+	$(RM) $(PRODUCT_CPU) $(PRODUCT_GPU) $(PRODUCT_SUBSET)
+	
+distclean: clean
+	$(RM) $(DPRODUCT)
+
+#Fixes singularity permission issue
+.placeholder:
+	touch $@
+
+ifeq ($(SHOW_CPU),1)
+
+$(DIRT):
+	mkdir $@
+
+$(addprefix $(DIRT)/,$(SUBSETS)): $(DIRT)/%: $(DIRT)
+	mkdir $@
+
+$(DIRT)/%/expression0.tsv.gz: $(DIRI)/expression.tsv.gz $(DIRT)/%/names_rna.txt .placeholder
+	$(SINGULARITY_CMD) $(ENV_MAIN) preproc selects_rna $(KPARAMS_SELECTSC_RNA) $< $(DIRT)/$*/names_rna.txt $@
+
+$(DIRT)/%/expression.tsv.gz: $(DIRT)/%/expression0.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) preproc qc_reads $(KPARAMS_QC_READS) $^ $@ $(PARAMS_QC_READS)
+
+ifeq ($(JOINT),1)
+$(DIRT)/%/names_atac.txt: $(DIRT)/%/expression.tsv.gz $(DIRT)/%/names_atac0.txt
+	$(SINGULARITY_CMD) $(ENV_MAIN) preproc selects_atac $(KPARAMS_SELECTS_ATAC) $^ $@
+else
+$(DIRT)/%/names_atac.txt: $(DIRT)/%/names_atac0.txt
+	cp $< $@
+endif
+
+$(DIRT)/%/reads.bam $(DIRT)/%/reads.bai $(DIRT)/%/peaks.bed : $(DIRT)/%/names_atac.txt $(DIRI)/bams
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin macs2 $(KPARAMS_MACS2) $^ $(DIRT)/$*/reads.bam $(DIRT)/$*/reads.bai $(DIRT)/$*/peaks.bed $(PARAMS_MACS2)
+	
+$(DIRT)/%/footprints.bed: $(DIRT)/%/reads.bam $(DIRT)/%/reads.bai $(DIRT)/%/peaks.bed
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin wellington $(KPARAMS_WELLINGTON) $^ $@
+	
+$(DIRT)/%/motifs.bed $(DIRT)/%/wellington.tsv.gz $(DIRT)/%/homer.tsv.gz : $(DIRT)/%/footprints.bed $(DIRI)/motifs.motif $(DIRI)/genome $(DIRT)/%/expression.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin homer $(KPARAMS_HOMER) $^ $(DIRT)/$*/motifs.bed $(DIRT)/$*/wellington.tsv.gz $(DIRT)/$*/homer.tsv.gz
+	
+$(DIRT)/%/binding.tsv.gz: $(DIRT)/%/wellington.tsv.gz $(DIRT)/%/homer.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin binding $(KPARAMS_BINDING) $^ $@
+
+$(DIRT)/%/tssdist.tsv.gz: $(DIRT)/%/expression.tsv.gz $(DIRT)/%/wellington.tsv.gz $(DIRI)/gff.gff
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin tssdist $(KPARAMS_TSSDIST) $^ $@
+
+$(DIRT)/%/linking.tsv.gz: $(DIRT)/%/binding.tsv.gz $(DIRT)/%/tssdist.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin linking $(KPARAMS_LINKING) $^ $@
+
+$(DIRT)/%/binlinking.tsv.gz: $(DIRT)/%/linking.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin binlinking $(KPARAMS_BINLINKING) $^ $@ $(PARAMS_BINLINKING)
+	
+$(DIRT)/%/net_nweight.tsv.gz: $(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) network normalize $(KPARAMS_NORMALIZE) $^ $@
+
+$(DIRT)/%/net_iweight.tsv.gz: $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) network indirect $(KPARAMS_INDIRECT) --fi_meanvar $^ $@
+	
+$(DIRT)/%/net_inweight.tsv.gz: $(DIRT)/%/net_iweight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) network normalize $(KPARAMS_NORMALIZE) $^ $@
+
+endif
+
+ifeq ($(SHOW_PYRO),1)
+
+$(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz $(DIRT)/%/net_loss.tsv.gz $(DIRT)/%/net_stats.tsv.gz : $(DIRT)/%/expression.tsv.gz $(DIRT)/%/binlinking.tsv.gz .placeholder
+	$(SINGULARITY_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS_RECONSTRUCT) $(DIRT)/$*/expression.tsv.gz $(DIRT)/$*/binlinking.tsv.gz $(DIRT)/$*/net_weight.tsv.gz $(DIRT)/$*/net_meanvar.tsv.gz $(DIRT)/$*/net_covfactor.tsv.gz $(DIRT)/$*/net_loss.tsv.gz $(DIRT)/$*/net_stats.tsv.gz
+
+endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+

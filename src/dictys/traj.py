@@ -486,7 +486,7 @@ class point:
 		assert (dist>=0).all()
 		self.dist=dist
 	@classmethod
-	def from_dist(cls,traj:trajectory,edges:npt.NDArray,dist:npt.NDArray)->point:
+	def fromdist(cls,traj:trajectory,edges:npt.NDArray,dist:npt.NDArray)->point:
 		"""
 		Class conctructor from edges and distance to all nodes of each point.
 
@@ -1186,14 +1186,14 @@ class point:
 		params=[np.array(f['edges']),np.array(f['locs'])]
 		return cls(traj,*params)
 	@classmethod
-	def from_file(cls,traj:trajectory,path:str)->point:
+	def from_file(cls,traj:Optional[trajectory],path:str)->point:
 		"""
 		Load object from file
 
 		Parameters
 		----------
 		traj:	dictys.traj.trajectory
-			Trajectory object for points
+			Trajectory object for points. Set to None to load and use trajectory within the same file.
 		path:	str
 			File path to load from
 
@@ -1205,6 +1205,8 @@ class point:
 		import logging
 		logging.info(f'Reading file {path}.')
 		with h5py.File(path,'r') as f:
+			if traj is None:
+				traj=trajectory.from_fileobj(f['traj'])
 			return cls.from_fileobj(traj,f)
 	def to_fileobj(self,f:Union[h5py.File,h5py.Group],compression:str="gzip",**ka)->None:
 		"""
@@ -1227,7 +1229,7 @@ class point:
 		p['compression']=compression
 		p['data']=self.locs
 		f.create_dataset('locs',**p)
-	def to_file(self,path:str,**ka)->None:
+	def to_file(self,path:str,traj:bool=False,**ka)->None:
 		"""
 		Save object to file
 
@@ -1235,12 +1237,16 @@ class point:
 		----------
 		path:		str
 			File path to save to.
+		traj:		bool
+			Whether to save trajectory in the same file
 		ka:			dict
 			Keyword arguments passed to self.to_fileobj
 		"""
 		import logging
 		logging.info(f'Writing file {path}.')
 		with h5py.File(path,'w') as f:
+			if traj:
+				self.p.to_fileobj(f.create_group('traj'))
 			return self.to_fileobj(f,**ka)
 
 

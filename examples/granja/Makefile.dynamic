@@ -1,0 +1,65 @@
+#Parameters for subsetting cells
+SUBSET_SIZE:=1000
+SUBSET_OVERLAP:=875
+SUBSET_TIMEDIFF=0.05
+
+############################################################
+# Below should not be changed
+############################################################
+
+#Working folder
+DIRT:=tmp_dynamic
+FILE_SUBSET:=$(DIRT)/subsets.txt
+PRODUCT_SUBSET:=$(FILE_SUBSET)
+
+PARAMS_SUBSETS_RNA=$(SUBSET_SIZE) $(SUBSET_OVERLAP) $(SUBSET_TIMEDIFF)
+PARAMS_SUBSET_ATAC=$(SUBSET_SIZE)
+
+include Makefile.common
+
+ifeq ($(SHOW_CPU),1)
+
+$(DIRT)/subsets.txt $(DIRT)/subset_locs.h5 $(DIRT)/subset_edges.tsv.gz: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz $(DIRT) .placeholder
+	$(SINGULARITY_CMD) $(ENV_MAIN) dynamic subsets_rna $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz $(DIRT)/subsets.txt $(DIRT)/subset_locs.h5 $(DIRT) $(DIRT)/subset_edges.tsv.gz $(PARAMS_SUBSETS_RNA)
+
+ifeq (a$(JOINT),a1)
+$(DIRT)/%/names_atac0.txt: $(DIRT)/%/names_rna.txt
+	cp $< $@
+else
+$(DIRT)/%/names_atac0.txt: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_atac.h5 $(DIRI)/coord_atac.tsv.gz $(DIRT)/subsets.txt $(DIRT)/subset_locs.h5 
+	$(SINGULARITY_CMD) $(ENV_MAIN) dynamic subset_atac $^ $@ $* $(PARAMS_SUBSET_ATAC)
+endif
+
+endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+
