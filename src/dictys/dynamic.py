@@ -95,19 +95,17 @@ def subset_atac(fi_traj:str,fi_traj_cell_atac:str,fi_coord_atac:str,fi_subsets:s
 	"""
 	import logging
 	from os import linesep
-	from os.path import join as pjoin
 	import numpy as np
+	import pandas as pd
 	from dictys.traj import trajectory,point
+	from dictys.utils.file import read_txt
 	# Load data
 	traj=trajectory.from_file(fi_traj)
 	points=point.from_file(traj,fi_traj_cell_atac)
-	logging.info(f'Reading file {fi_coord_atc}')
+	logging.info(f'Reading file {fi_coord_atac}')
 	names_cell=np.array(list(pd.read_csv(fi_coord_atac,header=0,index_col=0,sep='\t').index))
 	logging.info(f'Reading file {fi_subsets}')
-	with open(fi_subsets,'r') as f:
-		names_subset=f.readlines()
-	names_subset=[x.strip() for x in names_subset]
-	names_subset=list(filter(lambda x:len(x)>0,names_subset))
+	names_subset=read_txt(fi_subsets,unique=True)
 	dict_subset=dict(zip(names_subset,range(len(names_subset))))
 	subsets=point.from_file(traj,fi_subset_locs)
 	subsets=subsets[[dict_subset[subset_name]]]

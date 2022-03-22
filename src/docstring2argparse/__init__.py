@@ -303,7 +303,11 @@ def docstringparser(pkgname,parser,ka_argparse=dict(formatter_class=argparse.Arg
 		for xj in f[xi][2]:
 			if xj[3][0]:
 				#Keyword arguments
-				p[xi].add_argument('--'+xj[0],type=totype(xj[1]),help=xj[2],default=xj[3][1],action='store')
+				ttype=totype(xj[1])
+				if ttype==bool:
+					p[xi].add_argument('--'+xj[0],help=xj[2],default=False,action='store_true')
+				else:
+					p[xi].add_argument('--'+xj[0],type=ttype,help=xj[2],default=xj[3][1],action='store')
 			else:
 				#Required arguments
 				p[xi].add_argument(xj[0],type=totype(xj[1]),help=xj[2],action='store')

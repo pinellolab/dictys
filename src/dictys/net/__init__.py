@@ -6,9 +6,8 @@ Module for network class and stats.
 """
 
 from __future__ import annotations
+from typing import Set,Optional
 __all__=['stat']
-
-_docstring2argparse_ignore_=['stat','network','binarize']
 
 from . import *
 
@@ -103,8 +102,9 @@ class network:
 			raise ValueError('Cell/state/node names must be non-empty, unique, and matching their counts exactly.')
 		for xi in self.prop:
 			t1=tuple(np.concatenate([self._get_prop_shape_(x) for x in xi]))
-			if not all(x.shape[-len(t1):]==t1 for x in self.prop[xi].values()):
-				raise ValueError('Cell/node/edge properties and their cross properties must have the correct dimensionality.')
+			t2=list(filter(lambda x:self.prop[xi][x].shape[-len(t1):]!=t1,self.prop[xi]))
+			if len(t2)>0:
+				raise ValueError('Properties of type {} have incorrect size. Expected trailing dimensions: {}. Actual dimensions: '.format(xi,t1)+', '.join(['{} ({})'.format(tuple(self.prop[xi][x].shape),x) for x in t2]))
 		assert len(self.nids)==2 and all(len(np.unique(x))==len(x) for x in self.nids)
 		assert all((x>=0).all() and (x<self.nn).all() for x in self.nids)
 		assert (self.nns==[len(x) for x in self.nids]).all() and (self.nns>0).all()
@@ -197,38 +197,195 @@ class network:
 				t=f.create_group('point')
 				for xi in self.point:
 					self.point[xi].to_fileobj(t.create_group(xi))
-	# def binarize(self,ntop,data='w',signed=False):
-	# 	"""
-	# 	Convert continuous to binary directed network.
+	@classmethod
+	def from_folders(cls,path_data:str,path_work:str,fi_subsets:str,dynamic:bool=False,nettype:str='n',optional:Set[str]={'readcount'},fi_c:Optional[str]=None)->network:
+		"""
+		Create class instance from pipeline working folder.
 
-	# 	Parameters
-	# 	-------------
-	# 	data:		str or numpy.ndarray(shape=(n1,n2,...),dtype=float)
-	# 		Continuous directed network. Larger values are stronger and indicate higher ranking in binarization. Use str to represent entry in self.esprop.
-	# 	ntop:		float
-	# 		Number (for >=1)/proportion (for <1) of strongest edges to keep.
-	# 	signed:		bool
-	# 		Whether to regard continuous network as signed so the absolute values will be used for strength comparison.
+		Parameters
+		-------------
+		path_data:
+			Path of data folder to load from
+		path_work:
+			Path of working folder to load from
+		fi_subsets:
+			Path of input txt file for cell subset names
+		dynamic:
+			Whether to load a dynamic network instead of a set of static networks
+		nettype:
+			Type of network. Accepts:
 
-	# 	Returns
-	# 	---------
-	# 	net_bin:	numpy.ndarray(shape=(..,n1,n2),dtype=bool)
-	# 		Binary directed network
-	# 	"""
-	# 	import numpy as np
-	# 	if isinstance(data,str):
-	# 		data=self.esprop[data]
-	# 	if not signed:
-	# 		dr=np.abs(dr)
-	# 	if ntop<1:
-	# 		ntop=int(ntop*dr.size)
-	# 	assert ntop<dr.size
-	# 	t1=np.partition(dr.reshape(dr.shape[0]*dr.shape[1],*dr.shape[2:]),-ntop,axis=0)[-ntop]
-	# 	assert (t1!=0).all()
-	# 	return dr>=t1
+			* '':	Unnormalized direct network.
 
+			* 'n':	Normalized direct network.
 
+			* 'i':	Unnormalized steady-state network.
 
+			* 'in':	Normalized steady-state network.
+
+		optional:
+			Optional data to include. Accepts:
+
+			* readcount:	RNA read count for each cell.
+
+		fi_c:
+			Path of input tsv file for extra property columns for each cell
+
+		Returns
+		---------
+		dictys.net.network
+			network class instance
+		"""
+		import logging
+		import itertools
+		from os.path import join as pjoin
+		from dictys.traj import trajectory,point
+		from dictys.utils.file import read_txt
+		from dictys.utils.numpy import dtype_min
+		import numpy as np
+		import pandas as pd
+
+		optional_allowed={'readcount'}
+		if len(optional-optional_allowed)>0:
+			raise ValueError('Unknown optional data types: '+','.join(optional-optional_allowed))
+
+		params={}
+		#Cells & states/subsets
+		sname=read_txt(fi_subsets,unique=True)
+		n=len(sname)
+		if n==0:
+			raise RuntimeError('Could not find cell subsets.')
+		success=np.ones(n,dtype=bool)
+		cnames=[]
+		for xi in range(n):
+			cnames.append(read_txt(pjoin(path_work,sname[xi],'names_rna.txt')))
+		cname=list(itertools.chain.from_iterable(cnames))
+		if not dynamic:
+			assert len(cname)==len(set(cname))
+		else:
+			cname=sorted(list(set(cname)))
+		cname_dict=dict(zip(cname,range(len(cname))))
+
+		#State-cell properties: cell membership in subset
+		msc=np.zeros((n,len(cname)),dtype=bool)
+		for xi in range(n):
+			msc[xi,[cname_dict[x] for x in cnames[xi]]]=True
+		msc=msc.astype(float)
+		scprop={'w':msc}
+
+		#Network
+		nets=[None]*n
+		for xi in range(n):
+			try:
+				fi=pjoin(path_work,sname[xi],f'net_{nettype}weight.tsv.gz')
+				logging.info(f'Reading file {fi}')
+				nets[xi]=pd.read_csv(fi,header=0,index_col=0,sep='\t')
+				if nets[xi].shape[0]==0:
+					success[xi]=False
+			except FileNotFoundError as e:
+				logging.warning('Skipping cell subset {} due to error: {}'.format(sname[xi],repr(e)))
+				success[xi]=False
+				nets[xi]=pd.DataFrame([],index=[],columns=[])
+
+		#Network nodes: source & target
+		nidss=[[x.index,x.columns] for x in nets]
+		assert all((x[1][:len(x[0])]==x[0]).all() for x in nidss)
+		nids=[sorted(list(set(itertools.chain.from_iterable(x)))) for x in zip(*nidss)]
+		niddicts=[dict(zip(x,range(len(x)))) for x in nids]
+		nname=nids[1]
+		ndict=dict(zip(nname,range(len(nname))))
+		nids=[np.array([ndict[y] for y in x]) for x in nids]
+		cname=np.array(cname)
+		sname=np.array(sname)
+		nname=np.array(nname)
+		#Counts
+		ns=len(sname)
+		nns=np.array([len(x) for x in nids])
+
+		#Cell properties
+		cprop={}
+		if fi_c is not None:
+			#External file
+			logging.info(f'Reading file {fi_c}')
+			t1=pd.read_csv(fi_c,header=0,index_col=0,sep='\t')
+			if len(set(cname)-set(t1.index))>0:
+				raise ValueError(f'Not all known cells included in {fi_c}.')
+			t1=t1.loc[cname]
+			for xi in t1.columns:
+				cprop[xi]=t1[xi].values
+		if dynamic:
+			#UMAP coordindates
+			fi=pjoin(path_data,'coord_rna.tsv.gz')
+			logging.info(f'Reading file {fi}')
+			t1=pd.read_csv(fi,header=0,index_col=0,sep='\t')
+			cprop['coord']=t1.loc[cname].values.T
+
+		#Node-cell properties
+		fi=pjoin(path_data,'expression.tsv.gz')
+		logging.info(f'Reading file {fi}')
+		readcount=pd.read_csv(fi,header=0,index_col=0,sep='\t')
+		readcount=readcount.loc[nname][cname]
+		ncprop={}
+		if 'readcount' in optional:
+			#Read counts
+			ncprop['readcount']=readcount.values.astype(dtype_min(readcount.values.astype(int)))
+
+		#Node-state properties
+		nsprop={}
+		#Node (pseudobulk) CPM
+		t1=readcount.values@msc.T
+		t1=1E6*t1/t1.sum(axis=0)
+		assert (t1>=0).all() and (t1<=1E6).all()
+		nsprop['cpm']=t1
+		
+		#Edge-state properties
+		esprop={}
+		#Edge weight
+		esprop['w']=np.zeros(np.r_[nns,ns],dtype=float)
+		#Edge mask
+		esprop['mask']=np.zeros(np.r_[nns,ns],dtype=bool)
+		for xi in np.nonzero(success)[0]:
+			t1=[[niddicts[y][x] for x in nidss[xi][y]] for y in range(2)]
+			esprop['w'][np.ix_(t1[0],t1[1],[xi])]=nets[xi].values.reshape(*nets[xi].shape,1)
+			esprop['mask'][np.ix_(t1[0],t1[1],[xi])]=True
+
+		if dynamic:
+			#State-state properties
+			ssprop={}
+			#Whether every state point pair on the trajectory is connected
+			fi=pjoin(path_work,'subset_edges.tsv.gz')
+			logging.info(f'Reading file {fi}')
+			t1=pd.read_csv(fi,header=0,index_col=0,sep='\t')
+			ssprop['traj-neighbor']=t1.values
+
+			#Trajectory
+			traj=trajectory.from_file(pjoin(path_data,'traj_node.h5'))
+			#Points
+			points={}
+			points['c']=point.from_file(traj,pjoin(path_data,'traj_cell_rna.h5'))
+			points['s']=point.from_file(traj,pjoin(path_work,'subset_locs.h5'))
+
+		#Construction
+		params={'cname':cname,'sname':sname,'nname':nname,'nids':nids,'cprop':cprop,'scprop':scprop,'ncprop':ncprop,'esprop':esprop,'nsprop':nsprop}
+		if dynamic:
+			params.update({'ssprop':ssprop,'traj':traj,'point':points})
+
+		if success.all():
+			return cls(**params)
+		if not success.any():
+			raise RuntimeError('All subsets failed.')
+		
+		#Remove failed states
+		# logging.warning('Removing {}/{} failed subsets.'.format((~success).sum(),len(success)))
+		success=np.nonzero(success)[0]
+		params['sname']=params['sname'][success]
+		points['s']=points['s'][success]
+		for xi in filter(lambda x:x.endwith('prop'),params):
+			t1=np.nonzero([x=='s' for x in xi[:-4]])[0]
+			for xj in t1:
+				params[xi]={x:y.swapaxes(xj,0)[success].swapaxes(xj,0) for x,y in params[xi].items()}
+
+		return cls(**params)
 
 
 

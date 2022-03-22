@@ -452,7 +452,7 @@ class cellscatter_scatter(statscatter):
 	"""
 	Draw scatter plots of cells.
 	"""
-	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka={},aspect=1,**ka):
+	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',color='type',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka={},aspect=1,**ka):
 		"""
 		Draw scatter plots of cells.
 
@@ -470,6 +470,8 @@ class cellscatter_scatter(statscatter):
 			Stat instance for cell weights with shape=(n_cell)
 		cmap:		str or numpy.ndarray(shape=(len(names),3 or 4))
 			Colormap in matplotlib format for different names
+		color:		str
+			Cell property name to use as categorical coloring
 		alphas:		(float,float)
 			Alpha/transparency for cell weight=0 and 1 respectively.
 		legend_loc:	(float,float)
@@ -482,8 +484,8 @@ class cellscatter_scatter(statscatter):
 		import numpy as np
 		from dictys.plot import get_cmap
 		#Determine colors for cell types
-		if 'c' in d.prop and 'type' in d.prop['c']:
-			ctype=d.prop['c']['type']
+		if 'c' in d.prop and color in d.prop['c']:
+			ctype=d.prop['c'][color]
 		else:
 			ctype=['Unknown']*d.cn
 		ctypelist=sorted(list(set(ctype)))

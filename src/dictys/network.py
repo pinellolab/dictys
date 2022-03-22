@@ -7,7 +7,6 @@ Gene regulatory network reconstruction with TF binding network and transcriptome
 
 import abc
 from typing import Optional,Tuple
-# import numpy.typing as npt
 from dictys.utils.importing import torch,pyro
 
 _docstring2argparse_ignore_=['Trace_ELBO_site','SVI_multiloss','model_base','model_covariance','model_ou']
@@ -1032,7 +1031,49 @@ def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:
 	logging.info(f'Writing file {fo_nweight}')
 	d.to_csv(fo_nweight,header=True,index=True,sep='\t')
 
+###########################################################################
+# Network storage
+###########################################################################
 
+def tofile(diri_data:str,diri_work:str,fi_subsets:str,fo_networks:str,dynamic:bool=False,nettype:str='n',optional:str='readcount',fi_c:Optional[str]=None)->None:
+	"""
+	Saving networks to a single file.
+
+	Parameters
+	-------------
+	diri_data:
+		Path of input data folder to load from
+	diri_work:
+		Path of input working folder to load from
+	fi_subsets:
+		Path of input txt file for cell subset names
+	fo_networks:
+		Path of output h5 file for all networks
+	dynamic:
+		Whether to load a dynamic network instead of a set of static networks
+	nettype:
+		Type of network. Accepts:
+
+		* '':	Unnormalized direct network
+
+		* 'n':	Normalized direct network
+
+		* 'i':	Unnormalized steady-state network
+
+		* 'in':	Normalized steady-state network
+
+	optional:
+		Optional data to include. Accepts:
+
+		* readcount:	RNA read count for each cell
+
+	fi_c:
+		Path of input tsv file for extra property columns for each cell
+	"""
+	from dictys.net import network
+	optional=set(filter(lambda x:len(x)>0,optional.split(',')))
+	n=network.from_folders(diri_data,diri_work,fi_subsets,dynamic=dynamic,nettype=nettype,optional=optional,fi_c=fi_c)
+	n.to_file(fo_networks)
 
 
 

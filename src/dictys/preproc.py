@@ -19,14 +19,11 @@ def selects_rna(fi_reads:str,fi_names:str,fo_reads:str)->None:
 	"""
 	import pandas as pd
 	import logging
+	from dictys.utils.file import read_txt
 	#Loading data
 	logging.info(f'Reading file {fi_reads}.')
 	d=pd.read_csv(fi_reads,index_col=0,header=0,sep='\t')
-	logging.info(f'Reading file {fi_names}.')
-	with open(fi_names,'r') as f:
-		names=f.readlines()
-	names=[x.strip() for x in names]
-	names=set(list(filter(lambda x:len(x)>0,names)))
+	names=set(read_txt(fi_names,unique=True))
 
 	#Filtering 
 	t1=d.columns.isin(names)
@@ -55,17 +52,10 @@ def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	import pandas as pd
 	from os import linesep
 	import logging
+	from dictys.utils.file import read_columns,read_txt
 
-	logging.info(f'Reading file {fi_list}.')
-	with open(fi_list,'r') as f:
-		ind=f.readlines()
-	ind=[x.strip() for x in ind]
-
-	logging.info(f'Reading file {fi_exp}.')
-	dt=pd.read_csv(fi_exp,index_col=0,header=0,nrows=1,sep='\t')
-	if any(len(x.columns)!=len(set(x.columns)) for x in [dt]):
-		raise ValueError('Duplicate names detected.')
-	dt=set(dt.columns)
+	ind=read_txt(fi_list,unique=True)
+	dt=set(read_columns(fi_exp,unique=True))
 	ind=list(filter(lambda x:len(x)>0 and x in dt,ind))
 	if len(ind)==0:
 		raise RuntimeError('No cell selected.')

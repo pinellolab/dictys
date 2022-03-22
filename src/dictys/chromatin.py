@@ -45,6 +45,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	import pandas as pd
 	import logging
 	from dictys.utils import shell
+	from dictys.utils.file import read_txt
 	if qcut<=0 or qcut>=1:
 		raise ValueError('qcut must be between 0 and 1.')
 	if not isfile(fi_names):
@@ -56,11 +57,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 	fi_names,fi_bam,fo_bam,fo_bai,fo_bed=[abspath(x) for x in [fi_names,fi_bam,fo_bam,fo_bai,fo_bed]]
 	
 	#Load sample names
-	logging.info(f'Reading file {fi_names}')
-	with open(fi_names,'r') as f:
-		names=f.readlines()
-	names=[x.strip() for x in names]
-	names=list(filter(lambda x:len(x)>0,names))
+	names=read_txt(fi_names,unique=True)
 	if len(names)==0:
 		raise ValueError('No sample name found in '+fi_names)
 	namestxt=linesep.join([x+'.bam' for x in names])+linesep
@@ -149,6 +146,7 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	import pandas as pd
 	import logging
 	from io import StringIO
+	from dictys.utils.file import read_index
 	if dret is None or len(dret)!=3:
 		raise RuntimeError('Homer failed.')
 	with StringIO(dret[0].decode()) as f:
@@ -169,7 +167,7 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	if dmotif.shape[0]==0:
 		raise RuntimeError('No motif found.')
 
-	namet=np.array(list(pd.read_csv(fi_exp,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	namet=np.array(read_index(fi_exp,unique=True))
 	#Set na as or function
 	t1=(pd.isna(dw)|pd.isna(dh)).values
 	dw.fillna(0,inplace=True)
@@ -372,14 +370,14 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_gff:str,fo_dist:str,cut:int=500000,n
 	import pandas as pd
 	import logging
 	from pybedtools import BedTool
+	from dictys.utils.file import read_index
 	assert nmin>0
 	if nmin>nmax:
 		raise ValueError('nmax must be greater than nmin.')
 
-	logging.info(f'Reading file {fi_exp}')
-	namet=np.array(list(pd.read_csv(fi_exp,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	namet=np.array(read_index(fi_exp,unique=True))
 	logging.info(f'Reading file {fi_wellington}')
-	namep=np.array(list(pd.read_csv(fi_wellington,header=0,index_col=0,sep='\t',usecols=[0]).index))
+	namep=np.array(read_index(fi_wellington,unique=True))
 	
 	#Produce peak bed file
 	peaks=pd.DataFrame([x.split(':') for x in namep],index=None,columns=None)

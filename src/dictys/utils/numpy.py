@@ -60,6 +60,40 @@ def median(v:npt.NDArray,w:Optional[npt.NDArray]=None,**ka)->Any:
 	ws=w.cumsum()
 	return v[ws.searchsorted(ws[-1]/2)]
 
+def dtype_min(v:npt.NDArray):
+	"""
+	Find the minimum sized numpy.dtype for integer array.
+
+	Parameters
+	----------
+	v:
+		Array to find smallest size
+
+	Returns
+	-------
+	numpy.dtype
+		Minimum dtype found.
+	"""
+	import numpy as np
+	if np.issubdtype(v.dtype,np.signedinteger):
+		typebase='i'
+	elif np.issubdtype(v.dtype,np.unsignedinteger):
+		typebase='u'
+	else:
+		assert not np.issubdtype(v.dtype,np.integer)
+		raise TypeError('v must be numpy.integer type.')
+	itemsize=v.dtype.itemsize
+	vrange=[v.min(),v.max()]
+	while itemsize>0:
+		itemsize_new=itemsize//2
+		t1=np.iinfo(np.dtype(f'{typebase}{itemsize_new}'))
+		if t1.min<=vrange[0] and t1.max>=vrange[1]:
+			itemsize=itemsize_new
+		else:
+			break
+	assert itemsize>0
+	return np.dtype(f'{typebase}{itemsize}')
+
 
 assert __name__ != "__main__"
 

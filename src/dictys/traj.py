@@ -7,7 +7,7 @@ Classes for trajectory and points on trajectory
 """
 
 from __future__ import annotations
-from typing import Union,Tuple,Callable,Any,Optional
+from typing import Union,Tuple,Callable,Optional
 import numpy.typing as npt
 import h5py
 
