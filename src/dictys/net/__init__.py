@@ -379,11 +379,13 @@ class network:
 		# logging.warning('Removing {}/{} failed subsets.'.format((~success).sum(),len(success)))
 		success=np.nonzero(success)[0]
 		params['sname']=params['sname'][success]
-		points['s']=points['s'][success]
-		for xi in filter(lambda x:x.endwith('prop'),params):
+		if 'point' in params:
+			params['point']['s']=params['point']['s'][success]
+		for xi in filter(lambda x:x.endswith('prop'),params):
 			t1=np.nonzero([x=='s' for x in xi[:-4]])[0]
+			t2=np.cumsum(np.r_[0,[2 if x=='e' else 1 for x in xi[:-4]]])
 			for xj in t1:
-				params[xi]={x:y.swapaxes(xj,0)[success].swapaxes(xj,0) for x,y in params[xi].items()}
+				params[xi]={x:y.swapaxes(t2[xj],0)[success].swapaxes(t2[xj],0) for x,y in params[xi].items()}
 
 		return cls(**params)
 

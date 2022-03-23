@@ -4,9 +4,19 @@
 """Utility function for numpy"""
 
 from typing import Any,Optional
-import numpy.typing as npt
+import dictys.utils
+try:
+	import numpy.typing as npt
+	NDArray=npt.NDArray
+except dictys.utils.ModuleNotFoundError:
+	NDArray=Any
+try:
+	import numpy.typing as npt
+	ArrayLike=npt.ArrayLike
+except dictys.utils.ModuleNotFoundError:
+	ArrayLike=Any
 
-def groupby(array:npt.NDArray)->dict[Any,npt.NDArray]:
+def groupby(array:NDArray)->dict[Any,NDArray]:
 	"""
 	Groups 1-D array to dict(value=np.array(index))
 
@@ -29,7 +39,7 @@ def groupby(array:npt.NDArray)->dict[Any,npt.NDArray]:
 	d={x:np.array(y) for x,y in d.items()}
 	return d
 
-def median(v:npt.NDArray,w:Optional[npt.NDArray]=None,**ka)->Any:
+def median(v:NDArray,w:Optional[NDArray]=None,**ka)->Any:
 	"""
 	Weighted median.
 
@@ -60,7 +70,7 @@ def median(v:npt.NDArray,w:Optional[npt.NDArray]=None,**ka)->Any:
 	ws=w.cumsum()
 	return v[ws.searchsorted(ws[-1]/2)]
 
-def dtype_min(v:npt.NDArray):
+def dtype_min(v:NDArray):
 	"""
 	Find the minimum sized numpy.dtype for integer array.
 

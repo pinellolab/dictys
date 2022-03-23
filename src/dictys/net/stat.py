@@ -8,11 +8,11 @@ Statistics of networks for data visualization and export.
 from __future__ import annotations
 import abc
 from typing import Union,Callable,Tuple,Optional
-import numpy.typing as npt
 import dictys.traj
 import dictys.net
+from dictys.utils.numpy import NDArray,ArrayLike
 
-def _getitem(key,v:npt.NDArray)->npt.NDArray:
+def _getitem(key,v:NDArray)->NDArray:
 	"""
 	Get items from numpy.array
 	key:	iterable of keys. Each key is a iterable or individual value.
@@ -34,7 +34,7 @@ class base(metaclass=abc.ABCMeta):
 	"""
 	Abstract base class for stat of network.
 	"""
-	def __init__(self,names:Optional[list[npt.ArrayLike[str]]]=None,label:Optional[str]=None):
+	def __init__(self,names:Optional[list[ArrayLike[str]]]=None,label:Optional[str]=None):
 		"""
 		Base class for statistics for each gene
 		names:	List of names of each axis of output stat, except last axis which is always time. Default is obtained from default_names function.
@@ -50,7 +50,7 @@ class base(metaclass=abc.ABCMeta):
 		self.names=[np.array(x) for x in names]
 		self.ndict=[dict(zip(x,range(len(x)))) for x in names]
 	@abc.abstractmethod
-	def compute(self,pts:dictys.traj.point)->npt.NDArray:
+	def compute(self,pts:dictys.traj.point)->NDArray:
 		"""
 		Use this function to compute stat values at each state or point
 		pts:	Point list instance of dictys.traj.point, or state list as list of int
@@ -58,14 +58,14 @@ class base(metaclass=abc.ABCMeta):
 		Stat values as numpy.array(shape=(...,len(pts))) . Use nan to hide value or set as invalid.
 		"""
 	@abc.abstractmethod
-	def default_names(self)->list[npt.NDArray[str]]:
+	def default_names(self)->list[NDArray[str]]:
 		"""
 		Use this function to determine the default names for each axis.
 		Note that only names shared with other stats will be visualized.
 		Return:
 		List of list of names for each axis.
 		"""
-	def default_lims(self,pts:dictys.traj.point=None,names:Optional[list[npt.ArrayLike[str]]]=None,expansion:float=0.02)->npt.ArrayLike:
+	def default_lims(self,pts:dictys.traj.point=None,names:Optional[list[ArrayLike[str]]]=None,expansion:float=0.02)->ArrayLike:
 		"""
 		Use this function to determine the default limits of the stat.
 		This implementation uses min/max of stat values.
@@ -147,7 +147,7 @@ class const(base):
 	Show constant(/state-invariant) value for stat.
 	"""
 	isconst=True
-	def __init__(self,val:npt.NDArray,names:list[npt.ArrayLike[str]],label:str='Constant',**ka):
+	def __init__(self,val:NDArray,names:list[ArrayLike[str]],label:str='Constant',**ka):
 		"""
 		Show constant(/state-invariant) value for stat
 		val:	Value to show
@@ -160,11 +160,11 @@ class const(base):
 		self.default_names_=names
 		self.default_label_=label
 		super().__init__(**ka)
-	def default_names(self)->list[npt.ArrayLike[str]]:
+	def default_names(self)->list[ArrayLike[str]]:
 		return self.default_names_
 	def default_label(self)->str:
 		return self.default_label_
-	def compute(self,pts:dictys.traj.point)->npt.NDArray:
+	def compute(self,pts:dictys.traj.point)->NDArray:
 		import numpy as np
 		return np.repeat(self.val.reshape(*self.val.shape,1),len(pts),axis=-1)
 
@@ -172,7 +172,7 @@ class function(base):
 	"""
 	Stat that is a function of other stat(s)
 	"""
-	def __init__(self,func:Callable[Tuple[npt.NDArray,...],npt.NDArray],stats:list[base],isconst:Optional[bool]=None,**ka):
+	def __init__(self,func:Callable[Tuple[NDArray,...],NDArray],stats:list[base],isconst:Optional[bool]=None,**ka):
 		"""
 		Stat that is a function of other stat(s)
 		func:	Function to combine other stats. Should have self.compute=func(*[x.compute(...) for x in stats]).
@@ -220,7 +220,7 @@ class fsinglestat(const):
 	"""
 	Show constant value for stat by combining different points.
 	"""	
-	def __init__(self,func_stat:Callable[Tuple[npt.NDArray,...],npt.NDArray],stat:list[base],pts:dictys.traj.point,**ka):
+	def __init__(self,func_stat:Callable[Tuple[NDArray,...],NDArray],stat:list[base],pts:dictys.traj.point,**ka):
 		"""
 		Show constant value for stat by combining different points.
 		func_stat:	Function to combine different points to one for the stat.
@@ -621,7 +621,7 @@ class flayout_base(base):
 	"""
 	Compute layout coordinates of nodes from network.
 	"""
-	def __init__(self,statnet:base,layout_func:Callable[npt.NDArray,npt.NDArray],ndim:int=2,pts:dictys.traj.point=None,netscale:float=1,**ka):
+	def __init__(self,statnet:base,layout_func:Callable[NDArray,NDArray],ndim:int=2,pts:dictys.traj.point=None,netscale:float=1,**ka):
 		"""
 		Compute layout coordinates of nodes from network.
 		statnet:	stat of network edge weight
@@ -654,7 +654,7 @@ class flayout_base(base):
 		return self.default_names_
 	def default_label(self):
 		return 'Coordinates'
-	def init_pos(self,m:npt.NDArray,sep:float=1,always:list[int]=[])->npt.NDArray:
+	def init_pos(self,m:NDArray,sep:float=1,always:list[int]=[])->NDArray:
 		"""
 		Initialize node positions for the initial network.
 		m:	Directed network edge matrix as numpy.array(shape=(n_node,n_node))
@@ -796,7 +796,7 @@ class flayout_base(base):
 			ans2[tmap]=ans1
 			ans.append(ans2)
 		self.pos=np.array(ans).transpose(1,2,0)
-	def ptsmap(self,pts:dictys.traj.point)->npt.NDArray:
+	def ptsmap(self,pts:dictys.traj.point)->NDArray:
 		"""
 		Maps points to known points.
 		"""

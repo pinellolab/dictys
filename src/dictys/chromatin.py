@@ -4,7 +4,7 @@
 """
 
 from typing import Optional
-import numpy.typing as npt
+from dictys.utils.numpy import NDArray
 
 ################################################################
 # Peak calling
@@ -508,7 +508,7 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int
 	logging.info(f'Writing file {fo_linking}')
 	ans.to_csv(fo_linking,index=True,header=True,sep='\t')
 
-def _binlinking_func(data:npt.NDArray,n:int,inf:str='never')->npt.NDArray:
+def _binlinking_func(data:NDArray,n:int,inf:str='never')->NDArray:
 	"""
 	Actual function to convert regulator-target link scores to binary.
 
