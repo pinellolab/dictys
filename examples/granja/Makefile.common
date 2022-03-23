@@ -4,7 +4,7 @@
 ############################################################
 #Singularity binary
 SINGULARITY=singularity
-#Custom parameteres for `singularity exec`. Can be used to fix symlinks of data files.
+#Custom parameters for `singularity exec`. Can be used to fix symlinks of data files.
 SINGULARITY_PARAMS:=-B /data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/granja2019-matched-sepagg:/data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/granja2019-matched-sepagg:ro
 #Path to singularity image
 SINGULARITY_IMAGE=~/dictys2.sif
@@ -63,7 +63,7 @@ ENV_PYRO=pyro
 PKGS_MAP=dictys docstring2argparse networkx
 #Parameters for singularity
 SINGULARITY_PARAMS+=-ec --nv
-SINGULARITY_PARAMS+=-B $(CURDIR)/.placeholder:/home/docker/.local/bin/.placeholder:ro -B $(CURDIR)/.placeholder:/home/docker/.cache/torch/kernels/.placeholder:ro
+SINGULARITY_PARAMS+=-B $(abspath $(lastword $(MAKEFILE_LIST))):/home/docker/.local/bin/.placeholder:ro -B $(abspath $(lastword $(MAKEFILE_LIST))):/home/docker/.cache/torch/kernels/.placeholder:ro
 SINGULARITY_PARAMS+=-B $(TMPDIR):/tmp:rw -B $(CURDIR):/dictys/work:rw
 SINGULARITY_PARAMS+=$(foreach p,$(PKGS_MAP),-B $(shell python -c "import $(p) as m;from os.path import dirname,abspath;print(dirname(abspath(m.__file__)))"):/dictys/lib/$(p):ro)
 #Command to run dictys in singularity
@@ -101,23 +101,19 @@ endif
 
 PRODUCT_CPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_CPU),$(DIRT)/$(c)/$(p)))
 PRODUCT_GPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_GPU),$(DIRT)/$(c)/$(p)))
-DPRODUCT=$(foreach c,$(SUBSETS),$(foreach p,$(DPRODUCT_NAMES),$(DIRO)/$(c)/$(p))) .placeholder
 
-.PHONY: all cpu gpu t clean distclean subset
+.PHONY: cpu gpu subset combine t clean distclean
 
-all: cpu gpu
+combine: $(DPRODUCT)
 
-cpu: $(PRODUCT_CPU) $(DPRODUCT)
+cpu: $(PRODUCT_CPU)
 
 gpu: $(PRODUCT_GPU)
 
 subset: $(PRODUCT_SUBSET)
 
 t:
-	@echo $(TMPDIR)
-	@echo $(CURDIR)
-	@echo $(SUBSETS)
-	@echo $(SINGULARITY_CMD)
+	@echo $(DPRODUCT)
 
 clean:
 	$(RM) $(PRODUCT_CPU) $(PRODUCT_GPU) $(PRODUCT_SUBSET)
@@ -125,20 +121,10 @@ clean:
 distclean: clean
 	$(RM) $(DPRODUCT)
 
-#Fixes singularity permission issue
-.placeholder:
-	touch $@
-
 ifeq ($(SHOW_CPU),1)
 
-$(DIRT):
-	mkdir $@
-
-$(addprefix $(DIRT)/,$(SUBSETS)): $(DIRT)/%: $(DIRT)
-	mkdir $@
-
-$(DIRT)/%/expression0.tsv.gz: $(DIRI)/expression.tsv.gz $(DIRT)/%/names_rna.txt .placeholder
-	$(SINGULARITY_CMD) $(ENV_MAIN) preproc selects_rna $(KPARAMS_SELECTSC_RNA) $< $(DIRT)/$*/names_rna.txt $@
+$(DIRT)/%/expression0.tsv.gz: $(DIRI)/expression.tsv.gz $(DIRT)/%/names_rna.txt
+	$(SINGULARITY_CMD) $(ENV_MAIN) preproc selects_rna $(KPARAMS_SELECTSC_RNA) $^ $@
 
 $(DIRT)/%/expression.tsv.gz: $(DIRT)/%/expression0.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) preproc qc_reads $(KPARAMS_QC_READS) $^ $@ $(PARAMS_QC_READS)
@@ -185,10 +171,13 @@ endif
 
 ifeq ($(SHOW_PYRO),1)
 
-$(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz $(DIRT)/%/net_loss.tsv.gz $(DIRT)/%/net_stats.tsv.gz : $(DIRT)/%/expression.tsv.gz $(DIRT)/%/binlinking.tsv.gz .placeholder
-	$(SINGULARITY_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS_RECONSTRUCT) $(DIRT)/$*/expression.tsv.gz $(DIRT)/$*/binlinking.tsv.gz $(DIRT)/$*/net_weight.tsv.gz $(DIRT)/$*/net_meanvar.tsv.gz $(DIRT)/$*/net_covfactor.tsv.gz $(DIRT)/$*/net_loss.tsv.gz $(DIRT)/$*/net_stats.tsv.gz
+$(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz $(DIRT)/%/net_loss.tsv.gz $(DIRT)/%/net_stats.tsv.gz : $(DIRT)/%/expression.tsv.gz $(DIRT)/%/binlinking.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS_RECONSTRUCT) $^ $(DIRT)/$*/net_weight.tsv.gz $(DIRT)/$*/net_meanvar.tsv.gz $(DIRT)/$*/net_covfactor.tsv.gz $(DIRT)/$*/net_loss.tsv.gz $(DIRT)/$*/net_stats.tsv.gz
 
 endif
+
+$(DPRODUCT):
+	$(SINGULARITY_CMD) $(ENV_MAIN) network tofile $(KPARAMS_TOFILE) $(DIRI) $(DIRT) $(FILE_SUBSET) $@
 
 
 
