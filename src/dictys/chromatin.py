@@ -10,7 +10,7 @@ from dictys.utils.numpy import NDArray
 # Peak calling
 ################################################################
 
-def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:str,qcut:float=0.05,nth:int=1,nmax:int=0)->None:
+def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:str,qcut:float=0.05,nth:int=1,nmax:int=500000)->None:
 	"""
 	Peak calling using macs2.
 
@@ -84,7 +84,7 @@ def macs2(fi_names:str,fi_bam:str,fo_bam:str,fo_bai:str,fo_bed:str,genome_size:s
 # TF footprinting
 ################################################################
 
-def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional[str]=None,cut:float=10,nth:int=1,nmax:int=1000000000)->None:
+def wellington(fi_bam:str,fi_bai:str,fi_bed:str,fo_bed:str,fi_blacklist:Optional[str]=None,cut:float=10,nth:int=1,nmax:int=100000)->None:
 	"""
 	TF footprinting with wellington.
 	
@@ -174,7 +174,6 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	dh.fillna(0,inplace=True)
 	#Extract dimensions
 	namep=np.array([str(x) for x in dw.index])
-	# namem=np.array(['_'.join([x.split('_')[0]]+x.split('.')[-2:]) for x in dw.columns])
 	namem=np.array(list(dw.columns))
 	#Set data values
 	dw,dh=[x.values.astype(float) for x in [dw,dh]]

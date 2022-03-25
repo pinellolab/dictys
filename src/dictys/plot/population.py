@@ -59,7 +59,7 @@ def compute_reg_spec(d0,min_entropy=0.5,ncut=0.4,nmin=20,nmax_reg=10,select_stat
 	#Degree centrality specificity
 	va=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
 	#CPM
-	cpm=2**(stat.lcpm(d0,cut=-1,const=1).compute(select_state)[d0.nids[0]])-1
+	cpm=2**(stat.lcpm(d0,cut=-1,constant=1).compute(select_state)[d0.nids[0]])-1
 
 	assert (na>=0).all() and (va>=0).all() and (va<=1).all()
 	assert na.shape==va.shape
@@ -196,8 +196,8 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 	import logging
 	import numpy as np
 	import pandas as pd
-	import matplotlib
 	import matplotlib.pyplot as plt
+	from dictys.plot import colorbar
 
 	ndict=[dict(zip(d0.nname[x],range(len(x)))) for x in d0.nids]
 	names=np.array([' '+'-'.join(x) for x in selection])
@@ -295,10 +295,7 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 	ax.tick_params(bottom=False,top=False,left=True,labeltop=False,labelbottom=False)
 	
 	#Figure for colorbar
-	fig2,ax=plt.subplots(figsize=(0.15, 0.8))
-	norm=matplotlib.colors.Normalize(vmin=-1, vmax=1)
-	fig2.colorbar(matplotlib.cm.ScalarMappable(norm=norm,cmap=cmap_value),cax=ax,orientation='vertical')
-	ax.set_title(f'Relative{linesep}strength',loc='center',pad=10)
+	fig2,ax=colorbar(cmap_value,-1,1,title=f'Relative{linesep}strength',title_pad=10)
 	
 	#Prepare data
 	net=pd.DataFrame(net.T,index=names2,columns=names)

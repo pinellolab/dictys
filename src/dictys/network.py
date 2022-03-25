@@ -673,7 +673,7 @@ class model_ou(model_covariance):
 # Network reconstruction
 ###########################################################################
 
-def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str='logread,logread2,ngene',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=2,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E7)->None:
+def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str='logread,logread2,ngene',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=2,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
 	"""
 	Reconstruct network with any pyro model in net_pyro_models that is based on covariance_model and has binary masks.
 
@@ -797,10 +797,8 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 	t1=set(namereg)
 	namet=np.r_[namereg,list(filter(lambda x:x not in t1,nametarget))]
 	assert len(namet)==ntarget
-	tdict=dict(zip(namet,range(len(namet))))
 	dt0=dt0.loc[namet].values
-	t1=dict(zip(nametarget,range(ntarget)))
-	mask=np.array([mask.values[:,t1[x]] if x in t1 else np.zeros(nreg,dtype=bool) for x in namet],dtype=bool).T
+	mask=mask[namet].values.astype(bool)
 
 	#Prepare other parameters
 	if loss=='Trace_ELBO_site':
@@ -813,22 +811,21 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 		model.train_svi(nstep,nstep_report=nstep_report)
 
 	#Recover networks: mean and z score of each edge
-	t1=[tdict[x] for x in nametarget]
 	ans_mean=torch.zeros([nreg,mask.shape[1]],**model.tensorka)
 	ans_mean[model.N_0mask[0],model.N_0mask[1]]=model.param(varmean)
-	ans_mean=ans_mean.detach().cpu().numpy().astype(float)[:,t1]
+	ans_mean=ans_mean.detach().cpu().numpy().astype(float)
 	assert ans_mean.shape==(nreg,ntarget) and np.isfinite(ans_mean).all()
 	if varstd is not None:
 		ans_z=torch.zeros([nreg,mask.shape[1]],**model.tensorka)
 		ans_z[model.N_0mask[0],model.N_0mask[1]]=model.param(varmean)/model.param(varstd)
-		ans_z=ans_z.detach().cpu().numpy().astype(float)[:,t1].reshape(nreg,ntarget)
+		ans_z=ans_z.detach().cpu().numpy().astype(float).reshape(nreg,ntarget)
 		assert ans_z.shape==(nreg,ntarget) and np.isfinite(ans_z).all()
 	#Recover other model parameters
-	ans_gmean=model.param('mu_G').detach().cpu().numpy().astype(float)[t1]
-	ans_gcov0_d=model.param('sigma0_G_d').detach().cpu().numpy().astype(float)[t1]
-	ans_gcov0_nd=model.param('sigma0_G_nd').detach().cpu().numpy().astype(float).T[:,t1]
-	ans_gcov_d=model.param('sigma_G_d').detach().cpu().numpy().astype(float)[t1]
-	ans_gcov_nd=model.param('sigma_G_nd').detach().cpu().numpy().astype(float).T[:,t1]
+	ans_gmean=model.param('mu_G').detach().cpu().numpy().astype(float)
+	ans_gcov0_d=model.param('sigma0_G_d').detach().cpu().numpy().astype(float)
+	ans_gcov0_nd=model.param('sigma0_G_nd').detach().cpu().numpy().astype(float).T
+	ans_gcov_d=model.param('sigma_G_d').detach().cpu().numpy().astype(float)
+	ans_gcov_nd=model.param('sigma_G_nd').detach().cpu().numpy().astype(float).T
 	ans_reg=model.param('reg').detach().cpu().numpy().astype(float).ravel()[0]
 	#Extract stats
 	ans_loss=np.array(model.stat_loss,dtype=float)

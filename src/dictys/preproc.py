@@ -49,9 +49,7 @@ def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 		Path of output text file of selected cell names, one per line
 
 	"""
-	import pandas as pd
 	from os import linesep
-	import logging
 	from dictys.utils.file import read_columns,read_txt
 
 	ind=read_txt(fi_list,unique=True)

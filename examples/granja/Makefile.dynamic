@@ -16,13 +16,13 @@ KPARAMS_TOFILE+=--dynamic
 #Working folder
 DIRT:=tmp_dynamic
 FILE_SUBSET:=$(DIRT)/subsets.txt
-PRODUCT_SUBSET:=$(FILE_SUBSET)
+PRODUCT_SUBSET:=$(FILE_SUBSET) $(DIRT)/subset_locs.h5 $(DIRT)/subset_edges.tsv.gz
 
 include Makefile.common
 
 ifeq ($(SHOW_CPU),1)
 
-$(DIRT)/subsets.txt $(DIRT)/subset_locs.h5 $(DIRT)/subset_edges.tsv.gz: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz
+$(PRODUCT_SUBSET) &: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz
 	mkdir -p $(DIRT)
 	$(SINGULARITY_CMD) $(ENV_MAIN) dynamic subsets_rna $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz $(DIRT)/subsets.txt $(DIRT)/subset_locs.h5 $(DIRT) $(DIRT)/subset_edges.tsv.gz $(PARAMS_SUBSETS_RNA)
 

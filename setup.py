@@ -29,7 +29,7 @@ def pkg_setup():
 		scripts=['bin/dictys'],
 		# include_package_data=True,
 		# install_requires=['numpy','scipy','pandas','scikit-learn','biothings_client','matplotlib>=3.5.0','h5py'],
-		install_requires='numpy,h5py,networkx'.split(','),
+		install_requires='numpy,scipy,pandas,h5py,networkx'.split(','),
 		classifiers=['Development Status :: 2 - Pre-Alpha ',
 			'License :: OSI Approved :: BSD License',
 			'Environment :: Console',
