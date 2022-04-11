@@ -7,7 +7,7 @@ SINGULARITY=singularity
 #Custom parameters for `singularity exec`. Can be used to fix symlinks of data files.
 SINGULARITY_PARAMS:=-B /data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/granja2019-matched-sepagg:/data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/granja2019-matched-sepagg:ro
 #Path to singularity image
-SINGULARITY_IMAGE=~/dictys3.sif
+SINGULARITY_IMAGE=~/dictys_old.sif
 #Custom temporary folder can be specified here, or in environmental variable TMPDIR
 TMPDIR?=/tmp
 #Maximum number of CPU threads for each job

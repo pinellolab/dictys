@@ -673,7 +673,7 @@ class model_ou(model_covariance):
 # Network reconstruction
 ###########################################################################
 
-def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str='logread,logread2,ngene',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=2,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
+def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str=',',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=2,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
 	"""
 	Reconstruct network with any pyro model in net_pyro_models that is based on covariance_model and has binary masks.
 
@@ -785,7 +785,10 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 			dc2.append((dt0.values!=0).sum(axis=0))
 		else:
 			raise ValueError(f'Unknown covariate name {cov}.')
-	dc=np.concatenate([dc.values,dc2],axis=0)
+	if len(dc2)>0:
+		dc=np.concatenate([dc.values,dc2],axis=0)
+	else:
+		dc=dc.values
 	t1=min(nt,ns)-dc.shape[0]
 	if npc>=t1:
 		raise RuntimeError(f'Insufficient degrees of freedom {t1} compared to off-diagonal factor count {npc} in unexplained variance matrix.')
