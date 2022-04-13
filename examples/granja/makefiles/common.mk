@@ -7,7 +7,7 @@ SINGULARITY=singularity
 #Custom parameters for `singularity exec`. Can be used to fix symlinks of data files.
 SINGULARITY_PARAMS:=-B /data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/granja2019-matched-sepagg:/data/pinello/PROJECTS/2020_08_dynet/dynet1/dat/00-raw/bams/granja2019-matched-sepagg:ro
 #Path to singularity image
-SINGULARITY_IMAGE=~/dictys_old.sif
+SINGULARITY_IMAGE=~/dictys3.sif
 #Custom temporary folder can be specified here, or in environmental variable TMPDIR
 TMPDIR?=/tmp
 #Maximum number of CPU threads for each job
@@ -56,9 +56,27 @@ KPARAMS_NORMALIZE:=
 ############################################################
 
 #Input data folder
-DIRI=data
+DIRI:=data
 #Output data folder
-DIRO=output
+ifeq (a$(DIRO),a)
+DIRO:=output
+endif
+#Working input folder
+ifeq (a$(DIRTI),a)
+ifneq (a$(DIRT),a)
+DIRTI:=$(DIRT)
+else
+$(error Specify working input folder with DIRTI or DIRT)
+endif
+endif
+#Working output folder
+ifeq (a$(DIRTO),a)
+ifneq (a$(DIRT),a)
+DIRTO:=$(DIRT)
+else
+$(error Specify working output folder with DIRTO or DIRT)
+endif
+endif
 #File for cell subsets
 FILE_SUBSET?=$(DIRI)/subsets.txt
 #Conda environments in container
@@ -71,14 +89,13 @@ SINGULARITY_PARAMS+=-ec --nv
 SINGULARITY_PARAMS+=-B $(abspath $(lastword $(MAKEFILE_LIST))):/home/docker/.local/bin/.placeholder:ro
 SINGULARITY_PARAMS+=-B $(TMPDIR):/tmp:rw -B $(CURDIR):/dictys/work:rw
 SINGULARITY_PARAMS+=$(foreach p,$(PKGS_MAP),-B $(shell python -c "import $(p) as m;from os.path import dirname,abspath;print(dirname(abspath(m.__file__)))"):/dictys/lib/$(p):ro)
-#Command to run dictys in singularity
 SINGULARITY_CMD=$(SINGULARITY) exec $(SINGULARITY_PARAMS) $(SINGULARITY_IMAGE) /usr/bin/env HOME=/home/docker /home/docker/.local/bin/dictys_singularity
 
 ############################################################
 # Parameters of each step
 ############################################################
-ifneq (a$(wildcard $(DIRO)/blacklist.bed),a)
-KPARAMS_WELLINGTON+=--fi_blacklist $(DIRO)/blacklist.bed
+ifneq (a$(wildcard $(DIRI)/blacklist.bed),a)
+KPARAMS_WELLINGTON+=--fi_blacklist $(DIRI)/blacklist.bed
 endif
 
 ############################################################
@@ -99,6 +116,7 @@ $(error Missing subsets.txt. Run `make subset` first for dynamic network.)
 endif
 endif
 
+#Determine targets to make based on cpu/gpu mode
 ifeq (a$(DEVICE),acpu)
 PRODUCT_NAMES_CPU+=$(PRODUCT_NAMES_GPU)
 PRODUCT_NAMES_GPU:=
@@ -114,8 +132,8 @@ SHOW_PYRO:=0
 endif
 endif
 
-PRODUCT_CPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_CPU),$(DIRT)/$(c)/$(p)))
-PRODUCT_GPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_GPU),$(DIRT)/$(c)/$(p)))
+PRODUCT_CPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_CPU),$(DIRTO)/$(c)/$(p)))
+PRODUCT_GPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_GPU),$(DIRTO)/$(c)/$(p)))
 
 ############################################################
 # Recipes
@@ -142,61 +160,61 @@ distclean: clean
 
 ifeq ($(SHOW_CPU),1)
 
-$(DIRT)/%/expression0.tsv.gz: $(DIRI)/expression.tsv.gz $(DIRT)/%/names_rna.txt
+$(DIRTO)/%/expression0.tsv.gz: $(DIRI)/expression.tsv.gz $(DIRTI)/%/names_rna.txt
 	$(SINGULARITY_CMD) $(ENV_MAIN) preproc selects_rna $(KPARAMS_SELECTSC_RNA) $^ $@
 
-$(DIRT)/%/expression.tsv.gz: $(DIRT)/%/expression0.tsv.gz
+$(DIRTO)/%/expression.tsv.gz: $(DIRTI)/%/expression0.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) preproc qc_reads $(KPARAMS_QC_READS) $^ $@ $(PARAMS_QC_READS)
 
 ifeq ($(JOINT),1)
-$(DIRT)/%/names_atac.txt: $(DIRT)/%/expression.tsv.gz $(DIRT)/%/names_atac0.txt
+$(DIRTO)/%/names_atac.txt: $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/names_atac0.txt
 	$(SINGULARITY_CMD) $(ENV_MAIN) preproc selects_atac $(KPARAMS_SELECTS_ATAC) $^ $@
 else
-$(DIRT)/%/names_atac.txt: $(DIRT)/%/names_atac0.txt
+$(DIRTO)/%/names_atac.txt: $(DIRTI)/%/names_atac0.txt
 	cp $< $@
 endif
 
-$(DIRT)/%/reads.bam $(DIRT)/%/reads.bai $(DIRT)/%/peaks.bed : $(DIRT)/%/names_atac.txt $(DIRI)/bams
-	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin macs2 $(KPARAMS_MACS2) $^ $(DIRT)/$*/reads.bam $(DIRT)/$*/reads.bai $(DIRT)/$*/peaks.bed $(PARAMS_MACS2)
+$(DIRTO)/%/reads.bam $(DIRTO)/%/reads.bai $(DIRTO)/%/peaks.bed : $(DIRTI)/%/names_atac.txt $(DIRI)/bams
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin macs2 $(KPARAMS_MACS2) $^ $(DIRTO)/$*/reads.bam $(DIRTO)/$*/reads.bai $(DIRTO)/$*/peaks.bed $(PARAMS_MACS2)
 	
-$(DIRT)/%/footprints.bed: $(DIRT)/%/reads.bam $(DIRT)/%/reads.bai $(DIRT)/%/peaks.bed
+$(DIRTO)/%/footprints.bed: $(DIRTI)/%/reads.bam $(DIRTI)/%/reads.bai $(DIRTI)/%/peaks.bed
 	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin wellington $(KPARAMS_WELLINGTON) $^ $@
 	
-$(DIRT)/%/motifs.bed $(DIRT)/%/wellington.tsv.gz $(DIRT)/%/homer.tsv.gz : $(DIRT)/%/footprints.bed $(DIRI)/motifs.motif $(DIRI)/genome $(DIRT)/%/expression.tsv.gz
-	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin homer $(KPARAMS_HOMER) $^ $(DIRT)/$*/motifs.bed $(DIRT)/$*/wellington.tsv.gz $(DIRT)/$*/homer.tsv.gz
+$(DIRTO)/%/motifs.bed $(DIRTO)/%/wellington.tsv.gz $(DIRTO)/%/homer.tsv.gz : $(DIRTI)/%/footprints.bed $(DIRI)/motifs.motif $(DIRI)/genome $(DIRTI)/%/expression.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin homer $(KPARAMS_HOMER) $^ $(DIRTO)/$*/motifs.bed $(DIRTO)/$*/wellington.tsv.gz $(DIRTO)/$*/homer.tsv.gz
 	
-$(DIRT)/%/binding.tsv.gz: $(DIRT)/%/wellington.tsv.gz $(DIRT)/%/homer.tsv.gz
+$(DIRTO)/%/binding.tsv.gz: $(DIRTI)/%/wellington.tsv.gz $(DIRTI)/%/homer.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin binding $(KPARAMS_BINDING) $^ $@
 
-$(DIRT)/%/tssdist.tsv.gz: $(DIRT)/%/expression.tsv.gz $(DIRT)/%/wellington.tsv.gz $(DIRI)/gff.gff
+$(DIRTO)/%/tssdist.tsv.gz: $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/wellington.tsv.gz $(DIRI)/gff.gff
 	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin tssdist $(KPARAMS_TSSDIST) $^ $@
 
-$(DIRT)/%/linking.tsv.gz: $(DIRT)/%/binding.tsv.gz $(DIRT)/%/tssdist.tsv.gz
+$(DIRTO)/%/linking.tsv.gz: $(DIRTI)/%/binding.tsv.gz $(DIRTI)/%/tssdist.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin linking $(KPARAMS_LINKING) $^ $@
 
-$(DIRT)/%/binlinking.tsv.gz: $(DIRT)/%/linking.tsv.gz
+$(DIRTO)/%/binlinking.tsv.gz: $(DIRTI)/%/linking.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) chromatin binlinking $(KPARAMS_BINLINKING) $^ $@ $(PARAMS_BINLINKING)
 	
-$(DIRT)/%/net_nweight.tsv.gz: $(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz
+$(DIRTO)/%/net_nweight.tsv.gz: $(DIRTI)/%/net_weight.tsv.gz $(DIRTI)/%/net_meanvar.tsv.gz $(DIRTI)/%/net_covfactor.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) network normalize $(KPARAMS_NORMALIZE) $^ $@
 
-$(DIRT)/%/net_iweight.tsv.gz: $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz
+$(DIRTO)/%/net_iweight.tsv.gz: $(DIRTI)/%/net_meanvar.tsv.gz $(DIRTI)/%/net_weight.tsv.gz $(DIRTI)/%/net_covfactor.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) network indirect $(KPARAMS_INDIRECT) --fi_meanvar $^ $@
 	
-$(DIRT)/%/net_inweight.tsv.gz: $(DIRT)/%/net_iweight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz
+$(DIRTO)/%/net_inweight.tsv.gz: $(DIRTI)/%/net_iweight.tsv.gz $(DIRTI)/%/net_meanvar.tsv.gz $(DIRTI)/%/net_covfactor.tsv.gz
 	$(SINGULARITY_CMD) $(ENV_MAIN) network normalize $(KPARAMS_NORMALIZE) $^ $@
 
 endif
 
 ifeq ($(SHOW_PYRO),1)
 
-$(DIRT)/%/net_weight.tsv.gz $(DIRT)/%/net_meanvar.tsv.gz $(DIRT)/%/net_covfactor.tsv.gz $(DIRT)/%/net_loss.tsv.gz $(DIRT)/%/net_stats.tsv.gz : $(DIRT)/%/expression.tsv.gz $(DIRT)/%/binlinking.tsv.gz
-	$(SINGULARITY_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS_RECONSTRUCT) $^ $(DIRT)/$*/net_weight.tsv.gz $(DIRT)/$*/net_meanvar.tsv.gz $(DIRT)/$*/net_covfactor.tsv.gz $(DIRT)/$*/net_loss.tsv.gz $(DIRT)/$*/net_stats.tsv.gz
+$(DIRTO)/%/net_weight.tsv.gz $(DIRTO)/%/net_meanvar.tsv.gz $(DIRTO)/%/net_covfactor.tsv.gz $(DIRTO)/%/net_loss.tsv.gz $(DIRTO)/%/net_stats.tsv.gz : $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/binlinking.tsv.gz
+	$(SINGULARITY_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS_RECONSTRUCT) $^ $(DIRTO)/$*/net_weight.tsv.gz $(DIRTO)/$*/net_meanvar.tsv.gz $(DIRTO)/$*/net_covfactor.tsv.gz $(DIRTO)/$*/net_loss.tsv.gz $(DIRTO)/$*/net_stats.tsv.gz
 
 endif
 
 $(DPRODUCT):
-	$(SINGULARITY_CMD) $(ENV_MAIN) network tofile $(KPARAMS_TOFILE) $(DIRI) $(DIRT) $(FILE_SUBSET) $@
+	$(SINGULARITY_CMD) $(ENV_MAIN) network tofile $(KPARAMS_TOFILE) $(DIRI) $(DIRTI) $(FILE_SUBSET) $@
 
 
 

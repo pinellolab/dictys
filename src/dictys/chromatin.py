@@ -187,6 +187,9 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
 	assert np.isfinite(dw).all() and np.isfinite(dh).all()
 	assert (dw>=0).all() and (dh>=0).all()
+	#Remove regions not mapped to motif
+	t1=(dw>0).any(axis=1)|(dh>0).any(axis=1)
+	dw,dh,namep=[x[t1] for x in [dw,dh,namep]]
 	#Output
 	logging.info(f'Writing file {fo_bed}')
 	dmotif.to_csv(fo_bed,header=False,index=False,sep='\t')
@@ -260,7 +263,7 @@ def _linking_score(vw,vh,dist,mode:int=7):
 		ans=ans-np.log(10)*np.abs(dist)/1E6
 	return ans
 
-def binding(fi_wellington:str,fi_homer:str,fo_bind:str,cuth:float=0,cutw:float=0,cut:float=0,combine:str='max',mode:int=3)->None:
+def binding(fi_wellington:str,fi_homer:str,fo_bind:str,cuth:float=0,cutw:float=0,cut:Optional[float]=None,combine:str='max',mode:int=3)->None:
 	"""
 	Finding TF binding events.
 
@@ -503,7 +506,17 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int
 	ans=-np.ones(nlink,dtype=float)*np.inf
 	ans[links[0],links[1]]=links[2]
 	assert np.isfinite(ans).any() and not np.isnan(ans).any()
+	#Slim links
+	t1=[(ans>-np.inf).any(axis=1-x) for x in [0,1]]
+	ans=ans[t1[0]][:,t1[1]]
+	namelink=[np.array(x)[y] for x,y in zip(namelink,t1)]
 	ans=pd.DataFrame(ans,index=namelink[0],columns=namelink[1])
+	#Adds TFs to potential targets if missing
+	t1=set(ans.columns)
+	t1=list(filter(lambda x:x not in t1,ans.index))
+	if len(t1)>0:
+		ans=pd.DataFrame(np.concatenate([ans.values,np.ones((ans.shape[0],len(t1)),dtype=ans.values.dtype)*(-np.inf)],axis=1),index=ans.index,columns=list(ans.columns)+t1)
+	#Output	
 	logging.info(f'Writing file {fo_linking}')
 	ans.to_csv(fo_linking,index=True,header=True,sep='\t')
 
