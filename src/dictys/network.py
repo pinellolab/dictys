@@ -673,7 +673,7 @@ class model_ou(model_covariance):
 # Network reconstruction
 ###########################################################################
 
-def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str=',',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=2,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
+def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str=',',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=1,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
 	"""
 	Reconstruct network with any pyro model in net_pyro_models that is based on covariance_model and has binary masks.
 
@@ -863,10 +863,6 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 	assert ans_stats.shape==(len(ans_statsname),len(ans_statstype),len(ans_steps))
 	assert ans_loss.ndim==2 and ans_loss.shape[1]==len(ans_lossname)
 	assert (ans_steps[1:]>ans_steps[:-1]).all() and np.isfinite(ans_stats).all()
-	# print([x.shape for x in [ans_mean,ans_gmean,ans_gcov0_d,ans_gcov0_nd,ans_gcov_d,ans_gcov_nd]])
-	# [(34, 644), (644,), (644,), (0, 644), (644,), (34, 644)]
-	# print([x.shape for x in [ans_loss,ans_lossname,ans_stats,ans_statsname,ans_statstype,ans_steps]])
-	# [(4000, 3), (3,), (9, 4, 41), (9,), (4,), (41,)]
 	#Reformat output
 	ans_weight=pd.DataFrame(ans_mean,index=namereg,columns=namet)
 	ans_meanvar=np.array([ans_gmean,ans_gcov_d]).T

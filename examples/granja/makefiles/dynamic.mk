@@ -18,7 +18,7 @@ DIRT:=tmp_dynamic
 FILE_SUBSET:=$(DIRT)/subsets.txt
 PRODUCT_SUBSET:=$(FILE_SUBSET) $(DIRT)/subset_locs.h5 $(DIRT)/subset_edges.tsv.gz
 
-include common.mk
+include $(dir $(lastword $(MAKEFILE_LIST)))common.mk
 
 ifeq ($(SHOW_CPU),1)
 
