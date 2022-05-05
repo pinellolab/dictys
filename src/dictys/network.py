@@ -935,17 +935,22 @@ def indirect(fi_weight:str,fi_covfactor:str,fo_iweight:str,norm:int=3,fi_meanvar
 	#Loading data
 	logging.info(f'Reading file {fi_weight}')
 	dw=pd.read_csv(fi_weight,header=0,index_col=0,sep='\t')
-	assert (dw.columns[:len(dw.index)]==dw.index).all()
+	assert dw.index.isin(dw.columns).all()
+	t1=set(dw.index)
+	t1=list(dw.index)+list(filter(lambda x:x not in t1,dw.columns))
+	dw=dw[t1]
 	d=dw.values
 	ns=d.shape
 	net0=np.concatenate([d,np.zeros((ns[1]-ns[0],ns[1]),dtype=float)],axis=0)
 	logging.info(f'Reading file {fi_covfactor}')
 	df=pd.read_csv(fi_covfactor,header=0,index_col=0,sep='\t')
-	assert len(dw.columns)==len(df.index) and (dw.columns==df.index).all()
+	assert len(dw.columns)==len(df.index) and set(dw.columns)==set(df.index)
+	df=df.loc[dw.columns]
 	if norm&2 is not None:
 		logging.info(f'Reading file {fi_meanvar}')
 		dmv=pd.read_csv(fi_meanvar,header=0,index_col=0,sep='\t')
-		assert len(dw.columns)==len(dmv.index) and (dw.columns==dmv.index).all()
+		assert len(dw.columns)==len(dmv.index) and set(dw.columns)==set(dmv.index)
+		dmv=dmv.loc[dw.columns]
 	
 	#Determine parameters to re-regularize OU process
 	reg=1
@@ -1006,14 +1011,19 @@ def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:
 	#Loading data
 	logging.info(f'Reading file {fi_weight}')
 	dw=pd.read_csv(fi_weight,header=0,index_col=0,sep='\t')
-	d=dw.values
 	logging.info(f'Reading file {fi_meanvar}')
 	dmv=pd.read_csv(fi_meanvar,header=0,index_col=0,sep='\t')
 	logging.info(f'Reading file {fi_covfactor}')
 	df=pd.read_csv(fi_covfactor,header=0,index_col=0,sep='\t')
-	assert (dw.columns[:len(dw.index)]==dw.index).all()
-	assert len(dw.columns)==len(dmv.index) and (dw.columns==dmv.index).all()
-	assert len(dw.columns)==len(df.index) and (dw.columns==df.index).all()
+	assert dw.index.isin(dw.columns).all()
+	assert len(dw.columns)==len(dmv.index) and set(dw.columns)==set(dmv.index)
+	assert len(dw.columns)==len(df.index) and set(dw.columns)==set(df.index)
+	t1=set(dw.index)
+	t1=list(dw.index)+list(filter(lambda x:x not in t1,dw.columns))
+	dw=dw[t1]
+	dmv=dmv.loc[t1]
+	df=df.loc[t1]
+	d=dw.values
 	#Normalize
 	cov=np.sqrt(dmv['var'].values+np.diag(df.values@df.values.T))
 	if norm&1:
