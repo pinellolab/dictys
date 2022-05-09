@@ -1,0 +1,7 @@
+Rewrite dictys.traj.point.weight_linear due to error.
+
+Write dictys.net.stat.base.match_names and use it to improve pseudo-time stat definition and for all matchings e.g. in panels.
+
+Improve curve stats by using match_names for pseudo-time properly.
+
+
