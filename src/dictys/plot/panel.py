@@ -544,7 +544,7 @@ class cellscatter(overlay):
 	"""
 	Draws overlay plot of scatter plots of cells and average cell pointer.
 	"""
-	def __init__(self,ax,d,pts,traj,weightfunc,pointer=True,scatterka={'s':2,'lw':0},pointerka={'color':'k','s':20,'zorder':99}):
+	def __init__(self,ax,d,pts,fsmooth,pointer=True,scatterka={'s':2,'lw':0},pointerka={'color':'k','s':20,'zorder':99}):
 		"""
 		Draws overlay plot of scatter plots of cells and average cell pointer.
 
@@ -556,10 +556,8 @@ class cellscatter(overlay):
 			Dynamic network object to draw cells
 		pts:		dictys.traj.point
 			Points of path to visualize network
-		traj:		dicty.traj.trajectory
-			Trajectory of points
-		weightfunc:	(TBA)
-			Function that weight cells for color and pointer
+		fsmooth:	functools.partial
+			Partial function that produces Gaussian kernel smoothened statistic on an original statistic as its parameter
 		pointer:	bool
 			Whether to show the current scatter plot as pointers
 		scatterka:	dict
@@ -571,7 +569,7 @@ class cellscatter(overlay):
 		statx=stat.const(d.prop['c']['coord'][0],[d.cname],label='Dim1')
 		staty=stat.const(d.prop['c']['coord'][1],[d.cname],label='Dim2')
 		#Cell weight
-		statw=stat.fsmooth(stat.sprop(d,'sc','w'),traj,weightfunc)
+		statw=fsmooth(stat.sprop(d,'sc','w'))
 		statw=stat.function(lambda *x:(x[0]/x[0].max(axis=0)),[statw],names=[d.cname])
 		panels=[]
 		#Scatter

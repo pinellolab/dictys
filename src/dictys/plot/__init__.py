@@ -5,7 +5,7 @@
 Network visualization
 """
 
-__all__=['panel','population']
+__all__=['dynamic','panel','population']
 
 from typing import Tuple,Optional
 from . import *
@@ -150,7 +150,7 @@ def heatmap(d,
 		figscale=0.02,
 		dtop=0.3,
 		dright=0,
-		colorbar=0.03,
+		wcolorbar=0.03,
 		wedge=0.03,
 		xselect=None,
 		yselect=None,
@@ -176,7 +176,7 @@ def heatmap(d,
 	dtop,
 	dright:	Top and right dendrogram size. Value from 0 to 1 values as proportion.
 			If 0, do not cluster on given axis.
-	colorbar: Width of colorbar. Value from 0 to 1 values as proportion.
+	wcolorbar: Width of colorbar. Value from 0 to 1 values as proportion.
 	wedge:	Width of edges and between colorbar and main figure.
 			Value from 0 to 1 values as proportion.
 	xselect,
@@ -232,12 +232,12 @@ def heatmap(d,
 
 	wtop = dtop / (1 + d2.shape[0] / 8)
 	wright = dright / (1 + d2.shape[1] * aspect / 8)
-	iscolorbar = colorbar > 0
+	iscolorbar = wcolorbar > 0
 	t1 = np.array(d2.T.shape)
 	t1 = t1 * figscale
 	t1[1] /= aspect
 	t1[1] /= 1 - wedge * 2 - wtop
-	t1[0] /= 1 - wedge * (2 + iscolorbar) - wright - colorbar
+	t1[0] /= 1 - wedge * (2 + iscolorbar) - wright - wcolorbar
 	if fig is None:
 		fig = plt.figure(figsize=t1)
 
@@ -246,7 +246,7 @@ def heatmap(d,
 		# Right dendrogram
 		if dright > 0:
 			ax1 = fig.add_axes([
-				1 - wedge * (1 + iscolorbar) - wright - colorbar, wedge, wright,
+				1 - wedge * (1 + iscolorbar) - wright - wcolorbar, wedge, wright,
 				1 - 2 * wedge - wtop])
 			tl1 = linkage(d2, method=method[1], metric=metric[1], optimal_ordering=optimal_ordering)
 			td1 = dendrogram(tl1, orientation='right')
@@ -259,7 +259,7 @@ def heatmap(d,
 
 		# Top dendrogram
 		if dtop > 0:
-			ax2 = fig.add_axes([wedge, 1 - wedge - wtop, 1 - wedge * (2 + iscolorbar) - wright - colorbar, wtop])
+			ax2 = fig.add_axes([wedge, 1 - wedge - wtop, 1 - wedge * (2 + iscolorbar) - wright - wcolorbar, wtop])
 			tl2 = linkage(d2.T, method=method[0], metric=metric[0], optimal_ordering=optimal_ordering)
 			td2 = dendrogram(tl2)
 			ax2.set_xticks([])
@@ -275,7 +275,7 @@ def heatmap(d,
 			# Right dendrogram
 			if dright > 0:
 				ax1 = fig.add_axes([
-					1 - wedge * (1 + iscolorbar) - wright - colorbar, wedge, wright,
+					1 - wedge * (1 + iscolorbar) - wright - wcolorbar, wedge, wright,
 					1 - 2 * wedge - wtop])
 				td1 = dendrogram(tl1, orientation='right')
 				ax1.set_xticks([])
@@ -285,7 +285,7 @@ def heatmap(d,
 				td1=None
 			# Top dendrogram
 			if dtop > 0:
-				ax2 = fig.add_axes([wedge, 1 - wedge - wtop, 1 - wedge * (2 + iscolorbar) - wright - colorbar, wtop])
+				ax2 = fig.add_axes([wedge, 1 - wedge - wtop, 1 - wedge * (2 + iscolorbar) - wright - wcolorbar, wtop])
 				td2 = dendrogram(tl1)
 				ax2.set_xticks([])
 				ax2.set_yticks([])
@@ -296,7 +296,7 @@ def heatmap(d,
 			d3 = d3.iloc[td0,:].iloc[:,td0]
 			xt0,yt0 = [[y[x] for x in td0] for y in [xt0,yt0]]
 	axmatrix = fig.add_axes([
-		wedge, wedge, 1 - wedge * (2 + iscolorbar) - wright - colorbar,
+		wedge, wedge, 1 - wedge * (2 + iscolorbar) - wright - wcolorbar,
 		1 - 2 * wedge - wtop])
 	ka = {'aspect': 1 / aspect, 'origin': 'lower', 'cmap': cmap}
 	if vmin is not None:
@@ -331,9 +331,9 @@ def heatmap(d,
 		if ax1 is not None:
 			ax1.set_ylim(ax1.get_ylim()[::-1])
 		axmatrix.set_ylim(axmatrix.get_ylim()[::-1])
-	if colorbar > 0:
+	if wcolorbar > 0:
 		cax = fig.add_axes([
-			1 - wedge - colorbar, wedge, colorbar, 1 - 2 * wedge - wtop])
+			1 - wedge - wcolorbar, wedge, wcolorbar, 1 - 2 * wedge - wtop])
 		fig.colorbar(im, cax=cax)
 
 	return fig, d3.columns, d3.index

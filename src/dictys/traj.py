@@ -1043,7 +1043,7 @@ class point:
 		#Nearest point
 		t1=d.argmin(axis=0)
 		#Nearest point but on other side of nearest point
-		#Other side
+		#Other side (neccesary condition)
 		t2=d2[t1]>d.T
 		t2=[np.nonzero(x)[0] for x in t2]
 		#Nearest point

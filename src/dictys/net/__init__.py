@@ -6,15 +6,17 @@ Module for network class and stats.
 """
 
 from __future__ import annotations
-from typing import Set,Optional
+from typing import Set,Optional,Tuple,Callable
+import matplotlib
+
 __all__=['stat']
 
+import dictys
 from . import *
-
 
 class network:
 	"""
-	Class for context-specific and dynamic networks
+	Class for context-specific network and parent class for dynamic networks
 
 	Required variables
 	----------------------------------
@@ -102,7 +104,7 @@ class network:
 			raise ValueError('Cell/state/node names must be non-empty, unique, and matching their counts exactly.')
 		for xi in self.prop:
 			t1=tuple(np.concatenate([self._get_prop_shape_(x) for x in xi]))
-			t2=list(filter(lambda x:self.prop[xi][x].shape[-len(t1):]!=t1,self.prop[xi]))
+			t2=list(filter(lambda x:self.prop[xi][x].shape[-len(t1):]!=t1,self.prop[xi]))		# pylint: disable=W0640
 			if len(t2)>0:
 				raise ValueError('Properties of type {} have incorrect size. Expected trailing dimensions: {}. Actual dimensions: '.format(xi,t1)+', '.join(['{} ({})'.format(tuple(self.prop[xi][x].shape),x) for x in t2]))
 		assert len(self.nids)==2 and all(len(np.unique(x))==len(x) for x in self.nids)
@@ -388,6 +390,122 @@ class network:
 				params[xi]={x:y.swapaxes(t2[xj],0)[success].swapaxes(t2[xj],0) for x,y in params[xi].items()}
 
 		return cls(**params)
+
+class dynamic_network(network):
+	"""
+	Class for dynamic networks with extra functions
+	"""
+	_name_='dynamic_network'
+	def linspace(self,start:int,stop:int,num:int,dist:float,check:bool=True)->Tuple[dictys.traj.point,Callable[[dictys.net.stat.base],dictys.net.stat.base]]:
+		"""
+		Returns evenly spaced points between two nodes for Gaussian kernel smoothing. Removes branches not on the path between these nodes.
+		
+		Parameters
+		----------
+		start:
+			Starting node ID
+		stop:
+			Ending node ID
+		num:
+			Number of points to generate. Must be non-negative.
+		dist:
+			Gaussian kernel smoothing distance
+		check:
+			Whether to perform checks, e.g. starting and ending nodes are branching or terminal nodes.
+		
+		Returns
+		-------
+		pts:		dictys.traj.point
+			Evenly spaced points with pts.p as its trajectory after removing unrelated branches
+		fsmooth:	functools.partial
+			Partial function that produces Gaussian kernel smoothened statistic on an original statistic as its parameter
+		"""
+		import numpy as np
+		from functools import partial
+		#Gaussian kernel smoothing parameters
+		weightfunc=['conv',[dist],dict({'criterion_path':'loose'})]
+		if check and ((self.traj.edges==start).sum()==2 or (self.traj.edges==stop).sum()==2):
+			raise ValueError('Start or stop node is not a branching or terminal node.')
+		
+		#Compute node location & order based by averaging cell locations on traj
+		cell=self.point['c']
+		point=cell.nearest(w=self.prop['sc']['w'])
+		#Find start/end nodes on points
+		point0=self.point['s']
+		t1=(dictys.traj.point.fromnodes(self.traj)[[start,stop]]-point0)==0
+		t1=[np.nonzero(x)[0] for x in t1]
+		assert all(len(x)==1 for x in t1)
+		start2,stop2=[x[0] for x in t1]
+
+		#Subtrajectory
+		traj2=point.subtraj(edges=np.array(np.nonzero(np.triu(self.prop['ss']['traj-neighbor']))).T)
+		pts=traj2.linspace(start2,stop2,num)
+		weightfunc[2]['nodes_path']=[start2,stop2]
+		fsmooth=partial(dictys.net.stat.fsmooth,pts=traj2,smoothen_func=weightfunc)
+		return (pts,fsmooth)
+
+	def draw_discover(self,start:int,stop:int,num:int=100,dist:float=1.5,ntops:Tuple[int,int,int,int]=[10,10,10,10],mode:str='regulation',posrate:float=0.01,**ka)->list[Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]]:
+		"""
+		Draws TF discovery plots for one branch.
+
+		Parameters
+		----------
+		start:
+			Branch starting node ID 
+		stop:
+			Branch ending node ID 
+		num:
+			Number of points from starting to ending nodes to draw
+		dist:
+			Gaussian kernel smoothing distance/length scale between cells. Larger value means stronger smoothing.
+		ntops:
+			Number of top TFs to show for each pattern
+		mode:
+			Mode or measure to discover TFs. Accepts:
+
+			* 'regulation': based on target count
+
+			* 'expression': based on CPM
+
+		posrate:
+			The number of edges to regard as positive when binarizing network. Only relevant when mode=='regulation'
+		ka:
+			Keyword arguments passed to dictys.plot.dynamic.draw_discover
+
+		Returns
+		-------
+		List of returns from dictys.plot.dynamic.draw_dynamic1 for each of the patterns drawn
+		"""
+		import pandas as pd
+		from dictys.net import stat
+		from dictys.plot.dynamic import fig_discover
+		pts,fsmooth=self.linspace(start,stop,num,dist)
+		if mode=='regulation':
+			#Log number of targets
+			stat1_net=fsmooth(stat.net(self))
+			stat1_netbin=stat.fbinarize(stat1_net,posrate=posrate)
+			stat1_y=stat.flnneighbor(stat1_netbin)
+		elif mode=='expression':
+			stat1_y=fsmooth(stat.lcpm(self,cut=0))
+		else:
+			raise ValueError(f'Unknown mode {mode}.')
+		#Pseudo time
+		stat1_x=stat.pseudotime(self,pts)
+		dy=pd.DataFrame(stat1_y.compute(pts),index=stat1_y.names[0])
+		dx=pd.Series(stat1_x.compute(pts)[0])
+		return fig_discover(dy,dx,ntops,**ka)
+	
+
+
+
+
+
+
+
+
+
+
+
 
 
 

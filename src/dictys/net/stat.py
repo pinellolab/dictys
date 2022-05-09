@@ -119,7 +119,7 @@ class base(metaclass=abc.ABCMeta):
 		if isinstance(other,base):
 			return function(truediv,[self,other],label=f'({self.label})/({other.label})')
 		raise NotImplementedError
-	def __getitem__(self, key)->base:
+	def __getitem__(self,key)->base:
 		"""Subset stat as a substat"""
 		from functools import partial
 		if not isinstance(key, tuple):
@@ -141,6 +141,8 @@ class base(metaclass=abc.ABCMeta):
 			keys.append(key1)
 		names+=self.names[len(key):]
 		return function(partial(_getitem,keys),[self],names=names,label=self.label)
+	# def match_names(self,*others):
+	# 	raise NotImplementedError
 
 class const(base):
 	"""
@@ -353,11 +355,11 @@ class pseudotime(base):
 		Statistic to output pseudotime
 		d:		Dataset object
 		pts:	Actual point list instance to use for visualization
-		traj:	Trajectory instance of dictys.traj.trajectory
+		traj:	Trajectory instance of dictys.traj.trajectory. Defaults to pts.p.
 		"""
 		self.d=d
 		if traj is None:
-			traj=d.traj
+			traj=pts.p
 		self.traj=traj
 		self.pts=pts
 		super().__init__(*a,**ka)
