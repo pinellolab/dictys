@@ -134,7 +134,7 @@ def fig_heatmap_reg_spec(v,aspect=0.3,figscale=0.15,g_ann=None,**ka):
 	vrange=[v.values.min(),v.values.max()]
 	#Draw heatmap
 	figscale=figscale*aspect
-	ka1=dict(metric=[lambda u,v:1-np.sqrt(u*v).sum()]*2,method='average',vmin=vrange[0],vmax=vrange[1],aspect=aspect,dtop=0.25,dright=0,figscale=figscale,xtick=False,ytick=True,cmap='viridis',optimal_ordering=False,colorbar=0.5/aspect/v.shape[0],wedge=0.75/aspect/v.shape[0])
+	ka1=dict(metric=[lambda u,v:1-np.sqrt(u*v).sum()]*2,method='average',vmin=vrange[0],vmax=vrange[1],aspect=aspect,dtop=0.25,dright=0,figscale=figscale,xtick=False,ytick=True,cmap='viridis',optimal_ordering=False,wcolorbar=0.5/aspect/v.shape[0],wedge=0.75/aspect/v.shape[0])
 	ka1.update(ka)
 	g=heatmap(v.T,**ka1)
 	fig1=plt.gcf()

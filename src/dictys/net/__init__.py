@@ -6,8 +6,9 @@ Module for network class and stats.
 """
 
 from __future__ import annotations
-from typing import Set,Optional,Tuple,Callable
+from typing import Set,Optional,Tuple,Callable,Union
 import matplotlib
+import pandas as pd
 
 __all__=['stat']
 
@@ -245,7 +246,6 @@ class network:
 		from dictys.utils.file import read_txt
 		from dictys.utils.numpy import dtype_min
 		import numpy as np
-		import pandas as pd
 
 		optional_allowed={'readcount'}
 		if len(optional-optional_allowed)>0:
@@ -444,6 +444,52 @@ class dynamic_network(network):
 		fsmooth=partial(dictys.net.stat.fsmooth,pts=traj2,smoothen_func=weightfunc)
 		return (pts,fsmooth)
 
+	def compute_chars(self,start:int,stop:int,num:int=100,dist:float=1.5,mode:str='regulation',posrate:float=0.01)->pd.DataFrame:
+		"""
+		Compute curve characteristics for one branch.
+
+		Parameters
+		----------
+		start:
+			Branch starting node ID 
+		stop:
+			Branch ending node ID 
+		num:
+			Number of points from starting to ending nodes to draw
+		dist:
+			Gaussian kernel smoothing distance/length scale between cells. Larger value means stronger smoothing.
+		mode:
+			Mode or measure to compute characteristics. Accepts:
+
+			* 'regulation': based on target count
+
+			* 'expression': based on CPM
+
+		posrate:
+			The number of edges to regard as positive when binarizing network. Only relevant when mode=='regulation'
+
+		Returns
+		-------
+		List of returns from dictys.plot.dynamic.draw_dynamic1 for each of the patterns drawn
+		"""
+		from dictys.net import stat
+		from dictys.plot.dynamic import _compute_chars_
+		pts,fsmooth=self.linspace(start,stop,num,dist)
+		if mode=='regulation':
+			#Log number of targets
+			stat1_net=fsmooth(stat.net(self))
+			stat1_netbin=stat.fbinarize(stat1_net,posrate=posrate)
+			stat1_y=stat.flnneighbor(stat1_netbin)
+		elif mode=='expression':
+			stat1_y=fsmooth(stat.lcpm(self,cut=0))
+		else:
+			raise ValueError(f'Unknown mode {mode}.')
+		#Pseudo time
+		stat1_x=stat.pseudotime(self,pts)
+		dy=pd.DataFrame(stat1_y.compute(pts),index=stat1_y.names[0])
+		dx=pd.Series(stat1_x.compute(pts)[0])
+		return _compute_chars_(dy,dx)
+
 	def draw_discover(self,start:int,stop:int,num:int=100,dist:float=1.5,ntops:Tuple[int,int,int,int]=[10,10,10,10],mode:str='regulation',posrate:float=0.01,**ka)->list[Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]]:
 		"""
 		Draws TF discovery plots for one branch.
@@ -476,7 +522,6 @@ class dynamic_network(network):
 		-------
 		List of returns from dictys.plot.dynamic.draw_dynamic1 for each of the patterns drawn
 		"""
-		import pandas as pd
 		from dictys.net import stat
 		from dictys.plot.dynamic import fig_discover
 		pts,fsmooth=self.linspace(start,stop,num,dist)
@@ -495,16 +540,41 @@ class dynamic_network(network):
 		dx=pd.Series(stat1_x.compute(pts)[0])
 		return fig_discover(dy,dx,ntops,**ka)
 	
-
-
-
-
-
-
-
-
-
-
+	def draw_regulation_heatmap(self,start:int,stop:int,regulations:list[Tuple[str,str]],num:int=100,dist:float=1.5,ax:Optional[matplotlib.axes.Axes]=None,cmap:Union[str,matplotlib.cm.ScalarMappable]='coolwarm',figsize:Tuple[float,float]=(2,0.22),vmax:Optional[float]=None)->Tuple[matplotlib.pyplot.Figure,matplotlib.axes.Axes,matplotlib.cm.ScalarMappable]:
+		"""Draws pseudo-time dependent heatmap of individual regulation strengths.
+	
+		Parameters
+		----------
+		start:
+			Branch starting node ID 
+		stop:
+			Branch ending node ID 
+		regulations:
+			List of regulations in (Regulator name, target name) format to draw strength
+		num:
+			Number of points from starting to ending nodes to draw
+		dist:
+			Gaussian kernel smoothing distance/length scale between cells. Larger value means stronger smoothing.
+		ax:
+			Axes to draw on.
+		figsize:
+			Figure size for each regulation as a row. Should remain unassigned when ax is assigned.
+		cmap:
+			Colormap in matplotlib string or matplotlib.cm.ScalarMappable
+		vmax:
+			Maximum value in colormap. Should remain unassigned when cmap is a matplotlib.cm.ScalarMappable instance.
+		
+		Returns
+		-------
+		fig:
+			Heatmap figure
+		ax:
+			Heatmap axes
+		cmap:
+			Heatmap colormap
+		"""
+		from dictys.plot.dynamic import fig_regulation_heatmap
+		return fig_regulation_heatmap(self,start,stop,regulations,num=num,dist=dist,ax=ax,cmap=cmap,figsize=figsize,vmax=vmax)
 
 
 

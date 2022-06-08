@@ -5,10 +5,12 @@
 Whole dataset visualization of dynamic networks 
 """
 
-from typing import Union,Tuple
+from typing import Union,Tuple,Optional
 import pandas as pd
 import matplotlib
+import matplotlib.figure
 import numpy.typing as npt
+import dictys
 
 ########################################################################
 # TF discovery plot
@@ -100,6 +102,20 @@ def _dynamic_network_char_switching_time_(dx:npt.NDArray,dy:npt.NDArray)->npt.ND
 	dx=(dx-dx[0])/(dx[-1]-dx[0])
 	dy=np.median([dy,np.repeat(dy[:,[0]],n,axis=1),np.repeat(dy[:,[-1]],n,axis=1)],axis=0)
 	return (auc(dx,(dy.T-dy[:,-1]).T))/(dy[:,0]-dy[:,-1]+1E-300)
+
+def _compute_chars_(dcurve,dtime):
+	charlist={
+		'Terminal logFC':_dynamic_network_char_terminal_logfc_,
+		'Transient logFC':_dynamic_network_char_transient_logfc_,
+		'Switching time':_dynamic_network_char_switching_time_,
+	}
+	#Compute curve characteristics
+	dchar={}
+	for xj in charlist:
+		dchar[xj]=charlist[xj](dtime.values,dcurve.values)
+	dchar=pd.DataFrame.from_dict(dchar)
+	dchar.set_index(dcurve.index,inplace=True,drop=True)
+	return dchar
 
 def _transform_inset_(left,bottom,width,height,figsize):
 	return (left/figsize[0],bottom/figsize[1],width/figsize[0],height/figsize[1])
@@ -300,7 +316,8 @@ def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:pd.Series=None,
 		ax0.plot([bbox[0]+bbox[2]/2]*2,[src+np.sign(dst-src)*line_space/figsize[1],dst-np.sign(dst-src)*line_space/figsize[1]],'-',lw=1,color=[0.5]*3)
 	ax0.axis('off')
 	return fig,axes,cmap
-	
+
+
 def fig_discover(dcurve,dtime,ntops:Tuple[int,int,int,int],
 		vrange:dict[str,Union[str,Tuple[float,float]]]={
 			'Terminal logFC':'symmetric',
@@ -345,17 +362,8 @@ def fig_discover(dcurve,dtime,ntops:Tuple[int,int,int,int],
 	import itertools
 	import numpy as np
 
-	charlist={
-		'Terminal logFC':_dynamic_network_char_terminal_logfc_,
-		'Transient logFC':_dynamic_network_char_transient_logfc_,
-		'Switching time':_dynamic_network_char_switching_time_,
-	}
 	#Compute curve characteristics
-	dchar={}
-	for xj in charlist:
-		dchar[xj]=charlist[xj](dtime.values,dcurve.values)
-	dchar=pd.DataFrame.from_dict(dchar)
-	dchar.set_index(dcurve.index,inplace=True,drop=True)
+	dchar=_compute_chars_(dcurve,dtime)
 	#Convert vrange to dict
 	if not isinstance(vrange,dict):
 		vrange={x:vrange for x in dchar}
@@ -402,6 +410,89 @@ def fig_discover(dcurve,dtime,ntops:Tuple[int,int,int,int],
 
 	ans=[draw_discover1(*x[0],**x[1]) for x in ans]
 	return ans
+
+########################################################################
+# Individual regulation heatmap
+########################################################################
+
+def fig_regulation_heatmap(network:dictys.net.dynamic_network,start:int,stop:int,regulations:list[Tuple[str,str]],num:int=100,dist:float=1.5,ax:Optional[matplotlib.axes.Axes]=None,cmap:Union[str,matplotlib.cm.ScalarMappable]='coolwarm',figsize:Tuple[float,float]=(2,0.22),vmax:Optional[float]=None)->Tuple[matplotlib.pyplot.Figure,matplotlib.axes.Axes,matplotlib.cm.ScalarMappable]:
+	"""Draws pseudo-time dependent heatmap of individual regulation strengths.
+	
+	Parameters
+	----------
+	network:
+		Dynamic network object
+	start:
+		Branch starting node ID 
+	stop:
+		Branch ending node ID 
+	regulations:
+		List of regulations in (Regulator name, target name) format to draw strength
+	num:
+		Number of points from starting to ending nodes to draw
+	dist:
+		Gaussian kernel smoothing distance/length scale between cells. Larger value means stronger smoothing.
+	ax:
+		Axes to draw on.
+	figsize:
+		Figure size for each regulation as a row. Should remain unassigned when ax is assigned.
+	cmap:
+		Colormap in matplotlib string or matplotlib.cm.ScalarMappable
+	vmax:
+		Maximum value in colormap. Should remain unassigned when cmap is a matplotlib.cm.ScalarMappable instance.
+	
+	Returns
+	-------
+	fig:
+		Heatmap figure
+	ax:
+		Heatmap axes
+	cmap:
+		Heatmap colormap
+	"""
+	import numpy as np
+	import matplotlib.pyplot as plt
+	from dictys.net import stat
+	#Get dynamic network edge strength
+	pts,fsmooth=network.linspace(start,stop,num,dist)
+	stat1_net=fsmooth(stat.net(network))
+	# stat1_x=stat.pseudotime(network,pts)
+	#Test regulation existence
+	tdict=[dict(zip(x,range(len(x)))) for x in stat1_net.names]
+	t1=[[x[y] for x in regulations if x[y] not in tdict[y]] for y in range(2)]
+	if len(t1[0])>0:
+		raise ValueError('Regulator gene(s) {} not found in network.'.format('/'.join(t1[0])))
+	if len(t1[1])>0:
+		raise ValueError('Target gene(s) {} not found in network.'.format('/'.join(t1[1])))
+	#Extract regulations to draw
+	dnet=stat1_net.compute(pts)
+	t1=np.array([[tdict[0][x[0]],tdict[1][x[1]]] for x in regulations]).T
+	dnet=dnet[t1[0],t1[1]]
+	#Create figure and axes
+	if ax is None:
+		figsize=(figsize[0],figsize[1]*dnet.shape[0])
+		fig=plt.figure(figsize=figsize)
+		ax=fig.add_subplot(111)
+	else:
+		if figsize is not None:
+			raise ValueError('figsize should not be set if ax is set.')
+		fig=ax.get_figure()
+		figsize=fig.get_size_inches()
+	aspect=(figsize[1]/dnet.shape[0])/(figsize[0]/dnet.shape[1])
+	#Determine colormap
+	if isinstance(cmap,str):
+		if vmax is None:
+			vmax=np.quantile(np.abs(dnet).ravel(),0.95)
+		cmap=matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=-vmax,vmax=vmax),cmap=cmap)		# pylint: disable=E1130
+	elif vmax is not None:
+		raise ValueError('vmax should not be set if cmap is a matplotlib.cm.ScalarMappable.')
+	#Draw figure
+	ax.imshow(cmap.to_rgba(dnet),aspect=aspect,interpolation='none')
+	ax.set_xticks([])
+	ax.set_yticks(list(range(len(regulations))))
+	ax.set_yticklabels(['-'.join(x) for x in regulations])
+	return fig,ax,cmap
+
 
 
 

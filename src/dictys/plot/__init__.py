@@ -7,7 +7,8 @@ Network visualization
 
 __all__=['dynamic','panel','population']
 
-from typing import Tuple,Optional
+from typing import Tuple,Optional,Union
+import matplotlib
 from . import *
 
 def get_cmap(cmap,n):
@@ -33,7 +34,7 @@ def get_cmap(cmap,n):
 		return c(np.linspace(0,1,c.N)[:n])
 	return c(np.linspace(0,1,n))
 
-def colorbar(cmap,vmin:float,vmax:float,figsize:Optional[Tuple[float,float]]=(0.15,0.8),ax=None,orientation:str='vertical',title:Optional[str]=None,**ka):
+def colorbar(cmap:Union[str,matplotlib.cm.ScalarMappable],vmin:Optional[float]=None,vmax:Optional[float]=None,figsize:Optional[Tuple[float,float]]=(0.15,0.8),ax=None,orientation:str='vertical',title:Optional[str]=None,**ka):
 	"""
 	Draw simple colorbar
 	
@@ -42,11 +43,11 @@ def colorbar(cmap,vmin:float,vmax:float,figsize:Optional[Tuple[float,float]]=(0.
 	cmap:
 		matplotlib colormap
 	vmin:
-		Minimum value for colormap
+		Minimum value for colormap. Should remain unassigned when cmap is a matplotlib.cm.ScalarMappable.
 	vmax:
-		Maximum value for colormap
+		Maximum value for colormap. Should remain unassigned when cmap is a matplotlib.cm.ScalarMappable.
 	figsize:
-		Size of colorbar figure in inches.  Conflicts with ax.
+		Size of colorbar figure in inches. Conflicts with ax.
 	ax:
 		Axes to draw on. Conflicts with figsize.
 	orientation:
@@ -63,8 +64,13 @@ def colorbar(cmap,vmin:float,vmax:float,figsize:Optional[Tuple[float,float]]=(0.
 	ax:
 		Axes of colorbar
 	"""
-	import matplotlib
 	import matplotlib.pyplot as plt
+	if isinstance(cmap,matplotlib.cm.ScalarMappable):
+		if vmax is not None or vmin is not None:
+			raise TypeError('vmin and vmax should be unset when cmap is a matplotlib.cm.ScalarMappable')
+	else:
+		cmap=matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=vmin, vmax=vmax),cmap=cmap)
+
 	ka_title={x[len('title_'):]:y for x,y in ka.items() if x.startswith('title_')}
 	ka={x:y for x,y in ka.items() if not x.startswith('title_')}
 
@@ -74,8 +80,7 @@ def colorbar(cmap,vmin:float,vmax:float,figsize:Optional[Tuple[float,float]]=(0.
 		if figsize is not None:
 			raise ValueError('At most one of figsize and ax should be set')
 		fig=ax.get_figure()
-	norm=matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-	fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm,cmap=cmap),cax=ax,orientation=orientation,**ka)
+	fig.colorbar(cmap,cax=ax,orientation=orientation,**ka)
 	if title is not None:
 		ax.set_title(title,loc='center',**ka_title)
 	elif len(ka_title)>0:
@@ -356,7 +361,6 @@ def dotplot(ds,dc,fig=None,figsize=0.2,size_transform=lambda x:x,sizes=None,vran
 	"""
 	import numpy as np
 	import matplotlib.pyplot as plt
-	import matplotlib
 	assert ds.shape==dc.shape
 	assert (ds.index==dc.index).all()
 	assert (ds.columns==dc.columns).all()
