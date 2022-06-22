@@ -68,7 +68,7 @@ class trajectory:
 	"""
 	Class for trajectory of cell state transitions on low dimension
 	"""
-	def __init__(self,edges:NDArray,lens:NDArray)->None:
+	def __init__(self,edges:NDArray[int],lens:NDArray[float])->None:
 		"""
 		Create state trajectory object. Only supports fully connected tree trajectory.
 
@@ -133,7 +133,7 @@ class trajectory:
 		t1=np.array(list(Counter(self.edges.ravel()).items()))
 		self.deg[t1[:,0]]=t1[:,1]
 	@staticmethod
-	def len_edge(dists:NDArray,edges:NDArray)->NDArray:
+	def len_edge(dists:NDArray[float],edges:NDArray[int])->NDArray[float]:
 		"""
 		Computes the length of each edge using points' distances to each state node
 
@@ -157,7 +157,7 @@ class trajectory:
 			ans[xi]=t1[np.isfinite(t1)].max()
 		return ans
 	@classmethod
-	def fromdist(cls,edges:NDArray,dists:NDArray)->trajectory:
+	def fromdist(cls,edges:NDArray[int],dists:NDArray[float])->trajectory:
 		"""
 		Create trajectory object from distance matrix betwen sample points and state nodes. Only supports fully connected tree trajectory.
 
@@ -179,7 +179,7 @@ class trajectory:
 			Point object converted.
 		"""
 		return point.fromnodes(self)
-	def conform_locs(self,locs:NDArray,edges:NDArray,rel_err:float=1E-7)->NDArray:
+	def conform_locs(self,locs:NDArray[float],edges:NDArray[int],rel_err:float=1E-7)->NDArray:
 		"""
 		Conform point locations by clipping small deviations under float precision.
 
@@ -269,7 +269,7 @@ class trajectory:
 		ans_steps[aorder]=steps
 		ans_lengths[aorder]=lengths
 		return point(self,ans_steps,ans_lengths)
-	def path(self,start:int,end:int)->NDArray:
+	def path(self,start:int,end:int)->NDArray[int]:
 		"""
 		Find path from start to end node as list of node IDs
 
@@ -352,7 +352,7 @@ class trajectory:
 			data=data.swapaxes(axis,0)[nodes].swapaxes(axis,0)
 		assert data.shape[axis]==len(pts)
 		return pts.smoothened(data,*a,axis=axis,**ka)
-	def terminal_nodes(self)->NDArray:
+	def terminal_nodes(self)->NDArray[int]:
 		"""
 		Finds the terminal nodes (degree=1).
 
@@ -445,7 +445,7 @@ class point:
 	"""
 	Class for points on a trajectory on low dimension
 	"""
-	def __init__(self,traj:trajectory,edges:NDArray,locs:NDArray,dist:Optional[NDArray]=None):
+	def __init__(self,traj:trajectory,edges:NDArray[int],locs:NDArray[float],dist:Optional[NDArray[float]]=None):
 		"""
 		Point list on trajectory.
 
@@ -486,7 +486,7 @@ class point:
 		assert (dist>=0).all()
 		self.dist=dist
 	@classmethod
-	def fromdist(cls,traj:trajectory,edges:NDArray,dist:NDArray)->point:
+	def fromdist(cls,traj:trajectory,edges:NDArray[int],dist:NDArray[float])->point:
 		"""
 		Class conctructor from edges and distance to all nodes of each point.
 
@@ -566,7 +566,7 @@ class point:
 		return cls(pts[0].p,np.concatenate([x.edges for x in pts]),np.concatenate([x.locs for x in pts]),dist=np.concatenate([x.dist for x in pts],axis=0))
 	def __add__(self,other:point)->point:
 		return self.concat([self,other])
-	def __sub__(self,other:point)->NDArray:
+	def __sub__(self,other:point)->NDArray[float]:
 		"""
 		Subtraction computes the distance matrix between all point pairs in two point lists.
 
@@ -613,7 +613,7 @@ class point:
 		assert ans.shape==(self.npt,other.npt)
 		assert (ans>=0).all()
 		return ans
-	def compute_dist(self)->NDArray:
+	def compute_dist(self)->NDArray[float]:
 		"""
 		Compute distance to every node on trajectory given locs
 
@@ -743,7 +743,7 @@ class point:
 	# 	node_start=self.p.edges[self.edges[start]].sum()-path[0]
 	# 	node_end=self.p.edges[self.edges[end]].sum()-path[-1]
 	# 	return self.p.path_points(node_start,node_end,lengths+self.dist[start,path[0]])
-	def path(self,start:int,end:int)->NDArray:
+	def path(self,start:int,end:int)->NDArray[int]:
 		"""
 		Find path from start to end points as list of node IDs
 

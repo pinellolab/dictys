@@ -3,7 +3,7 @@
 """Chromatin accessibility analyses
 """
 
-from typing import Optional
+from typing import Optional,Union
 from dictys.utils.numpy import NDArray
 
 ################################################################
@@ -245,7 +245,7 @@ def homer(fi_bed:str,fi_motif:str,dirio_genome:str,fi_exp:str,fo_bed:str,fo_well
 # Linking TFs to target genes
 ################################################################
 
-def _linking_score(vw,vh,dist,mode:int=7):
+def _linking_score(vw:Union[float,NDArray[float]],vh:Union[float,NDArray[float]],dist:Union[float,NDArray[float]],mode:int=7):
 	"""Footprinting I score
 	mode:
 		Mode to compute final score. Accepts binary flags:

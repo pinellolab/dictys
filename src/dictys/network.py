@@ -6,7 +6,7 @@ Gene regulatory network reconstruction with TF binding network and transcriptome
 """
 
 import abc
-from typing import Optional,Tuple
+from typing import Optional,Tuple,Callable,Union
 from dictys.utils.importing import torch,pyro
 
 _docstring2argparse_ignore_=['Trace_ELBO_site','SVI_multiloss','model_base','model_covariance','model_ou']
@@ -224,7 +224,7 @@ class model_base(metaclass=abc.ABCMeta):
 			Parameter value
 		"""
 		return pyro.param(name+self.suffix,*a,**ka)
-	def sample(self,name,dist,*a,**ka):
+	def sample(self,name:str,dist,*a,**ka):
 		"""
 		Performs sample for this model. Automatically handles renaming.
 
@@ -241,7 +241,7 @@ class model_base(metaclass=abc.ABCMeta):
 			Sampled value
 		"""
 		return pyro.sample(name+self.suffix,dist,*a,**ka)
-	def factor(self,name,*a,**ka):
+	def factor(self,name:str,*a,**ka):
 		"""
 		Creates pyro loss factor by name for this model. Automatically handles renaming.
 
@@ -251,7 +251,7 @@ class model_base(metaclass=abc.ABCMeta):
 			Name of factor
 		"""
 		return pyro.factor(name+self.suffix,*a,**ka)
-	def plate(self,name,*a,**ka):
+	def plate(self,name:str,*a,**ka):
 		"""
 		Creates pyro plate for this model. Automatically handles renaming.
 
@@ -306,7 +306,7 @@ class model_base(metaclass=abc.ABCMeta):
 		f0=getattr(pyro.infer,loss)(*a,**ka).differentiable_loss
 		func=partial(lambda f,dof,*a2,**ka2:f(*a2,**ka2)/dof,f0,self.nrand)
 		return func
-	def init(self,optimizer:str,loss,subsamples:dict={},optimizer_a:Tuple[list,dict]=[[],{}],loss_a:Tuple[list,dict]=[[],{}])->None:
+	def init(self,optimizer:str,loss:Union[str,Callable,list[Callable]],subsamples:dict={},optimizer_a:Tuple[list,dict]=[[],{}],loss_a:Tuple[list,dict]=[[],{}])->None:
 		"""
 		Initializes model for training.
 
@@ -463,7 +463,7 @@ class model_base(metaclass=abc.ABCMeta):
 		Pyro model function to compute likelihood or other loss. Should read in data from those placed by self.gen_params.
 		"""
 	@abc.abstractmethod
-	def guide(self):
+	def guide(self)->None:
 		"""
 		Pyro guide function to compute posterior likelihood or other loss. Should read in data from those placed by self.gen_params.
 		"""

@@ -8,10 +8,10 @@ Statistics of networks for data visualization and export.
 from __future__ import annotations
 import abc
 from typing import Union,Callable,Tuple,Optional
+import numpy as np
 import dictys.traj
 import dictys.net
 from dictys.utils.numpy import NDArray,ArrayLike
-import numpy as np
 
 def _getitem(key,v:NDArray)->NDArray:
 	"""
@@ -20,7 +20,6 @@ def _getitem(key,v:NDArray)->NDArray:
 	v:		numpy.array to get items from
 	Return:	numpy.array
 	"""
-	import numpy as np
 	sid=0
 	for xi in key:
 		if hasattr(xi,'__len__'):
@@ -41,7 +40,6 @@ class base(metaclass=abc.ABCMeta):
 		names:	List of names of each axis of output stat, except last axis which is always time. Default is obtained from default_names function.
 		label:	Label of stat that is shown as coordindate label unless overidden.
 		"""
-		import numpy as np
 		if label is None:
 			label=self.default_label()
 		self.label=label
@@ -76,7 +74,6 @@ class base(metaclass=abc.ABCMeta):
 		Return:
 		Limits as [min,max]
 		"""
-		import numpy as np
 		if pts is None:
 			raise NotImplementedError
 		ans=self.compute(pts)
@@ -168,7 +165,6 @@ class const(base):
 	def default_label(self)->str:
 		return self.default_label_
 	def compute(self,pts:Union[dictys.traj.point,NDArray[np.int_]])->NDArray:
-		import numpy as np
 		return np.repeat(self.val.reshape(*self.val.shape,1),len(pts),axis=-1)
 
 class function(base):
@@ -269,7 +265,6 @@ class fsmooth(base):
 		pts:	Trajectory or point instance of dictys.traj.trajectory or dictys.traj.point
 		smoothen_func:	[name,args,keyword args] as in dictys.point.smoothened
 		"""
-		import numpy as np
 		assert len(smoothen_func)==3
 		if isinstance(pts,dictys.traj.point):
 			n=len(pts)
@@ -331,7 +326,6 @@ class fbinarize(base):
 		Networks as numpy.array(shape=(n_reg,n_target,n_pts))
 		"""
 		#Load individual networks for each node
-		import numpy as np
 		ans=self.stat.compute(pts)
 		if self.signed:
 			ans=np.abs(ans)
@@ -378,7 +372,6 @@ class pseudotime(base):
 		Return:
 		pseudotime at each point as np.array(shape=[len(x) for x in self.names]+[len(pts)])
 		"""
-		import numpy as np
 		if not isinstance(pts,dictys.traj.point):
 			pts=self.traj.topoint()[pts]
 		ans=(pts-self.pts[[0]]).T
@@ -410,7 +403,6 @@ class lcpm(base):
 		Return:
 		log2(CPM+const) as np.array(shape=(n_gene,len(pts)))
 		"""
-		import numpy as np
 		if isinstance(pts,dictys.traj.point):
 			raise TypeError('lcpm should not be computed at any point. Use existing states or wrap with smooth instead.')
 
@@ -445,7 +437,6 @@ class sprop(base):
 		names_pref:	Prefixes added to the names of each dimension
 		"""
 		import itertools
-		import numpy as np
 		assert ptype in d.prop and pname in d.prop[ptype]
 
 		#Name collection
@@ -477,7 +468,6 @@ class sprop(base):
 		Return:
 		Networks as np.array(shape=(...,len(pts)))
 		"""
-		import numpy as np
 		if isinstance(pts,dictys.traj.point):
 			raise ValueError('Property should not be computed at any point. Use existing states or wrap with smooth instead.')
 		#Load individual networks for each node
@@ -535,7 +525,6 @@ class fcentrality_base(base):
 		Return:
 		Centrality as numpy.array(shape=(n,len(pts))) . Use nan to hide value or set as invalid.
 		"""
-		import numpy as np
 		import networkx as nx
 		dynet=self.stat.compute(pts)
 		ans=[]
@@ -622,8 +611,7 @@ def flnneighbor(statnet:base,label:str='Log2 (Outdegree + 1)',constant:float=1,s
 	constant:	Constant to add before log2.
 	statmask:	If set, computes relative log2 outdegree: log2 (outdegree + const) - log2 (max possible outdegree allowd by statmask + const)
 	"""
-	import numpy as np
-	return function(lambda x:np.log2(x),[fcentrality_degree(statnet,statmask=statmask,constant=constant,**ka)],label=label)
+	return function(np.log2,[fcentrality_degree(statnet,statmask=statmask,constant=constant,**ka)],label=label)
 
 class flayout_base(base):
 	"""
@@ -671,7 +659,6 @@ class flayout_base(base):
 		Return:	numpy.ndarray(shape=(n_node,n_dim)) as initial node positions. NAN means hidden.
 		"""
 		import itertools
-		import numpy as np
 		import networkx as nx
 		g=nx.Graph()
 		if self.netscale is not None:
@@ -723,7 +710,6 @@ class flayout_base(base):
 			length:	Use fixed average length of each edge
 		rand_expand:	Extra distance to put newly added nodes from the existing network
 		"""
-		import numpy as np
 		n=len(self.names[0])
 		ans=[]
 		tmap0=None
@@ -808,7 +794,6 @@ class flayout_base(base):
 		"""
 		Maps points to known points.
 		"""
-		import numpy as np
 		if not isinstance(pts,dictys.traj.point):
 			return None
 		#Map given points

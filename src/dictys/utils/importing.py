@@ -20,6 +20,7 @@ class dummy_class:
 	def __call__(self,*a,**ka):
 		return self
 
+
 try:
 	import torch
 except ModuleNotFoundError:		# pylint: disable=W0703

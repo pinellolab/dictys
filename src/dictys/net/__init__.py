@@ -7,12 +7,12 @@ Module for network class and stats.
 
 from __future__ import annotations
 from typing import Set,Optional,Tuple,Callable,Union
-from dictys.utils.importing import matplotlib
 import pandas as pd
 
 __all__=['stat']
 
 import dictys
+from dictys.utils.importing import matplotlib
 from . import *
 
 class network:
@@ -53,7 +53,7 @@ class network:
 	"""
 	_name_='network'
 	_shape_={'e':lambda x:tuple(x.nns)}
-	def _get_prop_shape_(self,propname:str):
+	def _get_prop_shape_(self,propname:str)->Tuple:
 		"""
 		Get shape of property from _shape_, use default (prefix with n) if not available.
 		"""

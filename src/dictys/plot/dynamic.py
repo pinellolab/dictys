@@ -2,20 +2,20 @@
 # Lingfei Wang, 2020-2022. All rights reserved.
 
 """
-Whole dataset visualization of dynamic networks 
+Dynamic network visualizations
 """
 
 from typing import Union,Tuple,Optional
 import pandas as pd
-from dictys.utils.importing import matplotlib
 import numpy.typing as npt
+from dictys.utils.importing import matplotlib
 import dictys
 
 ########################################################################
 # TF discovery plot
 ########################################################################
 
-def auc(dx:npt.NDArray,dy:npt.NDArray)->npt.NDArray:
+def auc(dx:npt.NDArray[float],dy:npt.NDArray[float])->npt.NDArray[float]:
 	"""
 	Computes area under the curves.
 
@@ -38,7 +38,7 @@ def auc(dx:npt.NDArray,dy:npt.NDArray)->npt.NDArray:
 	ans=dymean@dxdiff
 	return ans
 
-def _dynamic_network_char_terminal_logfc_(dx:npt.NDArray,dy:npt.NDArray)->npt.NDArray:
+def _dynamic_network_char_terminal_logfc_(dx:npt.NDArray[float],dy:npt.NDArray[float])->npt.NDArray[float]:
 	"""
 	Computes terminal logFC for curves.
 
@@ -58,7 +58,7 @@ def _dynamic_network_char_terminal_logfc_(dx:npt.NDArray,dy:npt.NDArray)->npt.ND
 		raise ValueError('dx must be increasing and have at least 2 values.')
 	return dy[:,-1]-dy[:,0]
 
-def _dynamic_network_char_transient_logfc_(dx:npt.NDArray,dy:npt.NDArray)->npt.NDArray:
+def _dynamic_network_char_transient_logfc_(dx:npt.NDArray[float],dy:npt.NDArray[float])->npt.NDArray[float]:
 	"""
 	Computes transient logFC for curves.
 
@@ -80,7 +80,7 @@ def _dynamic_network_char_transient_logfc_(dx:npt.NDArray,dy:npt.NDArray)->npt.N
 	dy=dy-np.median([dy,np.repeat(dy[:,[0]],n,axis=1),np.repeat(dy[:,[-1]],n,axis=1)],axis=0)
 	return auc(dx,dy)
 
-def _dynamic_network_char_switching_time_(dx:npt.NDArray,dy:npt.NDArray)->npt.NDArray:
+def _dynamic_network_char_switching_time_(dx:npt.NDArray[float],dy:npt.NDArray[float])->npt.NDArray[float]:
 	"""
 	Computes switching time for curves.
 
@@ -102,7 +102,7 @@ def _dynamic_network_char_switching_time_(dx:npt.NDArray,dy:npt.NDArray)->npt.ND
 	dy=np.median([dy,np.repeat(dy[:,[0]],n,axis=1),np.repeat(dy[:,[-1]],n,axis=1)],axis=0)
 	return (auc(dx,(dy.T-dy[:,-1]).T))/(dy[:,0]-dy[:,-1]+1E-300)
 
-def _compute_chars_(dcurve,dtime):
+def _compute_chars_(dcurve:pd.DataFrame,dtime:pd.DataFrame)->pd.DataFrame:
 	charlist={
 		'Terminal logFC':_dynamic_network_char_terminal_logfc_,
 		'Transient logFC':_dynamic_network_char_transient_logfc_,
@@ -116,13 +116,13 @@ def _compute_chars_(dcurve,dtime):
 	dchar.set_index(dcurve.index,inplace=True,drop=True)
 	return dchar
 
-def _transform_inset_(left,bottom,width,height,figsize):
+def _transform_inset_(left:float,bottom:float,width:float,height:float,figsize:float)->Tuple[float,float,float,float]:
 	return (left/figsize[0],bottom/figsize[1],width/figsize[0],height/figsize[1])
 
-def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:pd.Series=None,
+def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:Optional[pd.Series]=None,
 		cmap:Union[str,matplotlib.cm.ScalarMappable,dict[str,Union[str,matplotlib.cm.ScalarMappable]]]='viridis',
-		curve_expand=[0,0.1],inset_sides=2,inset_lvs=2,inset_size=(0.5,0.3),inset_space0=0.15,inset_space=(0.2,0.3),
-		heatmap_height=0.1,heatmap_space=0.05,line_space=0.04,fs=8,
+		curve_expand:Tuple[float,float]=(0,0.1),inset_sides:int=2,inset_lvs:int=2,inset_size:Tuple[float,float]=(0.5,0.3),inset_space0:float=0.15,inset_space:Tuple[float,float]=(0.2,0.3),
+		heatmap_height:float=0.1,heatmap_space:float=0.05,line_space:float=0.04,fs:float=8,
 		ka_curve:dict={},ka_heatmap:dict={},
 	)->Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]:		# noqa: E123
 	"""
@@ -316,8 +316,7 @@ def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:pd.Series=None,
 	ax0.axis('off')
 	return fig,axes,cmap
 
-
-def fig_discover(dcurve,dtime,ntops:Tuple[int,int,int,int],
+def fig_discover(dcurve:pd.DataFrame,dtime:pd.DataFrame,ntops:Tuple[int,int,int,int],
 		vrange:dict[str,Union[str,Tuple[float,float]]]={
 			'Terminal logFC':'symmetric',
 			'Switching time':'extreme',

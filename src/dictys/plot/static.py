@@ -6,8 +6,11 @@ Static GRN visualization
 """
 
 from typing import Union,Tuple,Optional
+import pandas as pd
+import dictys
+from dictys.utils.importing import matplotlib
 
-def compute_reg_spec(d0,min_entropy:float=0.5,ncut:float=0.4,nmin:int=20,nmax_reg:int=10,select_state:Optional[list[str]]=None):
+def compute_reg_spec(d0:dictys.net.network,min_entropy:float=0.5,ncut:float=0.4,nmin:int=20,nmax_reg:int=10,select_state:Optional[list[str]]=None):
 	"""
 	Compute state specificity of regulators with out-degree centrality and CPM.
 	Specificity is defined as value in this state / sum across all states.
@@ -44,7 +47,6 @@ def compute_reg_spec(d0,min_entropy:float=0.5,ncut:float=0.4,nmin:int=20,nmax_re
 	"""
 	from dictys.net import stat
 	import numpy as np
-	import pandas as pd
 
 	if select_state is None:
 		select_state=np.arange(d0.sn)
@@ -107,7 +109,7 @@ def compute_reg_spec(d0,min_entropy:float=0.5,ncut:float=0.4,nmin:int=20,nmax_re
 	na,va,cpm,cpm_v=[pd.DataFrame(x,index=d0.nname[d0.nids[0]],columns=d0.sname[select_state]) for x in [na,va,cpm,cpm_v]]
 	return (na,va,cpm,cpm_v,s[0],s[1])
 
-def fig_heatmap_reg_spec(v,aspect:float=0.3,figscale:float=0.15,g_ann:Optional[list[str]]=None,**ka):
+def fig_heatmap_reg_spec(v:pd.DataFrame,aspect:float=0.3,figscale:float=0.15,g_ann:Optional[list[str]]=None,**ka):
 	"""
 	Draw heatmap for regulators' state specificity.
 
@@ -150,7 +152,7 @@ def fig_heatmap_reg_spec(v,aspect:float=0.3,figscale:float=0.15,g_ann:Optional[l
 	ax.tick_params(which='both',axis='both',top=True,labeltop=False)
 	return fig1
 
-def fig_heatmap_top(d0,selection:list[Tuple[str,str]],ntop:int=10,direction:int=0,gann:Union[str,list[str]]=[],cmap_value:str='coolwarm',cmap_type:str='tab10',color_type:Optional[dict]=None,normalization:str='column',aspect:float=0.2,topheight:float=0.7,topspace:float=0.3,figscale:float=0.15):
+def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:int=10,direction:int=0,gann:Union[str,list[str]]=[],cmap_value:str='coolwarm',cmap_type:str='tab10',color_type:Optional[dict]=None,normalization:str='column',aspect:float=0.2,topheight:float=0.7,topspace:float=0.3,figscale:float=0.15):
 	"""
 	Draw heatmap for top targets of given regulators in given cell types/states.
 
@@ -197,7 +199,6 @@ def fig_heatmap_top(d0,selection:list[Tuple[str,str]],ntop:int=10,direction:int=
 	from os import linesep
 	import logging
 	import numpy as np
-	import pandas as pd
 	import matplotlib.pyplot as plt
 	from dictys.plot import colorbar
 
@@ -304,7 +305,7 @@ def fig_heatmap_top(d0,selection:list[Tuple[str,str]],ntop:int=10,direction:int=
 	
 	return (fig,fig2,net)
 
-def fig_diff_scatter(d0,ax,states:Tuple[str,str],annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
 	"""
 	Draw scatter plot for differential regulation and differential expresison logFCs.
 
@@ -337,8 +338,6 @@ def fig_diff_scatter(d0,ax,states:Tuple[str,str],annotate:Union[str,list[str]]=[
 
 	"""
 	import numpy as np
-	import pandas as pd
-	import matplotlib
 	from adjustText import adjust_text
 	from dictys.net import stat
 	from dictys.plot import panel
@@ -369,7 +368,7 @@ def fig_diff_scatter(d0,ax,states:Tuple[str,str],annotate:Union[str,list[str]]=[
 	ans=pd.DataFrame(ans,columns=['DE_logFC','DR_logFC'],index=p.names)
 	return ans
 
-def fig_diff_rank(data,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
 	"""
 	Draw bar plot for TF rankings based on differential regulation and differential expresison logFCs.
 
