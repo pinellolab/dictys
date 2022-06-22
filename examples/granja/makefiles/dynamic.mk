@@ -24,7 +24,7 @@ ifeq ($(SHOW_CPU),1)
 
 $(PRODUCT_SUBSET) &: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz
 	mkdir -p $(DIRTO)
-	$(SINGULARITY_CMD) $(ENV_MAIN) dynamic subsets_rna $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz $(DIRTO)/subsets.txt $(DIRTO)/subset_locs.h5 $(DIRTO) $(DIRTO)/subset_edges.tsv.gz $(PARAMS_SUBSETS_RNA)
+	$(FULL_CMD) $(ENV_MAIN) dynamic subsets_rna $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_rna.h5 $(DIRI)/coord_rna.tsv.gz $(DIRTO)/subsets.txt $(DIRTO)/subset_locs.h5 $(DIRTO) $(DIRTO)/subset_edges.tsv.gz $(PARAMS_SUBSETS_RNA)
 
 ifeq (a$(JOINT),a1)
 $(DIRTO)/%/names_atac0.txt: $(DIRTI)/%/names_rna.txt
@@ -32,7 +32,7 @@ $(DIRTO)/%/names_atac0.txt: $(DIRTI)/%/names_rna.txt
 else
 $(DIRTO)/%/names_atac0.txt: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_atac.h5 $(DIRI)/coord_atac.tsv.gz $(DIRTI)/subsets.txt $(DIRTI)/subset_locs.h5
 	mkdir -p $(dir $@)
-	$(SINGULARITY_CMD) $(ENV_MAIN) dynamic subset_atac $^ $@ $* $(PARAMS_SUBSET_ATAC)
+	$(FULL_CMD) $(ENV_MAIN) dynamic subset_atac $^ $@ $* $(PARAMS_SUBSET_ATAC)
 endif
 
 endif

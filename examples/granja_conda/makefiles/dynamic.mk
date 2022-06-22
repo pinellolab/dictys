@@ -1,0 +1,1 @@
+../../granja/makefiles/dynamic.mk

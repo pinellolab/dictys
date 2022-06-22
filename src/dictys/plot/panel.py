@@ -87,7 +87,7 @@ class statscatter(base):
 	"""
 	Draw scatter plots from two stats.
 	"""
-	def __init__(self,ax,pts,statx,staty,names:Optional[list[str]]=None,annotate:Union[list[str],dict[str,str]]=[],
+	def __init__(self,ax,pts,statx,staty,names:Optional[list[str]]=None,annotate:Union[str,list[str],dict[str,str]]=[],
 			annotate_err:bool=True,
 			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict={},statka:dict={},
 			staty2=None,scatterka2:dict={},aspect:Optional[float]=None):
@@ -274,7 +274,7 @@ class statscatter(base):
 		import numpy as np
 		if force or not all(hasattr(x,'isconst') and x.isconst for x in self.stats):
 			data=[self.stats[x].compute(pts) for x in range(self.ny+1)]
-			assert all(data[x].shape==(len(self.stats[x].names[0]),pts.npt) for x in range(self.ny+1))
+			assert all(data[x].shape==(len(self.stats[x].names[0]),len(pts)) for x in range(self.ny+1))
 			data=[data[x][[self.stats[x].ndict[0][y] for y in self.names]] for x in range(self.ny+1)]
 			assert all(x.shape==data[0].shape for x in data[1:])
 			data=np.array(data)
@@ -283,7 +283,7 @@ class statscatter(base):
 
 		#Compute stat based parameters
 		param={x:y.compute(pts) for x,y in self.statka.items() if force or not (hasattr(y,'isconst') and y.isconst)}
-		assert all(param[x].shape==tuple([len(y) for y in self.statka[x].names]+[pts.npt]) for x in param)
+		assert all(param[x].shape==tuple([len(y) for y in self.statka[x].names]+[len(pts)]) for x in param)
 		param={x:param[x][[self.statka[x].ndict[0][y] for y in self.names]] for x in param}
 		if data is not None:
 			assert all(x.shape[0]==data[0].shape[0] for x in param.values())
@@ -318,7 +318,6 @@ class statscatter(base):
 		for xi in range(self.ny):
 			if data is not None:
 				self.objs[xi*(len(self.annotate)+1)].set_offsets(data[[0,1+xi]].T)
-				# self.objs[xi*(len(self.annotate)+1)].set_alpha(isshow[xi].astype(float))
 			self.objs[xi*(len(self.annotate)+1)].set(**param)
 			if data is not None or len(param)>0:
 				objs.append(self.objs[xi*(len(self.annotate)+1)])
@@ -917,7 +916,7 @@ class animate_generic:
 			Animation
 		"""
 		from matplotlib.animation import FuncAnimation
-		return FuncAnimation(self.fig,self.draw,init_func=self.init,frames=self.pts.npt,blit=blit,**ka)
+		return FuncAnimation(self.fig,self.draw,init_func=self.init,frames=len(self.pts),blit=blit,**ka)
 
 
 

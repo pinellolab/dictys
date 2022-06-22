@@ -20,7 +20,6 @@ class dummy_class:
 	def __call__(self,*a,**ka):
 		return self
 
-
 try:
 	import torch
 except ModuleNotFoundError:		# pylint: disable=W0703
@@ -29,6 +28,14 @@ try:
 	import pyro
 except ModuleNotFoundError:		# pylint: disable=W0703
 	pyro=dummy_class()
+try:
+	import matplotlib
+	import matplotlib.pyplot as matplotlib_pyplot
+	import matplotlib.figure as matplotlib_figure
+	matplotlib.pyplot=matplotlib_pyplot
+	matplotlib.figure=matplotlib_figure
+except ModuleNotFoundError:		# pylint: disable=W0703
+	matplotlib=dummy_class()
 
 assert __name__ != "__main__"
 

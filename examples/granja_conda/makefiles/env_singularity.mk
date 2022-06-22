@@ -1,0 +1,1 @@
+../../granja/makefiles/env_singularity.mk

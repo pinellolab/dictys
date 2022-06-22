@@ -7,7 +7,7 @@ Module for network class and stats.
 
 from __future__ import annotations
 from typing import Set,Optional,Tuple,Callable,Union
-import matplotlib
+from dictys.utils.importing import matplotlib
 import pandas as pd
 
 __all__=['stat']

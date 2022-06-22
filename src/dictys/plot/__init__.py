@@ -5,10 +5,10 @@
 Network visualization
 """
 
-__all__=['dynamic','panel','population']
+__all__=['dynamic','panel','static']
 
 from typing import Tuple,Optional,Union
-import matplotlib
+from dictys.utils.importing import matplotlib
 from . import *
 
 def get_cmap(cmap,n):

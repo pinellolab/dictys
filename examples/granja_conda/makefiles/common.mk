@@ -3,7 +3,7 @@
 # Run environment settings
 ############################################################
 #Which environment to use, corresponding to env_$(ENVMODE).mk file
-ENVMODE=singularity
+ENVMODE=none
 #Maximum number of CPU threads for each job
 #This is only nominated and passed through to other softwares without any guarantee.
 NTH=4
@@ -104,7 +104,7 @@ SHOW_PYRO:=1
 SUBSETS:=$(shell cat $(FILE_SUBSET) 2> /dev/null | tr "\n" " ")
 ifeq (a$(SUBSETS),a)
 ifneq (a$(MAKECMDGOALS),asubset)
-$(error Missing subsets.txt. Run `make subset` first for dynamic network)
+$(error Missing subsets.txt. Run `make subset` first for dynamic network.)
 endif
 endif
 
@@ -126,6 +126,8 @@ endif
 
 PRODUCT_CPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_CPU),$(DIRTO)/$(c)/$(p)))
 PRODUCT_GPU=$(foreach c,$(SUBSETS),$(foreach p,$(PRODUCT_NAMES_GPU),$(DIRTO)/$(c)/$(p)))
+#Temporary files by called programs
+PRODUCT_TMP+=$(foreach c,$(SUBSETS),$(wildcard $(DIRTO)/$(c)/reads.bam.tmp.*.bam))
 
 ############################################################
 # Recipes
@@ -143,10 +145,11 @@ subset: $(PRODUCT_SUBSET)
 
 t:
 	@echo $(PRODUCT)
+	@echo $(PRODUCT_TMP)
 	@echo $(DPRODUCT)
 
 clean:
-	$(RM) $(PRODUCT_CPU) $(PRODUCT_GPU) $(PRODUCT_SUBSET)
+	$(RM) $(PRODUCT_CPU) $(PRODUCT_GPU) $(PRODUCT_SUBSET) $(PRODUCT_TMP)
 	
 distclean: clean
 	$(RM) $(DPRODUCT)

@@ -3,4 +3,9 @@
 **/._*
 .DS_Store
 ._*
-examples
+*.log
+examples/*/data
+examples/*/output
+examples/*/test
+examples/*/tmp_static
+examples/*/tmp_dynamic

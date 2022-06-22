@@ -2,10 +2,12 @@
 # Lingfei Wang, 2020-2022. All rights reserved.
 
 """
-Population level visualization of networks 
+Static GRN visualization
 """
 
-def compute_reg_spec(d0,min_entropy=0.5,ncut=0.4,nmin=20,nmax_reg=10,select_state=None):
+from typing import Union,Tuple,Optional
+
+def compute_reg_spec(d0,min_entropy:float=0.5,ncut:float=0.4,nmin:int=20,nmax_reg:int=10,select_state:Optional[list[str]]=None):
 	"""
 	Compute state specificity of regulators with out-degree centrality and CPM.
 	Specificity is defined as value in this state / sum across all states.
@@ -105,7 +107,7 @@ def compute_reg_spec(d0,min_entropy=0.5,ncut=0.4,nmin=20,nmax_reg=10,select_stat
 	na,va,cpm,cpm_v=[pd.DataFrame(x,index=d0.nname[d0.nids[0]],columns=d0.sname[select_state]) for x in [na,va,cpm,cpm_v]]
 	return (na,va,cpm,cpm_v,s[0],s[1])
 
-def fig_heatmap_reg_spec(v,aspect=0.3,figscale=0.15,g_ann=None,**ka):
+def fig_heatmap_reg_spec(v,aspect:float=0.3,figscale:float=0.15,g_ann:Optional[list[str]]=None,**ka):
 	"""
 	Draw heatmap for regulators' state specificity.
 
@@ -148,7 +150,7 @@ def fig_heatmap_reg_spec(v,aspect=0.3,figscale=0.15,g_ann=None,**ka):
 	ax.tick_params(which='both',axis='both',top=True,labeltop=False)
 	return fig1
 
-def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwarm',cmap_type='tab10',color_type=None,normalization='column',aspect=0.2,topheight=0.7,topspace=0.3,figscale=0.15):
+def fig_heatmap_top(d0,selection:list[Tuple[str,str]],ntop:int=10,direction:int=0,gann:Union[str,list[str]]=[],cmap_value:str='coolwarm',cmap_type:str='tab10',color_type:Optional[dict]=None,normalization:str='column',aspect:float=0.2,topheight:float=0.7,topspace:float=0.3,figscale:float=0.15):
 	"""
 	Draw heatmap for top targets of given regulators in given cell types/states.
 
@@ -279,7 +281,7 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 	ax=fig.add_axes([0,1-topheight*figscale/figsize[1],1, topheight*figscale/figsize[1]])
 	t1=np.array([color_type[x[1]] for x in selection])
 	t1=t1.reshape(1,*t1.shape)
-	ax.imshow(t1,aspect=topheight)
+	ax.imshow(t1,aspect=topheight,interpolation='none',filternorm=False,resample=False)
 	ax.set_xticks(np.arange(ns[0]))
 	ax.set_xticklabels(names,rotation=90)
 	ax.set_yticks([])
@@ -288,7 +290,7 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 		xi.set_visible(False)
 	#Panel for heatmap
 	ax=fig.add_axes([0,0,1, figsize1[1]/figsize[1]],sharex=ax)
-	ax.imshow(net.T,cmap=cmap_value,vmin=-vmax,vmax=vmax,aspect=aspect)
+	ax.imshow(net.T,cmap=cmap_value,vmin=-vmax,vmax=vmax,aspect=aspect,interpolation='none',filternorm=False,resample=False)
 	gann2=np.nonzero([x in gann for x in names2])[0]
 	ax.set_yticks(gann2)
 	ax.set_yticklabels(names2[gann2])
@@ -302,10 +304,133 @@ def fig_heatmap_top(d0,selection,ntop=10,direction=0,gann=[],cmap_value='coolwar
 	
 	return (fig,fig2,net)
 
+def fig_diff_scatter(d0,ax,states:Tuple[str,str],annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+	"""
+	Draw scatter plot for differential regulation and differential expresison logFCs.
+
+	Parameters
+	----------
+	d0:
+		Input network
+	ax:
+		Axes to draw on
+	states:
+		Names of two cell states/types to compare as (reference,alternative)
+	annotate:
+		Genes to annotate their locations. Use 'all' to indicate all genes.
+	axes_alpha:
+		Transparency of axis lines drawn. Set to 1 to disable axis lines.
+	aspect:
+		Aspect ratio of scatter plot
+	lim:
+		Automatic X and Y limits. See parameter im of dictys.plot.panel.statscatter.
+	ka_adjust_test:
+		Keyword arguments for adjustText.adjust_text to adjust annotation positions. If None, skip adjustText.adjust_text.
+	ka:
+		Keyword arguments passed to ax.scatter
+
+	Returns
+	-------
+	data:
+		LogFCs of differential expression (data)
 
 
+	"""
+	import numpy as np
+	import pandas as pd
+	import matplotlib
+	from adjustText import adjust_text
+	from dictys.net import stat
+	from dictys.plot import panel
+	ka_default={'s':20,'c':([0.3]*3,),'lw':0,'alpha':0.7}
+	ka_default.update(ka)
+	
+	stat1_lcpm=stat.lcpm(d0,cut=0)
+	stat1_net=stat.net(d0)
+	stat1_netmask=stat.netmask(d0)
+	stat1_netbin=stat.fbinarize(stat1_net)
+	stat1_lntarget=stat.flnneighbor(stat1_netbin,statmask=stat1_netmask)
+	pts=np.array([d0.sdict[x] for x in states])
+	
+	p=panel.statscatter(ax,np.array([pts[1]]),
+		stat.fdiff(stat1_lcpm,stat.finitial(stat1_lcpm,np.array([pts[0]])),label='Differential expression logFC'),
+		stat.fdiff(stat1_lntarget,stat.finitial(stat1_lntarget,np.array([pts[0]])),label='Differential regulation logFC'),
+		annotate=annotate,aspect=aspect,lim=lim,scatterka=ka_default
+	)
+	p.init()
+	objs=p.draw(0)
+	if len(annotate)>0 and ka_adjust_text is not None:
+		adjust_text(list(filter(lambda x:isinstance(x,matplotlib.text.Text),objs)),**ka_adjust_text)
+	if axes_alpha<1:
+		t1=[ax.get_xlim(),ax.get_ylim()]
+		ax.plot([t1[0][0],t1[0][1]],[0,0],'k-',alpha=axes_alpha,zorder=0)
+		ax.plot([0,0],[t1[1][0],t1[1][1]],'k-',alpha=axes_alpha,zorder=0)
+	ans=p.get_data(pts[[1]])[0][:,:,0].T
+	ans=pd.DataFrame(ans,columns=['DE_logFC','DR_logFC'],index=p.names)
+	return ans
 
+def fig_diff_rank(data,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+	"""
+	Draw bar plot for TF rankings based on differential regulation and differential expresison logFCs.
 
+	Parameters
+	----------
+	data:
+		Differential regulation and differential expression logFCs. Output of fig_diff_scatter.
+	figsize:
+		Figure size as (figure width per bar, figure height per panel)
+	annotate:
+		Genes to annotate their locations
+	cmap:
+		Matplotlib color map name
+	ka_text:
+		Keyword arguments for plt.text for annotating genes
+	ka_adjust_test:
+		Keyword arguments for adjustText.adjust_text to adjust annotation positions. If None, skip adjustText.adjust_text.
+	ka:
+		Keyword arguments passed to plt.bar
+
+	Returns
+	-------
+	fig:
+		Drawn figure
+
+	"""
+	import numpy as np
+	import matplotlib.pyplot as plt
+	from adjustText import adjust_text
+	#Default barplot parameters
+	ka_bar={'lw':0,'width':1}
+	#Parameter preprocessing
+	ka_bar.update(ka)
+	cmap=plt.get_cmap(cmap)
+	data=data.copy()
+	#Compute mean logFC
+	data['Mean_logFC']=(data['DE_logFC']+data['DR_logFC'])/2
+	
+	n,m=data.shape
+	fig=plt.figure(figsize=(figsize[0]*n,figsize[1]*m))
+	dx=np.arange(n)
+	for xi in range(data.shape[1]):
+		#Draw each panel
+		ax=fig.add_subplot(m,1,xi+1)
+		#Sort genes by logFC ranking
+		t0=data.values[:,xi].argsort()[::-1]
+		t1=data.values[t0,xi]
+		t2=np.abs(t1).max()
+		tdict=dict(zip(data.index[t0],range(len(t0))))
+		cs=plt.get_cmap(cmap)((t1/t2+1)/2)
+		#Draw bar plot
+		ax.bar(dx,t1,color=cs,**ka_bar)
+		#Annotations
+		t2=[ax.text(dx[tdict[x]],t1[tdict[x]],x,**ka_text) for x in annotate]
+		xlim=np.array([dx[0]-0.5-0.01*n,dx[-1]+0.5+0.01*n])
+		ax.set_xlim(xlim)
+		ax.set_xticks([])
+		ax.set_ylabel(data.columns[xi].replace('_',' '))
+		if len(t2)>0 and ka_adjust_text is not None:
+			adjust_text(t2,**ka_adjust_text)
+	return fig
 
 
 

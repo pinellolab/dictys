@@ -7,8 +7,7 @@ Whole dataset visualization of dynamic networks
 
 from typing import Union,Tuple,Optional
 import pandas as pd
-import matplotlib
-import matplotlib.figure
+from dictys.utils.importing import matplotlib
 import numpy.typing as npt
 import dictys
 

@@ -11,6 +11,7 @@ from typing import Union,Callable,Tuple,Optional
 import dictys.traj
 import dictys.net
 from dictys.utils.numpy import NDArray,ArrayLike
+import numpy as np
 
 def _getitem(key,v:NDArray)->NDArray:
 	"""
@@ -50,7 +51,7 @@ class base(metaclass=abc.ABCMeta):
 		self.names=[np.array(x) for x in names]
 		self.ndict=[dict(zip(x,range(len(x)))) for x in names]
 	@abc.abstractmethod
-	def compute(self,pts:dictys.traj.point)->NDArray:
+	def compute(self,pts:Union[dictys.traj.point,NDArray[np.int_]])->NDArray:
 		"""
 		Use this function to compute stat values at each state or point
 		pts:	Point list instance of dictys.traj.point, or state list as list of int
@@ -65,7 +66,7 @@ class base(metaclass=abc.ABCMeta):
 		Return:
 		List of list of names for each axis.
 		"""
-	def default_lims(self,pts:dictys.traj.point=None,names:Optional[list[ArrayLike[str]]]=None,expansion:float=0.02)->ArrayLike:
+	def default_lims(self,pts:Union[dictys.traj.point,NDArray[np.int_],None]=None,names:Optional[list[ArrayLike[str]]]=None,expansion:float=0.02)->ArrayLike:
 		"""
 		Use this function to determine the default limits of the stat.
 		This implementation uses min/max of stat values.
@@ -166,7 +167,7 @@ class const(base):
 		return self.default_names_
 	def default_label(self)->str:
 		return self.default_label_
-	def compute(self,pts:dictys.traj.point)->NDArray:
+	def compute(self,pts:Union[dictys.traj.point,NDArray[np.int_]])->NDArray:
 		import numpy as np
 		return np.repeat(self.val.reshape(*self.val.shape,1),len(pts),axis=-1)
 
@@ -222,7 +223,7 @@ class fsinglestat(const):
 	"""
 	Show constant value for stat by combining different points.
 	"""	
-	def __init__(self,func_stat:Callable[Tuple[NDArray,...],NDArray],stat:list[base],pts:dictys.traj.point,**ka):
+	def __init__(self,func_stat:Callable[Tuple[NDArray,...],NDArray],stat:list[base],pts:Union[dictys.traj.point,NDArray[np.int_]],**ka):
 		"""
 		Show constant value for stat by combining different points.
 		func_stat:	Function to combine different points to one for the stat.
@@ -234,13 +235,13 @@ class fsinglestat(const):
 		ka1.update(ka)
 		super().__init__(val,stat.names,**ka1)
 
-def finitial(stat:base,pts:dictys.traj.point,**ka)->base:
+def finitial(stat:base,pts:Union[dictys.traj.point,NDArray[np.int_]],**ka)->base:
 	"""
 	Using initial value as a constant stat.
 	"""
-	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]] if isinstance(pts,dictys.traj.point) else [pts[0]],**ka)
+	return fsinglestat(lambda x:x.ravel(),stat,pts[[0]],**ka)
 
-def fmean(stat:base,pts:dictys.traj.point,**ka)->base:
+def fmean(stat:base,pts:Union[dictys.traj.point,NDArray[np.int_]],**ka)->base:
 	"""
 	Use mean value for stat.
 	"""
@@ -350,7 +351,7 @@ class pseudotime(base):
 	"""
 	Statistic to output pseudotime
 	"""
-	def __init__(self,d:dictys.net.network,pts:dictys.traj.point,*a,traj:Optional[dictys.traj.trajectory]=None,**ka):
+	def __init__(self,d:dictys.net.network,pts:Union[dictys.traj.point,NDArray[np.int_]],*a,traj:Optional[dictys.traj.trajectory]=None,**ka):
 		"""
 		Statistic to output pseudotime
 		d:		Dataset object
@@ -411,7 +412,7 @@ class lcpm(base):
 		"""
 		import numpy as np
 		if isinstance(pts,dictys.traj.point):
-			raise ValueError('lcpm should not be computed at any point. Use existing states or wrap with smooth instead.')
+			raise TypeError('lcpm should not be computed at any point. Use existing states or wrap with smooth instead.')
 
 		t1=set(self.d.nname)
 		t1=np.nonzero([x not in t1 for x in self.names[0]])[0]
@@ -493,15 +494,17 @@ class sprop(base):
 
 class net(sprop):
 	"""
-	Compute all edge weights of whole network with binarization if specified.
+	Compute all edge weights of whole network.
 	"""
 	def __init__(self,d:dictys.net.network,*a,varname:str='w',**ka):
-		"""
-		Compute all edge weights of whole network with binarization if specified.
-		varname:	Variable name used for network
-		posrate:	Proportion of top edges when converting to binary network. Set to None to retain continuous network.
-		"""
 		super().__init__(d,'es',varname,*a,label='Network edge strength',**ka)
+
+class netmask(sprop):
+	"""
+	Compute all edge masks of whole network.
+	"""
+	def __init__(self,d:dictys.net.network,*a,varname:str='mask',**ka):
+		super().__init__(d,'es',varname,*a,label='Network edge mask',**ka)
 
 class fcentrality_base(base):
 	"""
@@ -555,16 +558,18 @@ class fcentrality_degree(base):
 	"""
 	Degree centrality stat for network.
 	"""
-	def __init__(self,statnet:base,statmask:Optional[base]=None,roleaxis:int=0):
+	def __init__(self,statnet:base,roleaxis:int=0,statmask:Optional[base]=None,constant:float=0):
 		"""
 		Degree centrality stat for network.
 		statnet:	stat for network
-		statmask:	stat for mask. When specified, computes the degree centrality rate, i.e. degree/node_count, instead of degree
 		roleaxis:	Axis to compute degree for. 0 for outdegree and 1 for indegree.
+		statmask:	stat for mask. When specified, computes the degree centrality rate, i.e. (degree+constant)/(node_count+constant), instead of degree
+		constant:	Constant to add to degree centrality. Particularly useful when statmask is set. Always used.
 		"""
 		self.stat=statnet
 		self.mask=statmask
 		self.roleaxis=roleaxis
+		self.constant=constant
 		super().__init__()
 	def default_names(self):
 		return [self.stat.names[self.roleaxis]]
@@ -579,10 +584,10 @@ class fcentrality_degree(base):
 		"""
 		dynet=self.stat.compute(pts)
 		if self.mask is None:
-			dynet=dynet.sum(axis=1-self.roleaxis)
+			dynet=dynet.sum(axis=1-self.roleaxis)+self.constant
 		else:
 			mask=self.mask.compute(pts)
-			dynet=(dynet*mask).sum(axis=1-self.roleaxis)/(mask.sum(axis=1-self.roleaxis)+1E-300)
+			dynet=((dynet*mask).sum(axis=1-self.roleaxis)+self.constant)/((mask!=0).any(axis=self.roleaxis).sum(axis=0)+self.constant)
 		assert dynet.shape==(len(self.names[0]),len(pts))
 		return dynet
 
@@ -610,14 +615,15 @@ def fcentrality_closeness(statnet:base,label:str='Closeness centrality',**ka)->b
 	print('Closeness centrality: very slow!')
 	return fcentrality_base(statnet,nx.closeness_centrality,label=label,**ka)
 
-def flnneighbor(statnet:base,label:str='Log2 (Outdegree + 1)',constant:float=1,**ka)->base:
+def flnneighbor(statnet:base,label:str='Log2 (Outdegree + 1)',constant:float=1,statmask:Optional[base]=None,**ka)->base:
 	"""
-	Log2 outdegree centrality stat. Specifically, Log2 (Outdegree + const)
+	Log2 outdegree centrality stat. Specifically, log2 (Outdegree + const)
 	statnet:	stat for network
 	constant:	Constant to add before log2.
+	statmask:	If set, computes relative log2 outdegree: log2 (outdegree + const) - log2 (max possible outdegree allowd by statmask + const)
 	"""
 	import numpy as np
-	return function(lambda x:np.log2(x+constant),[fcentrality_degree(statnet,**ka)],label=label)
+	return function(lambda x:np.log2(x),[fcentrality_degree(statnet,statmask=statmask,constant=constant,**ka)],label=label)
 
 class flayout_base(base):
 	"""

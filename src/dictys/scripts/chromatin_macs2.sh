@@ -33,5 +33,5 @@ rm 02-filtered.bam
 samtools index -@ "$nodes" "$output_bam" "$output_bai"
 
 #Step3A. Peak calling on aggregate population [Keep only significant peaks]
-macs2 callpeak -t "$output_bam" -n 04 -g $genome_size --nomodel --shift -75 --extsize 150 --keep-dup all --verbose 4 --call-summits -q $cutoff
+OMP_NUM_THREADS=$nodes MKL_NUM_THREADS=$nodes NUMEXPR_NUM_THREADS=$nodes OPENBLAS_NUM_THREADS=$nodes OMP_MAX_THREADS=$nodes MKL_MAX_THREADS=$nodes NUMEXPR_MAX_THREADS=$nodes OPENBLAS_MAX_THREADS=$nodes VECLIB_MAXIMUM_THREADS=$nodes macs2 callpeak -t "$output_bam" -n 04 -g $genome_size --nomodel --shift -75 --extsize 150 --keep-dup all --verbose 4 --call-summits -q $cutoff
 mv 04_peaks.narrowPeak "$output_bed"
