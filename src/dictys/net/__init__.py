@@ -390,6 +390,58 @@ class network:
 				params[xi]={x:y.swapaxes(t2[xj],0)[success].swapaxes(t2[xj],0) for x,y in params[xi].items()}
 
 		return cls(**params)
+	def export(self,output_folder:str,sparsities:Union[None,float,list[Union[None,float]]]=None)->None:
+		"""
+		Export context specific networks to tsv files. Each context specific network is exported to an accordingly named file. If certain contexts do not have exported networks, the sparsity level is too large or too small.
+
+		Parameters
+		----------
+		output_folder:
+			Path of output folder. Must be absent.
+		sparsities:
+			Network sparsity to use to convert to binary networks. Accepts:
+
+			* None: Output continuous network into folder "Full"
+
+			* float: Output binary network with the corresponding sparsity into folder "sparsity=..."
+
+			* List of None and/or float: Output networks of different types or sparsities into their corresponding folders
+
+		"""
+		from os.path import join as pjoin
+		from os import makedirs
+		import numpy as np
+		from dictys.net import stat
+		if sparsities is None or isinstance(sparsities,float):
+			sparsities=[sparsities]
+		
+		makedirs(output_folder)
+		stat1_lcpm=stat.lcpm(self,cut=0)
+		stat1_net0=stat.net(self)
+		pts=np.arange(self.sn)
+		#Output CPM
+		fo=pjoin(output_folder,'cpm.tsv.gz')
+		d1=stat1_lcpm.compute(pts)
+		t1=(d1>0).any(axis=1)
+		d1=pd.DataFrame(d1[t1],index=stat1_lcpm.names,columns=self.sname)
+		d1.to_csv(fo,header=True,index=True,sep='\t')
+		#Output network
+		for xi in sparsities:
+			output_folder1=pjoin(output_folder,'Full' if xi is None else f'sparsity={xi}')
+			makedirs(output_folder1)
+			stat1_net=stat.fbinarize(stat1_net0,sparsity=xi) if xi is not None else stat1_net0
+			d1=stat1_net.compute(pts)
+			for xj in range(self.sn):
+				fo=pjoin(output_folder1,self.sname[xj]+'.tsv.gz')
+				d2=d1[:,:,xj]
+				#Remove empty regulators & targets
+				t1=[(d2!=0).any(axis=1-x) for x in range(2)]
+				if xi is not None and (any(not x.any() for x in t1) or d2[t1[0]][:,t1[1]].all()):
+					#Skip sparsity for cell type because too large/small (all/no edges are positive)
+					continue
+				d2=pd.DataFrame(d2[t1[0]][:,t1[1]],index=stat1_net.names[0][t1[0]],columns=stat1_net.names[1][t1[1]])
+				#Output to tsv.gz file
+				d2.to_csv(fo,header=True,index=True,sep='\t')
 
 class dynamic_network(network):
 	"""
@@ -443,8 +495,7 @@ class dynamic_network(network):
 		weightfunc[2]['nodes_path']=[start2,stop2]
 		fsmooth=partial(dictys.net.stat.fsmooth,pts=traj2,smoothen_func=weightfunc)
 		return (pts,fsmooth)
-
-	def compute_chars(self,start:int,stop:int,num:int=100,dist:float=1.5,mode:str='regulation',posrate:float=0.01)->pd.DataFrame:
+	def compute_chars(self,start:int,stop:int,num:int=100,dist:float=1.5,mode:str='regulation',sparsity:float=0.01)->pd.DataFrame:
 		"""
 		Compute curve characteristics for one branch.
 
@@ -465,7 +516,7 @@ class dynamic_network(network):
 
 			* 'expression': based on CPM
 
-		posrate:
+		sparsity:
 			The number of edges to regard as positive when binarizing network. Only relevant when mode=='regulation'
 
 		Returns
@@ -478,7 +529,7 @@ class dynamic_network(network):
 		if mode=='regulation':
 			#Log number of targets
 			stat1_net=fsmooth(stat.net(self))
-			stat1_netbin=stat.fbinarize(stat1_net,posrate=posrate)
+			stat1_netbin=stat.fbinarize(stat1_net,sparsity=sparsity)
 			stat1_y=stat.flnneighbor(stat1_netbin)
 		elif mode=='expression':
 			stat1_y=fsmooth(stat.lcpm(self,cut=0))
@@ -489,8 +540,7 @@ class dynamic_network(network):
 		dy=pd.DataFrame(stat1_y.compute(pts),index=stat1_y.names[0])
 		dx=pd.Series(stat1_x.compute(pts)[0])
 		return _compute_chars_(dy,dx)
-
-	def draw_discover(self,start:int,stop:int,num:int=100,dist:float=1.5,ntops:Tuple[int,int,int,int]=[10,10,10,10],mode:str='regulation',posrate:float=0.01,**ka)->list[Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]]:
+	def draw_discover(self,start:int,stop:int,num:int=100,dist:float=1.5,ntops:Tuple[int,int,int,int]=[10,10,10,10],mode:str='regulation',sparsity:float=0.01,**ka)->list[Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]]:
 		"""
 		Draws TF discovery plots for one branch.
 
@@ -513,7 +563,7 @@ class dynamic_network(network):
 
 			* 'expression': based on CPM
 
-		posrate:
+		sparsity:
 			The number of edges to regard as positive when binarizing network. Only relevant when mode=='regulation'
 		ka:
 			Keyword arguments passed to dictys.plot.dynamic.draw_discover
@@ -528,7 +578,7 @@ class dynamic_network(network):
 		if mode=='regulation':
 			#Log number of targets
 			stat1_net=fsmooth(stat.net(self))
-			stat1_netbin=stat.fbinarize(stat1_net,posrate=posrate)
+			stat1_netbin=stat.fbinarize(stat1_net,sparsity=sparsity)
 			stat1_y=stat.flnneighbor(stat1_netbin)
 		elif mode=='expression':
 			stat1_y=fsmooth(stat.lcpm(self,cut=0))
@@ -539,7 +589,6 @@ class dynamic_network(network):
 		dy=pd.DataFrame(stat1_y.compute(pts),index=stat1_y.names[0])
 		dx=pd.Series(stat1_x.compute(pts)[0])
 		return fig_discover(dy,dx,ntops,**ka)
-	
 	def draw_regulation_heatmap(self,start:int,stop:int,regulations:list[Tuple[str,str]],num:int=100,dist:float=1.5,ax:Optional[matplotlib.axes.Axes]=None,cmap:Union[str,matplotlib.cm.ScalarMappable]='coolwarm',figsize:Tuple[float,float]=(2,0.22),vmax:Optional[float]=None)->Tuple[matplotlib.pyplot.Figure,matplotlib.axes.Axes,matplotlib.cm.ScalarMappable]:
 		"""Draws pseudo-time dependent heatmap of individual regulation strengths.
 	
@@ -575,8 +624,71 @@ class dynamic_network(network):
 		"""
 		from dictys.plot.dynamic import fig_regulation_heatmap
 		return fig_regulation_heatmap(self,start,stop,regulations,num=num,dist=dist,ax=ax,cmap=cmap,figsize=figsize,vmax=vmax)
+	def export(self,output_folder:str,start:int,stop:int,num:int,dist:float,sparsities:Union[None,float,list[Union[None,float]]]=None)->None:
+		"""
+		Export dynamic network to tsv files. Each time point network is exported to an accordingly named file. If certain contexts do not have exported networks, the sparsity level is too large or too small.
 
+		Parameters
+		----------
+		output_folder:
+			Path of output folder. Must be absent.
+		start:
+			Starting node ID to export network
+		stop:
+			Stopping node ID to export network
+		num:
+			Number of intermediate time points to export network
+		dist:
+			Gaussian kernel smoothing distance
+		sparsities:
+			Network sparsity to use to convert to binary networks. Accepts:
 
+			* None: Output continuous network into folder "Full"
+
+			* float: Output binary network with the corresponding sparsity into folder "sparsity=..."
+
+			* List of None and/or float: Output networks of different types or sparsities into their corresponding folders
+
+		"""
+		from os.path import join as pjoin
+		from os import makedirs
+		import numpy as np
+		from dictys.net import stat
+		if sparsities is None or isinstance(sparsities,float):
+			sparsities=[sparsities]
+		makedirs(output_folder)
+		
+		pts,fsmooth=self.linspace(start,stop,num,dist)
+		stat1_time=stat.pseudotime(self,pts)
+		stat1_lcpm=fsmooth(stat.lcpm(self,cut=0))
+		stat1_net0=fsmooth(stat.net(self))
+		#Output pseudotime
+		d1=stat1_time.compute(pts)[0]
+		d1=pd.DataFrame(zip(np.arange(len(pts))+1,d1),columns=['State_index','Pseudo-time'])
+		d1.to_csv(pjoin(output_folder,'pseudotime.tsv.gz'),header=True,index=False,sep='\t')
+		#Output CPM
+		fo=pjoin(output_folder,'cpm.tsv.gz')
+		d1=stat1_lcpm.compute(pts)
+		t1=(d1>0).any(axis=1)
+		d1=pd.DataFrame(d1[t1],index=stat1_lcpm.names,columns=np.arange(len(pts))+1)
+		d1.to_csv(fo,header=True,index=True,sep='\t')
+		#Output network
+		for xi in sparsities:
+			output_folder1=pjoin(output_folder,'Full' if xi is None else f'sparsity={xi}')
+			makedirs(output_folder1)
+			stat1_net=stat.fbinarize(stat1_net0,sparsity=xi) if xi is not None else stat1_net0
+			d1=stat1_net.compute(pts)
+			for xj in range(len(pts)):
+				fo=pjoin(output_folder1,str(xj+1)+'.tsv.gz')
+				d2=d1[:,:,xj]
+				#Remove empty regulators & targets
+				t1=[(d2!=0).any(axis=1-x) for x in range(2)]
+				if xi is not None and (any(not x.any() for x in t1) or d2[t1[0]][:,t1[1]].all()):
+					#Skip sparsity for cell type because too large/small (all/no edges are positive)
+					continue
+				d2=pd.DataFrame(d2[t1[0]][:,t1[1]],index=stat1_net.names[0][t1[0]],columns=stat1_net.names[1][t1[1]])
+				#Output to tsv.gz file
+				d2.to_csv(fo,header=True,index=True,sep='\t')
 
 
 

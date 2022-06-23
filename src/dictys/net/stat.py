@@ -296,20 +296,20 @@ class fbinarize(base):
 	"""
 	Convert continuous network stat to binary network stat.
 	"""
-	def __init__(self,stat:base,*a,statmask:Optional[base]=None,posrate:float=0.01,signed:bool=True,**ka):
+	def __init__(self,stat:base,*a,statmask:Optional[base]=None,sparsity:float=0.01,signed:bool=True,**ka):
 		"""
 		Convert continuous network stat to binary network stat.
 		stat:		Stat for continuous network as numpy.ndarray(shape=(n_reg,n_target),dtype=float)
 		statmask:	Stat for network mask indicating which edges are tested in the continuous network,
 					as numpy.ndarray(shape=(n_reg,n_target),dtype=bool)
-		posrate:	Proportion of significant edges when converting to binary network.
+		sparsity:	Proportion of significant edges when converting to binary network.
 		signed:		Whether continuous network is signed.
 					If so, larger absolute values indicate stronger edge.
 					If not, larger values indicate stronger edge.
 		a,
 		ka:			Arguments and keyword arguments passed to parent class
 		"""
-		self.posrate=posrate
+		self.sparsity=sparsity
 		self.signed=signed
 		self.stat=stat
 		self.mask=statmask
@@ -331,10 +331,10 @@ class fbinarize(base):
 			ans=np.abs(ans)
 		#Determine cutoff for each point
 		if self.mask is None:
-			cut=np.repeat(int(self.posrate*np.prod(ans.shape[:-1])),ans.shape[-1])
+			cut=np.repeat(int(self.sparsity*np.prod(ans.shape[:-1])),ans.shape[-1])
 		else:
 			mask=self.mask.compute(pts)
-			cut=(self.posrate*mask.sum(axis=0).sum(axis=0)).astype(int)
+			cut=(self.sparsity*mask.sum(axis=0).sum(axis=0)).astype(int)
 		assert cut.shape==(ans.shape[-1],)
 		cut=[np.partition(x.ravel(),-y)[-y] for x,y in zip(ans.transpose(2,0,1),cut)]
 		ans=ans>=cut

@@ -70,7 +70,7 @@ def subsets_rna(fi_traj:str,fi_traj_cell_rna:str,fi_coord_rna:str,fo_subsets:str
 	with open(fo_subsets,'w') as f:
 		f.write(linesep.join(names_subset)+linesep)	
 
-def subset_atac(fi_traj:str,fi_traj_cell_atac:str,fi_coord_atac:str,fi_subsets:str,fi_subset_locs:str,fo_subset:str,subset_name:str,ncell:int)->None:
+def subsets_atac(fi_traj:str,fi_traj_cell_atac:str,fi_coord_atac:str,fi_subsets:str,fi_subset_locs:str,fo_subset:str,subset_name:str,ncell:int)->None:
 	"""
 	Split ATAC cells into overlapping subsets along trajectory.
 

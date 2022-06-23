@@ -1,3 +1,11 @@
+Example for traj inf on granja.
+
+Filter for footprint-target gene relations.
+
+Full tutorial from beginning to end.
+
+Merging envs in docker.
+
 Rewrite dictys.traj.point.weight_linear due to error.
 
 Write dictys.net.stat.base.match_names and use it to improve pseudo-time stat definition and for all matchings e.g. in panels.

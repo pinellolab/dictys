@@ -32,7 +32,7 @@ $(DIRTO)/%/names_atac0.txt: $(DIRTI)/%/names_rna.txt
 else
 $(DIRTO)/%/names_atac0.txt: $(DIRI)/traj_node.h5 $(DIRI)/traj_cell_atac.h5 $(DIRI)/coord_atac.tsv.gz $(DIRTI)/subsets.txt $(DIRTI)/subset_locs.h5
 	mkdir -p $(dir $@)
-	$(FULL_CMD) $(ENV_MAIN) dynamic subset_atac $^ $@ $* $(PARAMS_SUBSET_ATAC)
+	$(FULL_CMD) $(ENV_MAIN) dynamic subsets_atac $^ $@ $* $(PARAMS_SUBSET_ATAC)
 endif
 
 endif

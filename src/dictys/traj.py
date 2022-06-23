@@ -494,8 +494,8 @@ class point:
 		----------
 		traj:	dictys.traj.trajectory
 			Trajectory the points are on
-		edges:	numpy.ndarray(shape=(n_point))
-			Edge ID each point is on
+		edges:	numpy.ndarray(shape=(n_point) or (n_point,2))
+			Edge each point is on, as edge ID (for shape=(n_point)), or as two node IDs (for shape=(n_point,2))
 		dist:	numpy.ndarray(shape=(n_point,n_node))
 			Distance matrix between each point and each node. Automatically computed if not provided.
 
@@ -505,8 +505,13 @@ class point:
 			Constructed point object
 		"""
 		import numpy as np
-		assert edges.ndim==1
+		assert edges.ndim in {1,2}
 		assert dist.shape==(len(edges),traj.nn)
+		if edges.ndim==2:
+			#Convert to edge ID
+			if any(tuple(x) not in traj.edgedict for x in edges):
+				raise ValueError('Found edges absent in trajectory.')
+			edges=np.array([traj.edgedict[tuple(x)][0] for x in edges])
 		locs=dist[np.arange(len(edges)),traj.edges[edges,0]]
 		return cls(traj,edges,locs,dist=dist)
 	@classmethod
@@ -687,62 +692,6 @@ class point:
 			perturb_amount[xi]=np.random.rand(len(xi))*(bound[1]-bound[0])*scale+bound[0]
 		self.locs=self.p.conform_locs(self.locs+perturb_amount,self.edges)
 		self.dist=self.compute_dist()
-	# def linspace(self,start:int,end:int,n:int)->point:
-	# 	"""
-	# 	Find evenly spaced points on a path like np.linspace
-
-	# 	Parameters
-	# 	----------
-	# 	start:	int
-	# 		Start point's IDs to indicate the path
-	# 	end:	int
-	# 		End point's IDs to indicate the path
-	# 	n:		int
-	# 		Number of points including terminal points
-
-	# 	Returns
-	# 	----------
-	# 	dictys.traj.point
-	# 		Instance of point class with points go from start to end nodes.
-	# 	"""
-	# 	import numpy as np
-	# 	assert n>=2
-	# 	path=self.path(start,end)
-	# 	if len(path)>0:
-	# 		dist=self.dist[start,path[0]]+self.lens[[self.p.edgedict[path[x],path[x+1]][0] for x in range(len(path)-1)]].sum()+self.dist[end,path[-1]]
-	# 	else:
-	# 		dist=np.abs(self.locs[start]-self.locs[end])
-	# 	locs=np.linspace(0,dist,n)
-	# 	return self.path_points(start,end,locs)
-	# def path_points(self,start:int,end:int,lengths:ArrayLike)->point:
-	# 	"""
-	# 	Find points at specific lengths on a path.
-
-	# 	Parameters
-	# 	----------
-	# 	start:	int
-	# 		Start point's ID to indicate the path
-	# 	end:	int
-	# 		End point's ID to indicate the path
-	# 	lengths:	numpy.ndarray(dtype=float)
-	# 		Lengths of movement from the starting point towards the ending point as numpy.ndarray. Each length correspond to an output point.
-	# 		For lengths with negative values, the start point will be returned.
-	# 		For lengths greater than total length of path, the end point will be returned.
-
-	# 	Returns
-	# 	----------
-	# 	dictys.traj.point
-	# 		Instance of point class with points go from start to end points.
-	# 	"""
-	# 	import numpy as np
-	# 	n=len(lengths)
-	# 	lengths=lengths.copy()
-	# 	lengths[lengths<0]=0
-	# 	t1=(self[[start]]-self[[end]]).ravel()[0]
-	# 	lengths[lengths>t1]=t1
-	# 	node_start=self.p.edges[self.edges[start]].sum()-path[0]
-	# 	node_end=self.p.edges[self.edges[end]].sum()-path[-1]
-	# 	return self.p.path_points(node_start,node_end,lengths+self.dist[start,path[0]])
 	def path(self,start:int,end:int)->NDArray[int]:
 		"""
 		Find path from start to end points as list of node IDs
