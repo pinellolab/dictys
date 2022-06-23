@@ -4,6 +4,7 @@
 .DS_Store
 ._*
 *.log
+.ipynb_checkpoints
 examples/*/data
 examples/*/output
 examples/*/test
