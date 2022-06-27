@@ -38,8 +38,8 @@ KPARAMS_TSSDIST:=
 KPARAMS_LINKING:=
 KPARAMS_BINLINKING:=
 KPARAMS_RECONSTRUCT:=--device $(DEVICE) --nth $(NTH)
-KPARAMS_INDIRECT:=
-KPARAMS_NORMALIZE:=
+KPARAMS_INDIRECT:=--nth $(NTH)
+KPARAMS_NORMALIZE:=--nth $(NTH)
 
 ############################################################
 # Below should not be changed

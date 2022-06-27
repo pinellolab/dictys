@@ -44,7 +44,7 @@ These examples cover context specific and dynamic GRN inference, for joint and s
 * `expression.tsv.gz`: Read count matrix of RNA-profiled cells
 * `genome`: Folder containing reference genome in HOMER format. Copying it from the original location is recommended because HOMER creates preparsed files in this folder.
 * `gff.gff`: GFF file of gene annotations to locate transcription start sites
-* `motifs.motif`: Motif file in HOMER format. Motifs must be named as TF_... where TF is the TF name. Cutoff scores must be valid.
+* `motifs.motif`: Motif file of all motifs in HOMER format. Motifs must be named as TF_... where TF is the TF gene name matching those in `expression.tsv.gz`. [Log odds detection threshold](http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html) must be valid. Motif file can be obtained from different motif databases, e.g. from [HOCOMOCO](https://hocomoco11.autosome.org/downloads_v11) or aggregated from HOMER.
 
 Only needed for context-specific GRN inference:
 * `subsets.txt`: Names of cell subsets/contexts to reconstruct GRNs
