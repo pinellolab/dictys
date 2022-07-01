@@ -335,7 +335,7 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	LogFCs of differential expression
 	"""
 	import numpy as np
-	import matplotlib.ticker as ticker
+	from matplotlib import ticker
 	from adjustText import adjust_text
 	from dictys.net import stat
 	from dictys.plot import panel
@@ -347,8 +347,6 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	pts=np.array([d0.sdict[x] for x in states])
 	stat1_lcpm=stat.lcpm(d0,cut=0)
 	stat1_net=stat.net(d0)
-	stat1_netmask=stat.netmask(d0)
-	stat1_netmask_cpm=stat.netmask_cpm(stat1_netmask,stat1_lcpm)
 	stat1_netbin=stat.fbinarize(stat1_net)
 	stat1_lntarget=stat.flnneighbor(stat1_netbin)
 	stat1_lntarget_abs=stat.flnneighbor(stat1_netbin)
@@ -472,7 +470,6 @@ def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulator
 	"""
 	from functools import partial
 	import numpy as np
-	import pandas as pd
 	from dictys.net.layout import _fruchterman_reingold
 	from dictys.net import stat
 	from dictys.plot import panel
@@ -497,7 +494,7 @@ def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulator
 	ka_edge2.update(ka_edge)
 	p=panel.network(ax,pts,stat1_layout,stat1_subnet_trunc,nodeka={'annotate':annotate,'scatterka':ka_node2,'annotate_err':False},edgeka=ka_edge2)
 	p.init()
-	objs=p.draw(0)
+	p.draw(0)
 	nodes=p.panels[1].get_data(pts)[0][:,:,0].T
 	nodes=pd.DataFrame(nodes,index=stat1_layout.names[0],columns=['x','y'])
 	edges=np.nonzero(stat1_subnetbin.compute(pts)[:,:,0])

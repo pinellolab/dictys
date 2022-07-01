@@ -9,6 +9,7 @@ from __future__ import annotations
 import abc
 from typing import Union,Callable,Tuple,Optional
 import numpy as np
+import numpy.typing as npt
 import dictys.traj
 import dictys.net
 from dictys.utils.numpy import NDArray,ArrayLike
@@ -276,6 +277,9 @@ def fdiff(stat:base,stat_base:base,label:str=None)->base:
 	return s1
 
 def fmasked(stat:base,stat_mask:base,**ka)->base:
+	"""
+	Masking entries to NAN with a boolean mask matrix. False items will be masked.
+	"""
 	def masking(s,m):
 		assert s.shape==m.shape
 		s=s.copy()
@@ -526,33 +530,33 @@ class netmask(sprop):
 	def __init__(self,d:dictys.net.network,*a,varname:str='mask',**ka):
 		super().__init__(d,'es',varname,*a,label='Network edge mask',**ka)
 
-class netmask_cpm(function):
-	def __init__(self,netmask,lcpm,cut_lcpm=1):
-		# netmask1=netmask(d)
-		# lcpm1=lcpm(d,cut=cut_cpm)
-		self.cut_lcpm=cut_lcpm
-		super().__init__(self._function_,[netmask,lcpm],self)
-	def default_names(self):
-		return self.stats[0].default_names()
-	def default_label(self):
-		return 'Network edge mask'
-	@staticmethod
-	def _function_(netmask1,lcpm1,self):
-		n=netmask1.shape[-1]
-		ans=np.zeros([len(x) for x in self.names]+[n],dtype=bool)
-		t1=dict(zip(self.stats[1].names[0],range(len(self.stats[1].names[0]))))
-		#ID in netmask in shape [2,..]
-		t2=[np.nonzero([y[x] in t1 for x in range(len(y))])[0] for y in self.stats[0].names]
-		#ID in lcpm
-		t3=[np.array([t1[y] for y in x[0][x[1]]]) for x in zip(self.stats[0].names,t2)]
-		#ID passed cut in lcpm in shape [2,n,...]
-		t3=[[np.nonzero(np.isfinite(lcpm1[x,y])&(lcpm1[x,y]>self.cut_lcpm))[0] for y in range(n)] for x in t3]
-		# t3=[[x[np.isfinite(lcpm1[x,y])] for y in range(n)] for x in t3]
-		for xi in range(n):
-			ans[np.ix_(t2[0][t3[0][xi]],t2[1][t3[1][xi]],[xi])]=True
-		ans&=netmask1
-		# ans=(ans.transpose(1,0,2)&(netmask1.sum(axis=1)>=self.cut_ntarget)).transpose(1,0,2)
-		return ans
+# class netmask_cpm(function):
+# 	def __init__(self,netmask,lcpm,cut_lcpm=1):
+# 		# netmask1=netmask(d)
+# 		# lcpm1=lcpm(d,cut=cut_cpm)
+# 		self.cut_lcpm=cut_lcpm
+# 		super().__init__(self._function_,[netmask,lcpm],self)
+# 	def default_names(self):
+# 		return self.stats[0].default_names()
+# 	def default_label(self):
+# 		return 'Network edge mask'
+# 	@staticmethod
+# 	def _function_(netmask1,lcpm1,self):
+# 		n=netmask1.shape[-1]
+# 		ans=np.zeros([len(x) for x in self.names]+[n],dtype=bool)
+# 		t1=dict(zip(self.stats[1].names[0],range(len(self.stats[1].names[0]))))
+# 		#ID in netmask in shape [2,..]
+# 		t2=[np.nonzero([y[x] in t1 for x in range(len(y))])[0] for y in self.stats[0].names]
+# 		#ID in lcpm
+# 		t3=[np.array([t1[y] for y in x[0][x[1]]]) for x in zip(self.stats[0].names,t2)]
+# 		#ID passed cut in lcpm in shape [2,n,...]
+# 		t3=[[np.nonzero(np.isfinite(lcpm1[x,y])&(lcpm1[x,y]>self.cut_lcpm))[0] for y in range(n)] for x in t3]
+# 		# t3=[[x[np.isfinite(lcpm1[x,y])] for y in range(n)] for x in t3]
+# 		for xi in range(n):
+# 			ans[np.ix_(t2[0][t3[0][xi]],t2[1][t3[1][xi]],[xi])]=True
+# 		ans&=netmask1
+# 		# ans=(ans.transpose(1,0,2)&(netmask1.sum(axis=1)>=self.cut_ntarget)).transpose(1,0,2)
+# 		return ans
 
 class fcentrality_base(base):
 	"""

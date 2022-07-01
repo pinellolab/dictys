@@ -622,7 +622,7 @@ class dynamic_network(network):
 		"""
 		from dictys.plot.dynamic import fig_regulation_heatmap
 		return fig_regulation_heatmap(self,start,stop,regulations,num=num,dist=dist,ax=ax,cmap=cmap,figsize=figsize,vmax=vmax)
-	def export(self,output_folder:str,start:int,stop:int,num:int,dist:float,sparsities:Union[None,float,list[Union[None,float]]]=None)->None:
+	def export(self,output_folder:str,start:int,stop:int,num:int,dist:float,sparsities:Union[None,float,list[Union[None,float]]]=None)->None:		# pylint: disable=W0221
 		"""
 		Export dynamic network to tsv files. Each time point network is exported to an accordingly named file. If certain contexts do not have exported networks, the sparsity level is too large or too small.
 
