@@ -209,7 +209,7 @@ def homer(fi_bed:str,fi_motif:str,dirio_genome:str,fi_exp:str,fo_bed:str,fo_well
 	fi_bed:	
 		Path of input bed file of regions
 	fi_motif:
-		Path of input motif PWM file in homer format. Motifs must be named in format 'gene_whatever...' where gene matches gene names in fi_exp. Should not contain duplicates.
+		Path of input motif PWM file in homer format. Motifs must be named in format 'gene_...' where gene matches gene names in fi_exp. Should not contain duplicates.
 	dirio_genome:
 		Path of input & output folder or file for reference genome for homer. A separate hard copy is recommended because homer may write into the folder to preparse genome.
 	fi_exp:

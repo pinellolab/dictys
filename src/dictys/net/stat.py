@@ -29,7 +29,6 @@ def _getitem(key,v:NDArray)->NDArray:
 			v=np.take(v,xi,axis=sid)
 	return v
 
-
 class base(metaclass=abc.ABCMeta):
 	"""
 	Abstract base class for stat of network.
@@ -97,26 +96,46 @@ class base(metaclass=abc.ABCMeta):
 		Label as str
 		"""
 	#Arithmetic operations between stats
+	def _operator_(self,op:Callable,other,symbol:str)->base:
+		if isinstance(other,base):
+			return function(op,[self,other],label=f'({self.label}){symbol}({other.label})')
+		return function(op,[self],other,label='({}){}{}'.format(self.label,symbol,str(base)))
 	def __add__(self,other:base)->base:
-		from operator import add
-		if isinstance(other,base):
-			return function(add,[self,other],label=f'({self.label})+({other.label})')
-		raise NotImplementedError
+		from operator import add as op
+		return self._operator_(op,other,'+')
 	def __sub__(self,other:base)->base:
-		from operator import sub
-		if isinstance(other,base):
-			return function(sub,[self,other],label=f'({self.label})-({other.label})')
-		raise NotImplementedError
+		from operator import sub as op
+		return self._operator_(op,other,'-')
 	def __mul__(self,other:base)->base:
-		from operator import mul
-		if isinstance(other,base):
-			return function(mul,[self,other],label=f'({self.label})*({other.label})')
-		raise NotImplementedError
+		from operator import mul as op
+		return self._operator_(op,other,'*')
 	def __truediv__(self,other:base)->base:
-		from operator import truediv
-		if isinstance(other,base):
-			return function(truediv,[self,other],label=f'({self.label})/({other.label})')
-		raise NotImplementedError
+		from operator import truediv as op
+		return self._operator_(op,other,'/')
+	def __lt__(self,other:base)->base:
+		from operator import lt as op
+		return self._operator_(op,other,'<')
+	def __le__(self,other:base)->base:
+		from operator import le as op
+		return self._operator_(op,other,'<=')
+	def __eq__(self,other:base)->base:
+		from operator import eq as op
+		return self._operator_(op,other,'==')
+	def __ne__(self,other:base)->base:
+		from operator import ne as op
+		return self._operator_(op,other,'!=')
+	def __gt__(self,other:base)->base:
+		from operator import gt as op
+		return self._operator_(op,other,'>')
+	def __ge__(self,other:base)->base:
+		from operator import ge as op
+		return self._operator_(op,other,'>=')
+	def __and__(self,other:base)->base:
+		from operator import and_ as op
+		return self._operator_(op,other,'&')
+	def __or__(self,other:base)->base:
+		from operator import or_ as op
+		return self._operator_(op,other,'|')
 	def __getitem__(self,key)->base:
 		"""Subset stat as a substat"""
 		from functools import partial
@@ -171,17 +190,19 @@ class function(base):
 	"""
 	Stat that is a function of other stat(s)
 	"""
-	def __init__(self,func:Callable[Tuple[NDArray,...],NDArray],stats:list[base],isconst:Optional[bool]=None,**ka):
+	def __init__(self,func:Callable[Tuple[NDArray,...],NDArray],stats:list[base],*a,isconst:Optional[bool]=None,**ka):
 		"""
 		Stat that is a function of other stat(s)
-		func:	Function to combine other stats. Should have self.compute=func(*[x.compute(...) for x in stats]).
+		func:	Function to combine other stats. Should have self.compute=func(*[x.compute(...) for x in stats],*a).
 		stats:	List of stats whose final outputs (compute) will be operated on by func.
+		a:		Other arguments passed to func
 		isconst:Overide whether the function stat is a constant. By default, it is constant only if all dependent stats are constant.
 		label:	Label of stat that is shown as coordindate label.
 		"""
 		self.n=len(stats)
 		assert self.n>0
 		self.func=func
+		self.a=a
 		self.stats=stats
 		if isconst is None:
 			isconst=all(hasattr(x,'isconst') and x.isconst for x in stats)
@@ -211,7 +232,7 @@ class function(base):
 		ans=[x.compute(pts) for x in self.stats]
 		assert all(ans[x].ndim==len(self.stats[x].names)+1 for x in range(self.n))
 		assert all(ans[x].shape==tuple([len(y) for y in self.stats[x].names]+[n]) for x in range(self.n))
-		ans2=self.func(*ans)
+		ans2=self.func(*ans,*self.a)
 		assert ans2.shape==tuple([len(x) for x in self.names]+[n])
 		return ans2
 
@@ -253,6 +274,15 @@ def fdiff(stat:base,stat_base:base,label:str=None)->base:
 	else:
 		s1.label=label
 	return s1
+
+def fmasked(stat:base,stat_mask:base,**ka)->base:
+	def masking(s,m):
+		assert s.shape==m.shape
+		s=s.copy()
+		s[~m]=np.nan
+		return s
+	ans=function(masking,[stat,stat_mask],**ka)
+	return ans
 
 class fsmooth(base):
 	"""
@@ -496,6 +526,34 @@ class netmask(sprop):
 	def __init__(self,d:dictys.net.network,*a,varname:str='mask',**ka):
 		super().__init__(d,'es',varname,*a,label='Network edge mask',**ka)
 
+class netmask_cpm(function):
+	def __init__(self,netmask,lcpm,cut_lcpm=1):
+		# netmask1=netmask(d)
+		# lcpm1=lcpm(d,cut=cut_cpm)
+		self.cut_lcpm=cut_lcpm
+		super().__init__(self._function_,[netmask,lcpm],self)
+	def default_names(self):
+		return self.stats[0].default_names()
+	def default_label(self):
+		return 'Network edge mask'
+	@staticmethod
+	def _function_(netmask1,lcpm1,self):
+		n=netmask1.shape[-1]
+		ans=np.zeros([len(x) for x in self.names]+[n],dtype=bool)
+		t1=dict(zip(self.stats[1].names[0],range(len(self.stats[1].names[0]))))
+		#ID in netmask in shape [2,..]
+		t2=[np.nonzero([y[x] in t1 for x in range(len(y))])[0] for y in self.stats[0].names]
+		#ID in lcpm
+		t3=[np.array([t1[y] for y in x[0][x[1]]]) for x in zip(self.stats[0].names,t2)]
+		#ID passed cut in lcpm in shape [2,n,...]
+		t3=[[np.nonzero(np.isfinite(lcpm1[x,y])&(lcpm1[x,y]>self.cut_lcpm))[0] for y in range(n)] for x in t3]
+		# t3=[[x[np.isfinite(lcpm1[x,y])] for y in range(n)] for x in t3]
+		for xi in range(n):
+			ans[np.ix_(t2[0][t3[0][xi]],t2[1][t3[1][xi]],[xi])]=True
+		ans&=netmask1
+		# ans=(ans.transpose(1,0,2)&(netmask1.sum(axis=1)>=self.cut_ntarget)).transpose(1,0,2)
+		return ans
+
 class fcentrality_base(base):
 	"""
 	Base class for centrality measure from network stat
@@ -569,7 +627,7 @@ class fcentrality_degree(base):
 		Computes degree centrality for states or points
 		pts:	Point list instance of dictys.traj.point, or state list as list of int
 		Return:
-		Centrality as numpy.array(shape=(n,len(pts))) . Use nan to hide value or set as invalid.
+		Centrality as numpy.array(shape=(n,len(pts))). Use nan to hide value or set as invalid.
 		"""
 		dynet=self.stat.compute(pts)
 		if self.mask is None:
@@ -610,6 +668,7 @@ def flnneighbor(statnet:base,label:str='Log2 (Outdegree + 1)',constant:float=1,s
 	statnet:	stat for network
 	constant:	Constant to add before log2.
 	statmask:	If set, computes relative log2 outdegree: log2 (outdegree + const) - log2 (max possible outdegree allowd by statmask + const)
+	ka:			Keyword arguments passed to fcentrality_degree
 	"""
 	return function(np.log2,[fcentrality_degree(statnet,statmask=statmask,constant=constant,**ka)],label=label)
 
@@ -617,7 +676,7 @@ class flayout_base(base):
 	"""
 	Compute layout coordinates of nodes from network.
 	"""
-	def __init__(self,statnet:base,layout_func:Callable[NDArray,NDArray],ndim:int=2,pts:dictys.traj.point=None,netscale:float=1,**ka):
+	def __init__(self,statnet:base,layout_func:Callable[NDArray,NDArray],ndim:int=2,pts:Union[dictys.traj.point,npt.NDArray,None]=None,netscale:float=1,**ka):
 		"""
 		Compute layout coordinates of nodes from network.
 		statnet:	stat of network edge weight
@@ -813,6 +872,9 @@ class flayout_base(base):
 			if pts2 is None or len(pts2)!=len(pts):
 				raise ValueError('Property should not be computed at any point. Use only input points or wrap with smooth instead.')
 			pts=pts2
+		else:
+			t1=dict(zip(self.pts,range(len(self.pts))))
+			pts=np.array([t1[x] for x in pts])
 		return self.pos[:,:,pts]
 
 

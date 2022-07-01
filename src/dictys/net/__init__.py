@@ -540,7 +540,7 @@ class dynamic_network(network):
 		dy=pd.DataFrame(stat1_y.compute(pts),index=stat1_y.names[0])
 		dx=pd.Series(stat1_x.compute(pts)[0])
 		return _compute_chars_(dy,dx)
-	def draw_discover(self,start:int,stop:int,num:int=100,dist:float=1.5,ntops:Tuple[int,int,int,int]=[10,10,10,10],mode:str='regulation',sparsity:float=0.01,**ka)->list[Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]]:
+	def draw_discover(self,start:int,stop:int,num:int=100,dist:float=1.5,mode:str='regulation',sparsity:float=0.01,**ka)->list[Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]]:
 		"""
 		Draws TF discovery plots for one branch.
 
@@ -554,8 +554,6 @@ class dynamic_network(network):
 			Number of points from starting to ending nodes to draw
 		dist:
 			Gaussian kernel smoothing distance/length scale between cells. Larger value means stronger smoothing.
-		ntops:
-			Number of top TFs to show for each pattern
 		mode:
 			Mode or measure to discover TFs. Accepts:
 
@@ -566,7 +564,7 @@ class dynamic_network(network):
 		sparsity:
 			The number of edges to regard as positive when binarizing network. Only relevant when mode=='regulation'
 		ka:
-			Keyword arguments passed to dictys.plot.dynamic.draw_discover
+			Keyword arguments passed to dictys.plot.dynamic.fig_discover
 
 		Returns
 		-------
@@ -588,7 +586,7 @@ class dynamic_network(network):
 		stat1_x=stat.pseudotime(self,pts)
 		dy=pd.DataFrame(stat1_y.compute(pts),index=stat1_y.names[0])
 		dx=pd.Series(stat1_x.compute(pts)[0])
-		return fig_discover(dy,dx,ntops,**ka)
+		return fig_discover(dy,dx,**ka)
 	def draw_regulation_heatmap(self,start:int,stop:int,regulations:list[Tuple[str,str]],num:int=100,dist:float=1.5,ax:Optional[matplotlib.axes.Axes]=None,cmap:Union[str,matplotlib.cm.ScalarMappable]='coolwarm',figsize:Tuple[float,float]=(2,0.22),vmax:Optional[float]=None)->Tuple[matplotlib.pyplot.Figure,matplotlib.axes.Axes,matplotlib.cm.ScalarMappable]:
 		"""Draws pseudo-time dependent heatmap of individual regulation strengths.
 	

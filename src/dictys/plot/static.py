@@ -305,7 +305,7 @@ def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:in
 	
 	return (fig,fig2,net)
 
-def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],cut_cpm:float=1,cut_ntarget:float=5,annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka)->pd.DataFrame:
 	"""
 	Draw scatter plot for differential regulation and differential expresison logFCs.
 
@@ -332,30 +332,37 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 
 	Returns
 	-------
-	data:
-		LogFCs of differential expression (data)
-
-
+	LogFCs of differential expression
 	"""
 	import numpy as np
+	import matplotlib.ticker as ticker
 	from adjustText import adjust_text
 	from dictys.net import stat
 	from dictys.plot import panel
 	ka_default={'s':20,'c':([0.3]*3,),'lw':0,'alpha':0.7}
 	ka_default.update(ka)
-	
+	cut_lcpm=np.log2(cut_cpm+1)
+	cut_lntarget=np.log2(cut_ntarget+1)
+
+	pts=np.array([d0.sdict[x] for x in states])
 	stat1_lcpm=stat.lcpm(d0,cut=0)
 	stat1_net=stat.net(d0)
 	stat1_netmask=stat.netmask(d0)
+	stat1_netmask_cpm=stat.netmask_cpm(stat1_netmask,stat1_lcpm)
 	stat1_netbin=stat.fbinarize(stat1_net)
-	stat1_lntarget=stat.flnneighbor(stat1_netbin,statmask=stat1_netmask)
-	pts=np.array([d0.sdict[x] for x in states])
+	stat1_lntarget=stat.flnneighbor(stat1_netbin)
+	stat1_lntarget_abs=stat.flnneighbor(stat1_netbin)
+	stat1_lcpm0=stat.finitial(stat1_lcpm,np.array([pts[0]]))
+	stat1_lntarget_abs0=stat.finitial(stat1_lntarget_abs,np.array([pts[0]]))
+	stat1_lntarget0=stat.finitial(stat1_lntarget,np.array([pts[0]]))
+	stat1_dlcpm=stat.fmasked(stat1_lcpm-stat1_lcpm0,(stat1_lcpm0>=cut_lcpm)|(stat1_lcpm>=cut_lcpm),label='Differential expression logFC')
+	stat1_dlntarget=stat.fmasked(stat1_lntarget-stat1_lntarget0,(stat1_lntarget_abs0>=cut_lntarget)|(stat1_lntarget_abs>=cut_lntarget),label='Differential regulation logFC')
 	
-	p=panel.statscatter(ax,np.array([pts[1]]),
-		stat.fdiff(stat1_lcpm,stat.finitial(stat1_lcpm,np.array([pts[0]])),label='Differential expression logFC'),
-		stat.fdiff(stat1_lntarget,stat.finitial(stat1_lntarget,np.array([pts[0]])),label='Differential regulation logFC'),
-		annotate=annotate,aspect=aspect,lim=lim,scatterka=ka_default
-	)
+	p=panel.statscatter(ax,np.array([pts[1]]),stat1_dlcpm,stat1_dlntarget,annotate=annotate,aspect=aspect,lim=lim,scatterka=ka_default)
+	ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+	ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+	ax.yaxis.set_major_locator(ticker.MultipleLocator(5))
+	ax.yaxis.set_minor_locator(ticker.MultipleLocator(1))
 	p.init()
 	objs=p.draw(0)
 	if len(annotate)>0 and ka_adjust_text is not None:
@@ -366,9 +373,10 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 		ax.plot([0,0],[t1[1][0],t1[1][1]],'k-',alpha=axes_alpha,zorder=0)
 	ans=p.get_data(pts[[1]])[0][:,:,0].T
 	ans=pd.DataFrame(ans,columns=['DE_logFC','DR_logFC'],index=p.names)
+	ans.dropna(inplace=True)
 	return ans
 
-def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={'rotation':90},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
 	"""
 	Draw bar plot for TF rankings based on differential regulation and differential expresison logFCs.
 
@@ -391,9 +399,7 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 
 	Returns
 	-------
-	fig:
-		Drawn figure
-
+	Drawn figure
 	"""
 	import numpy as np
 	import matplotlib.pyplot as plt
@@ -406,6 +412,7 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 	data=data.copy()
 	#Compute mean logFC
 	data['Mean_logFC']=(data['DE_logFC']+data['DR_logFC'])/2
+	data=data[['Mean_logFC','DE_logFC','DR_logFC']]
 	
 	n,m=data.shape
 	fig=plt.figure(figsize=(figsize[0]*n,figsize[1]*m))
@@ -431,7 +438,71 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 			adjust_text(t2,**ka_adjust_text)
 	return fig
 
+def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulators:Optional[list[str]]=None,targets:Optional[list[str]]=None,annotate:Union[str,list[str]]=[],sparsity:float=0.01,ka_node:dict={},ka_edge:dict={})->Tuple[pd.DataFrame,pd.DataFrame]:
+	"""
+	Draw subnetwork with graph representation.
 
+	Parameters
+	----------
+	d0:
+		Input network
+	ax:
+		Axes to draw on
+	state:
+		Names of cell state/type to draw subnetwork
+	regulators:
+		Restricting the subnetwork to outgoing edges from these genes
+	targets:
+		Restricting the subnetwork to incoming edges to these genes
+	annotate:
+		Genes to annotate their locations. Use 'all' to indicate all genes shown.
+	sparsity:
+		Network binarization sparsity (proportion of positive edges)
+	ka_node:
+		Keyword arguments for drawing nodes passed to pyplot.scatter
+	ka_edge:
+		Keyword arguments for drawing edges passed to pyplot.arrow
+
+	Returns
+	-------
+	nodes:
+		DataFrame of node locations
+	edges:
+		DataFrame of edges
+	"""
+	from functools import partial
+	import numpy as np
+	import pandas as pd
+	from dictys.net.layout import _fruchterman_reingold
+	from dictys.net import stat
+	from dictys.plot import panel
+	#Default ploting parameters
+	ka_node2={'s':5,'lw':0}
+	ka_edge2={'lw':0.05}
+
+	pts=np.array([d0.sdict[state]])
+	stat1_net=stat.net(d0)
+	stat1_netbin=stat.fbinarize(stat1_net,sparsity=sparsity)
+	#Subnetwork
+	stat1_subnet,stat1_subnetbin=stat1_net,stat1_netbin
+	if regulators is not None:
+		stat1_subnet,stat1_subnetbin=[x[regulators] for x in [stat1_subnet,stat1_subnetbin]]
+	if targets is not None:
+		stat1_subnet,stat1_subnetbin=[x[:,targets] for x in [stat1_subnet,stat1_subnetbin]]
+	stat1_subnet_trunc=stat.function(lambda *x:x[0]*x[1],[stat1_subnet,stat1_subnetbin],names=stat1_subnet.names)
+	#Spring Layout
+	stat1_layout=stat.flayout_base(stat1_subnet_trunc,partial(_fruchterman_reingold),pts=pts)
+	
+	ka_node2.update(ka_node)
+	ka_edge2.update(ka_edge)
+	p=panel.network(ax,pts,stat1_layout,stat1_subnet_trunc,nodeka={'annotate':annotate,'scatterka':ka_node2,'annotate_err':False},edgeka=ka_edge2)
+	p.init()
+	objs=p.draw(0)
+	nodes=p.panels[1].get_data(pts)[0][:,:,0].T
+	nodes=pd.DataFrame(nodes,index=stat1_layout.names[0],columns=['x','y'])
+	edges=np.nonzero(stat1_subnetbin.compute(pts)[:,:,0])
+	edges=pd.DataFrame([stat1_subnetbin.names[0][edges[0]],stat1_subnetbin.names[1][edges[1]]],index=['Regulator','Target']).T
+	return (nodes,edges)
 
 
 

@@ -673,7 +673,7 @@ class model_ou(model_covariance):
 # Network reconstruction
 ###########################################################################
 
-def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str=',',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:int=1,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
+def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor:str,fo_loss:str,fo_stats:str,lr:float=0.01,lrd:float=0.999,nstep:float=4000,npc:int=0,fi_cov:Optional[str]=None,covs:str=',',model:str='ou',nstep_report:int=100,rseed:int=12345,device:str='cpu',dtype:str='float',loss:str='Trace_ELBO_site',nth:float=1,varmean:str='N_0val',varstd:Optional[str]=None,fo_weightz:Optional[str]=None,scale_lyapunov:float=1E5)->None:
 	"""
 	Reconstruct network with any pyro model in net_pyro_models that is based on covariance_model and has binary masks.
 
@@ -724,7 +724,7 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 	loss:
 		Loss function name
 	nth:
-		Number of threads for CPU usage.
+		Number of threads for CPU usage. When <1, use nth*(detected core count).
 	varmean:
 		Pyro parameter name for mean of effect size
 	varstd:
@@ -892,7 +892,7 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 # Network post processing
 ###########################################################################
 
-def indirect(fi_weight:str,fi_covfactor:str,fo_iweight:str,norm:int=3,fi_meanvar:Optional[str]=None,eigmin:Optional[float]=0.2,eigmax:Optional[float]=1.8,multiplier:float=1.1)->None:
+def indirect(fi_weight:str,fi_covfactor:str,fo_iweight:str,norm:int=3,fi_meanvar:Optional[str]=None,eigmin:Optional[float]=0.2,eigmax:Optional[float]=1.8,multiplier:float=1.1,nth:float=1)->None:
 	"""
 	Computes steady-state indirect effect of gene perturbation from OU process.
 
@@ -921,14 +921,18 @@ def indirect(fi_weight:str,fi_covfactor:str,fo_iweight:str,norm:int=3,fi_meanvar
 		Upper bound of eigenvalue for finding the minimal required extra regularization.
 	multiplier:
 		Step size of strengthening regularization. Larger values provide faster but over-regularization. Must be greater than 1.
+	nth:
+		Number of threads for CPU usage. When <1, use nth*(detected core count).
 	"""
 	import logging
 	import numpy as np
 	import pandas as pd
+	from dictys.utils.parallel import num_threads,autocount
 
 	assert multiplier>1
 	if norm not in {0,1,2,3}:
 		raise ValueError('Invalid norm value. Choose from: 0, 1, 2, 3.')
+	nth=autocount(nth)
 	eigtarget=[eigmin if eigmin is not None else -np.inf,eigmax if eigmax is not None else np.inf]
 	assert eigtarget[0]<1 and eigtarget[1]>1		# pylint: disable=R1716
 
@@ -952,35 +956,36 @@ def indirect(fi_weight:str,fi_covfactor:str,fo_iweight:str,norm:int=3,fi_meanvar
 		assert len(dw.columns)==len(dmv.index) and set(dw.columns)==set(dmv.index)
 		dmv=dmv.loc[dw.columns]
 	
-	#Determine parameters to re-regularize OU process
-	reg=1
-	while True:
-		net1=net0/reg
-		#Compute steady state network
-		beta=np.eye(ns[1])-net1.T
-		betai=np.linalg.inv(beta)
-		dx=betai.T
-		if norm&2 is not None:
-			xtot=np.exp(dmv['mean'].values).sum()
-			dxtot=np.exp(dmv['mean'].values)@betai.T
-			dx=dx-dxtot/xtot
-		t1=np.diag(dx)[:ns[0]]
-		if t1.min()>=eigtarget[0] and t1.max()<=eigtarget[1]:
-			break
-		reg*=multiplier
-	net1=dx*reg
+	with num_threads(nth):
+		#Determine parameters to re-regularize OU process
+		reg=1
+		while True:
+			net1=net0/reg
+			#Compute steady state network
+			beta=np.eye(ns[1])-net1.T
+			betai=np.linalg.inv(beta)
+			dx=betai.T
+			if norm&2 is not None:
+				xtot=np.exp(dmv['mean'].values).sum()
+				dxtot=np.exp(dmv['mean'].values)@betai.T
+				dx=dx-dxtot/xtot
+			t1=np.diag(dx)[:ns[0]]
+			if t1.min()>=eigtarget[0] and t1.max()<=eigtarget[1]:
+				break
+			reg*=multiplier
+		net1=dx*reg
 
-	if norm & 1:
-		#Normalization of effect size of base rate perturbation using effect size on the perturbed TF itself.
-		net1=(net1.T/np.diag(net1)).T
-	net1[np.diag_indices_from(net1)]=0
+		if norm & 1:
+			#Normalization of effect size of base rate perturbation using effect size on the perturbed TF itself.
+			net1=(net1.T/np.diag(net1)).T
+		net1[np.diag_indices_from(net1)]=0
 
 	#Convert to output
 	net1=pd.DataFrame(net1[:ns[0]],index=dw.index,columns=dw.columns)
 	logging.info(f'Writing file {fo_iweight}.')
 	net1.to_csv(fo_iweight,header=True,index=True,sep='\t')
 
-def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:int=3)->None:
+def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:int=3,nth:float=1)->None:
 	"""
 	Normalize edge strength.
 
@@ -1002,12 +1007,18 @@ def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:
 		* 1:	Multiplying edge weight with stochastic noise std of TF
 		
 		* 2:	Dividing edge weight with stochastic noise std of target
+
+	nth:
+		Number of threads for CPU usage. When <1, use nth*(detected core count).
 	"""
 	import logging
 	import numpy as np
 	import pandas as pd
+	from dictys.utils.parallel import num_threads,autocount
+
 	if norm not in {1,2,3}:
 		raise ValueError('Invalid norm value. Choose from: 1, 2, 3.')
+	nth=autocount(nth)
 	#Loading data
 	logging.info(f'Reading file {fi_weight}')
 	dw=pd.read_csv(fi_weight,header=0,index_col=0,sep='\t')
@@ -1025,13 +1036,14 @@ def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:
 	df=df.loc[t1]
 	d=dw.values
 	#Normalize
-	cov=np.sqrt(dmv['var'].values+np.diag(df.values@df.values.T))
-	if norm&1:
-		#Edge weight*std of TF
-		d=(d.T*cov[:dw.shape[0]]).T
-	if norm&2:
-		#Edge weight/std of target
-		d=d/cov
+	with num_threads(nth):
+		cov=np.sqrt(dmv['var'].values+np.diag(df.values@df.values.T))
+		if norm&1:
+			#Edge weight*std of TF
+			d=(d.T*cov[:dw.shape[0]]).T
+		if norm&2:
+			#Edge weight/std of target
+			d=d/cov
 	d=pd.DataFrame(d,index=dw.index,columns=dw.columns)
 	#Saving data
 	logging.info(f'Writing file {fo_nweight}')

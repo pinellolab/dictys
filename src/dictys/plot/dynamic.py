@@ -121,7 +121,7 @@ def _transform_inset_(left:float,bottom:float,width:float,height:float,figsize:f
 
 def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:Optional[pd.Series]=None,
 		cmap:Union[str,matplotlib.cm.ScalarMappable,dict[str,Union[str,matplotlib.cm.ScalarMappable]]]='viridis',
-		curve_expand:Tuple[float,float]=(0,0.1),inset_sides:int=2,inset_lvs:int=2,inset_size:Tuple[float,float]=(0.5,0.3),inset_space0:float=0.15,inset_space:Tuple[float,float]=(0.2,0.3),
+		curve_expand:Tuple[float,float]=(0,0.1),inset_sides:int=2,inset_lvs:int=1,inset_size:Tuple[float,float]=(0.5,0.3),inset_space0:float=0.15,inset_space:Tuple[float,float]=(0.2,0.3),
 		heatmap_height:float=0.1,heatmap_space:float=0.05,line_space:float=0.04,fs:float=8,
 		ka_curve:dict={},ka_heatmap:dict={},
 	)->Tuple[matplotlib.figure.Figure,list,dict[str,matplotlib.cm.ScalarMappable]]:		# noqa: E123
@@ -316,7 +316,7 @@ def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:Optional[pd.Seri
 	ax0.axis('off')
 	return fig,axes,cmap
 
-def fig_discover(dcurve:pd.DataFrame,dtime:pd.DataFrame,ntops:Tuple[int,int,int,int],
+def fig_discover(dcurve:pd.DataFrame,dtime:pd.DataFrame,ntops:Tuple[int,int,int,int]=(8,8,4,4),
 		vrange:dict[str,Union[str,Tuple[float,float]]]={
 			'Terminal logFC':'symmetric',
 			'Switching time':'extreme',
