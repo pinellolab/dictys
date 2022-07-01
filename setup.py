@@ -8,8 +8,7 @@ license="BSD-3-Clause"
 url="https://github.com/pinellolab/"+pkgname
 author="Lingfei Wang, Nikolaos Trasanidis"
 author_email="Lingfei.Wang.github@outlook.com, NTRASANIDIS@mgh.harvard.edu"
-
-
+packages=[pkgname,'docstring2argparse']
 
 def pkg_setup():
 	from setuptools import setup
@@ -40,8 +39,8 @@ def pkg_setup():
 			'Programming Language :: Python :: 3',
 			'Topic :: Scientific/Engineering :: Bio-Informatics'],
 		license=license,
-		packages=[pkgname],
-		package_dir={pkgname:path.join('src',pkgname)},
+		packages=packages,
+		package_dir={x:path.join('src',x) for x in packages},
 	)
 
 pkg_setup()
