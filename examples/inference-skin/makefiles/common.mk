@@ -3,7 +3,7 @@
 # Run environment settings
 ############################################################
 #Which environment to use, corresponding to env_$(ENVMODE).mk file
-ENVMODE=singularity
+ENVMODE=none
 #Maximum number of CPU threads for each job
 #This is only nominated and passed through to other softwares without any guarantee.
 NTH=4
@@ -16,30 +16,30 @@ DEVICE=cuda:0
 ############################################################
 
 #Genome size for Macs2, accept shortcuts like mm & hs
-GENOME_MACS2=hs
+GENOME_MACS2=mm
 #Whether dataset is joint profiling of RNA & ATAC of same cell. Separate measurements of two modalities in different cells: 0. Joint measurements: 1.
-JOINT=0
+JOINT=1
 
 ############################################################
 # Parameters of each step
 ############################################################
 
-PARAMS_QC_READS:=50 10 0 200 100 0
-PARAMS_MACS2:=$(GENOME_MACS2)
-PARAMS_BINLINKING:=20
-KPARAMS_SELECTSC_RNA:=
-KPARAMS_QC_READS:=
-KPARAMS_SELECTSC_ATAC:=
-KPARAMS_MACS2:=--nth $(NTH)
-KPARAMS_WELLINGTON:=--nth $(NTH)
-KPARAMS_HOMER:=--nth 1
-KPARAMS_BINDING:=
-KPARAMS_TSSDIST:=
-KPARAMS_LINKING:=
-KPARAMS_BINLINKING:=
-KPARAMS_RECONSTRUCT:=--device $(DEVICE) --nth $(NTH)
-KPARAMS_INDIRECT:=--nth $(NTH)
-KPARAMS_NORMALIZE:=--nth $(NTH)
+PARAMS-PREPROC-QC_READS:=50 10 0 200 100 0
+PARAMS-CHROMATIN-MACS2:=$(GENOME_MACS2)
+PARAMS-CHROMATIN-BINLINKING:=20
+KPARAMS-PREPROC-SELECTSC_RNA:=
+KPARAMS-PREPROC-QC_READS:=
+KPARAMS-PREPROC-SELECTSC_ATAC:=
+KPARAMS-CHROMATIN-MACS2:=--nth $(NTH)
+KPARAMS-CHROMATIN-WELLINGTON:=--nth $(NTH)
+KPARAMS-CHROMATIN-HOMER:=--nth $(NTH)
+KPARAMS-CHROMATIN-BINDING:=
+KPARAMS-CHROMATIN-TSSDIST:=
+KPARAMS-CHROMATIN-LINKING:=
+KPARAMS-CHROMATIN-BINLINKING:=
+KPARAMS-NETWORK-RECONSTRUCT:=--device $(DEVICE) --nth $(NTH)
+KPARAMS-NETWORK-INDIRECT:=--nth $(NTH)
+KPARAMS-NETWORK-NORMALIZE:=--nth $(NTH)
 
 ############################################################
 # Below should not be changed
@@ -87,7 +87,7 @@ endif
 # Parameters of each step
 ############################################################
 ifneq (a$(wildcard $(DIRI)/blacklist.bed),a)
-KPARAMS_WELLINGTON+=--fi_blacklist $(DIRI)/blacklist.bed
+KPARAMS-CHROMATIN-WELLINGTON+=--fi_blacklist $(DIRI)/blacklist.bed
 endif
 
 ############################################################
@@ -133,7 +133,7 @@ PRODUCT_TMP+=$(foreach c,$(SUBSETS),$(wildcard $(DIRTO)/$(c)/reads.bam.tmp.*.bam
 # Recipes
 ############################################################
 
-.PHONY: cpu gpu subset combine t clean distclean
+.PHONY: cpu gpu subset combine t clean distclean showcmd
 
 combine: $(DPRODUCT)
 
@@ -148,6 +148,9 @@ t:
 	@echo $(PRODUCT_TMP)
 	@echo $(DPRODUCT)
 
+showcmd:
+	@echo $(FULL_CMD) $(ENV_MAIN)
+
 clean:
 	$(RM) $(PRODUCT_CPU) $(PRODUCT_GPU) $(PRODUCT_SUBSET) $(PRODUCT_TMP)
 	
@@ -157,61 +160,61 @@ distclean: clean
 ifeq ($(SHOW_CPU),1)
 
 $(DIRTO)/%/expression0.tsv.gz: $(DIRI)/expression.tsv.gz $(DIRTI)/%/names_rna.txt
-	$(FULL_CMD) $(ENV_MAIN) preproc selects_rna $(KPARAMS_SELECTSC_RNA) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) preproc selects_rna $(KPARAMS-PREPROC-SELECTSC_RNA) $^ $@
 
 $(DIRTO)/%/expression.tsv.gz: $(DIRTI)/%/expression0.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) preproc qc_reads $(KPARAMS_QC_READS) $^ $@ $(PARAMS_QC_READS)
+	$(FULL_CMD) $(ENV_MAIN) preproc qc_reads $(KPARAMS-PREPROC-QC_READS) $^ $@ $(PARAMS-PREPROC-QC_READS)
 
 ifeq ($(JOINT),1)
 $(DIRTO)/%/names_atac.txt: $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/names_atac0.txt
-	$(FULL_CMD) $(ENV_MAIN) preproc selects_atac $(KPARAMS_SELECTS_ATAC) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) preproc selects_atac $(KPARAMS-PREPROC-SELECTS_ATAC) $^ $@
 else
 $(DIRTO)/%/names_atac.txt: $(DIRTI)/%/names_atac0.txt
 	cp $< $@
 endif
 
 $(DIRTO)/%/reads.bam $(DIRTO)/%/reads.bai $(DIRTO)/%/peaks.bed : $(DIRTI)/%/names_atac.txt $(DIRI)/bams
-	$(FULL_CMD) $(ENV_MAIN) chromatin macs2 $(KPARAMS_MACS2) $^ $(DIRTO)/$*/reads.bam $(DIRTO)/$*/reads.bai $(DIRTO)/$*/peaks.bed $(PARAMS_MACS2)
+	$(FULL_CMD) $(ENV_MAIN) chromatin macs2 $(KPARAMS-CHROMATIN-MACS2) $^ $(DIRTO)/$*/reads.bam $(DIRTO)/$*/reads.bai $(DIRTO)/$*/peaks.bed $(PARAMS-CHROMATIN-MACS2)
 	
 $(DIRTO)/%/footprints.bed: $(DIRTI)/%/reads.bam $(DIRTI)/%/reads.bai $(DIRTI)/%/peaks.bed
-	$(FULL_CMD) $(ENV_MAIN) chromatin wellington $(KPARAMS_WELLINGTON) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) chromatin wellington $(KPARAMS-CHROMATIN-WELLINGTON) $^ $@
 
-.NOTPARALLEL: 
 $(DIRTO)/%/motifs.bed $(DIRTO)/%/wellington.tsv.gz $(DIRTO)/%/homer.tsv.gz: $(DIRTI)/%/footprints.bed $(DIRI)/motifs.motif $(DIRI)/genome $(DIRTI)/%/expression.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) chromatin homer $(KPARAMS_HOMER) $^ $(DIRTO)/$*/motifs.bed $(DIRTO)/$*/wellington.tsv.gz $(DIRTO)/$*/homer.tsv.gz
+	$(FULL_CMD) $(ENV_MAIN) chromatin homer $(KPARAMS-CHROMATIN-HOMER) $^ $(DIRTO)/$*/motifs.bed $(DIRTO)/$*/wellington.tsv.gz $(DIRTO)/$*/homer.tsv.gz
 	
 $(DIRTO)/%/binding.tsv.gz: $(DIRTI)/%/wellington.tsv.gz $(DIRTI)/%/homer.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) chromatin binding $(KPARAMS_BINDING) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) chromatin binding $(KPARAMS-CHROMATIN-BINDING) $^ $@
 
 $(DIRTO)/%/tssdist.tsv.gz: $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/wellington.tsv.gz $(DIRI)/gff.gff
-	$(FULL_CMD) $(ENV_MAIN) chromatin tssdist $(KPARAMS_TSSDIST) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) chromatin tssdist $(KPARAMS-CHROMATIN-TSSDIST) $^ $@
 
 $(DIRTO)/%/linking.tsv.gz: $(DIRTI)/%/binding.tsv.gz $(DIRTI)/%/tssdist.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) chromatin linking $(KPARAMS_LINKING) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) chromatin linking $(KPARAMS-CHROMATIN-LINKING) $^ $@
 
 $(DIRTO)/%/binlinking.tsv.gz: $(DIRTI)/%/linking.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) chromatin binlinking $(KPARAMS_BINLINKING) $^ $@ $(PARAMS_BINLINKING)
+	$(FULL_CMD) $(ENV_MAIN) chromatin binlinking $(KPARAMS-CHROMATIN-BINLINKING) $^ $@ $(PARAMS-CHROMATIN-BINLINKING)
 	
 $(DIRTO)/%/net_nweight.tsv.gz: $(DIRTI)/%/net_weight.tsv.gz $(DIRTI)/%/net_meanvar.tsv.gz $(DIRTI)/%/net_covfactor.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) network normalize $(KPARAMS_NORMALIZE) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) network normalize $(KPARAMS-NETWORK-NORMALIZE) $^ $@
 
 $(DIRTO)/%/net_iweight.tsv.gz: $(DIRTI)/%/net_meanvar.tsv.gz $(DIRTI)/%/net_weight.tsv.gz $(DIRTI)/%/net_covfactor.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) network indirect $(KPARAMS_INDIRECT) --fi_meanvar $^ $@
+	$(FULL_CMD) $(ENV_MAIN) network indirect $(KPARAMS-NETWORK-INDIRECT) --fi_meanvar $^ $@
 	
 $(DIRTO)/%/net_inweight.tsv.gz: $(DIRTI)/%/net_iweight.tsv.gz $(DIRTI)/%/net_meanvar.tsv.gz $(DIRTI)/%/net_covfactor.tsv.gz
-	$(FULL_CMD) $(ENV_MAIN) network normalize $(KPARAMS_NORMALIZE) $^ $@
+	$(FULL_CMD) $(ENV_MAIN) network normalize $(KPARAMS-NETWORK-NORMALIZE) $^ $@
 
 endif
 
 ifeq ($(SHOW_PYRO),1)
 
 $(DIRTO)/%/net_weight.tsv.gz $(DIRTO)/%/net_meanvar.tsv.gz $(DIRTO)/%/net_covfactor.tsv.gz $(DIRTO)/%/net_loss.tsv.gz $(DIRTO)/%/net_stats.tsv.gz : $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/binlinking.tsv.gz
-	$(FULL_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS_RECONSTRUCT) $^ $(DIRTO)/$*/net_weight.tsv.gz $(DIRTO)/$*/net_meanvar.tsv.gz $(DIRTO)/$*/net_covfactor.tsv.gz $(DIRTO)/$*/net_loss.tsv.gz $(DIRTO)/$*/net_stats.tsv.gz
+	$(FULL_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS-NETWORK-RECONSTRUCT) $^ $(DIRTO)/$*/net_weight.tsv.gz $(DIRTO)/$*/net_meanvar.tsv.gz $(DIRTO)/$*/net_covfactor.tsv.gz $(DIRTO)/$*/net_loss.tsv.gz $(DIRTO)/$*/net_stats.tsv.gz
 
 endif
 
 $(DPRODUCT):
-	$(FULL_CMD) $(ENV_MAIN) network tofile $(KPARAMS_TOFILE) $(DIRI) $(DIRTI) $(FILE_SUBSET) $@
+	mkdir -p $(dir $(DPRODUCT))
+	$(FULL_CMD) $(ENV_MAIN) network tofile $(KPARAMS-NETWORK-TOFILE) $(DIRI) $(DIRTI) $(FILE_SUBSET) $@
 
 
 

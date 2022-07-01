@@ -1,1 +1,0 @@
-../../granja/makefiles/static.mk

@@ -3,7 +3,7 @@
 # Run environment settings
 ############################################################
 #Which environment to use, corresponding to env_$(ENVMODE).mk file
-ENVMODE=singularity
+ENVMODE=none
 #Maximum number of CPU threads for each job
 #This is only nominated and passed through to other softwares without any guarantee.
 NTH=4
@@ -16,9 +16,9 @@ DEVICE=cuda:0
 ############################################################
 
 #Genome size for Macs2, accept shortcuts like mm & hs
-GENOME_MACS2=hs
+GENOME_MACS2=mm
 #Whether dataset is joint profiling of RNA & ATAC of same cell. Separate measurements of two modalities in different cells: 0. Joint measurements: 1.
-JOINT=0
+JOINT=1
 
 ############################################################
 # Parameters of each step

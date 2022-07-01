@@ -32,7 +32,7 @@ KPARAMS_QC_READS:=
 KPARAMS_SELECTSC_ATAC:=
 KPARAMS_MACS2:=--nth $(NTH)
 KPARAMS_WELLINGTON:=--nth $(NTH)
-KPARAMS_HOMER:=--nth $(NTH)
+KPARAMS_HOMER:=--nth 1
 KPARAMS_BINDING:=
 KPARAMS_TSSDIST:=
 KPARAMS_LINKING:=
@@ -175,8 +175,9 @@ $(DIRTO)/%/reads.bam $(DIRTO)/%/reads.bai $(DIRTO)/%/peaks.bed : $(DIRTI)/%/name
 	
 $(DIRTO)/%/footprints.bed: $(DIRTI)/%/reads.bam $(DIRTI)/%/reads.bai $(DIRTI)/%/peaks.bed
 	$(FULL_CMD) $(ENV_MAIN) chromatin wellington $(KPARAMS_WELLINGTON) $^ $@
-	
-$(DIRTO)/%/motifs.bed $(DIRTO)/%/wellington.tsv.gz $(DIRTO)/%/homer.tsv.gz : $(DIRTI)/%/footprints.bed $(DIRI)/motifs.motif $(DIRI)/genome $(DIRTI)/%/expression.tsv.gz
+
+.NOTPARALLEL: 
+$(DIRTO)/%/motifs.bed $(DIRTO)/%/wellington.tsv.gz $(DIRTO)/%/homer.tsv.gz: $(DIRTI)/%/footprints.bed $(DIRI)/motifs.motif $(DIRI)/genome $(DIRTI)/%/expression.tsv.gz
 	$(FULL_CMD) $(ENV_MAIN) chromatin homer $(KPARAMS_HOMER) $^ $(DIRTO)/$*/motifs.bed $(DIRTO)/$*/wellington.tsv.gz $(DIRTO)/$*/homer.tsv.gz
 	
 $(DIRTO)/%/binding.tsv.gz: $(DIRTI)/%/wellington.tsv.gz $(DIRTI)/%/homer.tsv.gz
