@@ -15,7 +15,7 @@ To install Dictys with Anaconda:
 .. code-block::
 
 	#Install non-pypi dependencies
-	conda create -y -n dictys_env_name -c pytorch pytorch torchvision torchaudio cudatoolkit=11.3 bedtools homer samtools macs2
+	conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch pytorch torchvision torchaudio cudatoolkit=11.3 bedtools homer samtools macs2
 	. activate dictys_env_name
 	#Install pypi dependencies
 	pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter
