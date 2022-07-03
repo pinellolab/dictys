@@ -6,7 +6,7 @@ Dictys
 
 TBA: copy abstract.
 
-.. image:: Dictys overview.png
+.. image:: images/Dictys_overview.png
    :width: 600
 
 
