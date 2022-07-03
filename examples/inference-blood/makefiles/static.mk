@@ -12,6 +12,7 @@ KPARAMS-NETWORK-TOFILE:=
 DIRT:=tmp_static
 DPRODUCT=$(DIRO)/static.h5
 
+include $(dir $(lastword $(MAKEFILE_LIST)))config.mk
 include $(dir $(lastword $(MAKEFILE_LIST)))common.mk
 
 ifeq ($(SHOW_CPU),1)

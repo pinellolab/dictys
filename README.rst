@@ -33,7 +33,7 @@ Dictys contains two major functions: network inference and network analysis. Net
 
 Issues
 ==========================
-Pease raise an issue on `github <https://github.com/pinellolab/dictys/issues/new>`_.
+Please raise an issue on `github <https://github.com/pinellolab/dictys/issues/new>`_.
 
 References
 ==========================

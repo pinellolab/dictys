@@ -347,7 +347,7 @@ def binding(fi_wellington:str,fi_homer:str,fo_bind:str,cuth:float=0,cutw:float=0
 	logging.info(f'Writing file {fo_bind}')
 	ans.to_csv(fo_bind,index=False,header=True,sep='\t')
 
-def tssdist(fi_exp:str,fi_wellington:str,fi_gff:str,fo_dist:str,cut:int=500000,nmin:int=1,nmax:int=10000000)->None:
+def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,nmin:int=1,nmax:int=10000000)->None:
 	"""
 	Annotating TF bond regions to target genes based on distance to TSS.
 
@@ -357,8 +357,8 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_gff:str,fo_dist:str,cut:int=500000,n
 		Path of input expression matrix file in tsv format to obtain gene names
 	fi_wellington:
 		Path of input tsv file of wellington scores to obtain DNA regions
-	fi_gff:
-		Path of input GFF file that annotates gene regions with strand info
+	fi_tss:
+		Path of input bed file for gene region and strand
 	fo_dist:
 		Path of output tsv file of distance from TF-bond regions to TSS
 	cut:
@@ -385,25 +385,28 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_gff:str,fo_dist:str,cut:int=500000,n
 	peaks=pd.DataFrame([x.split(':') for x in namep],index=None,columns=None)
 	peaks=BedTool(peaks.to_csv(None,header=False,index=False,sep='\t'),from_string=True)
 	#Produce target gene bed file
-	logging.info(f'Reading file {fi_gff}')
-	genes=pd.read_csv(fi_gff,header=None,index_col=None,sep='\t')
+	logging.info(f'Reading file {fi_tss}')
+	genes=pd.read_csv(fi_tss,header=None,index_col=None,sep='\t')
 	t1=set(namet)
 	#Shrink to genes showed up
-	genes=genes[genes[1].isin(t1)]
+	genes=genes[genes[3].isin(t1)]
+	if genes.shape[1]<5:
+		genes[4]='.'
 	if genes.shape[1]<6:
-		genes[6]='+'
+		genes[5]='+'
 		signed=False
 	else:
 		signed=True
 	#Simplify to bed file
-	genes=genes[[0,3,4,6,2]].copy()
-	genes.rename({genes.columns[x]:x for x in range(len(genes.columns))},axis=1,inplace=True)
-	assert genes[3].isin({'+','-'}).all()
-	t1=genes.apply(lambda x:x[1] if x[3]=='+' else x[2],axis=1)
+	# genes=genes[[0,3,4,6,2]].copy()
+	# genes.rename({genes.columns[x]:x for x in range(len(genes.columns))},axis=1,inplace=True)
+	assert genes[5].isin({'+','-'}).all()
+	genes=genes.copy()
+	t1=genes.apply(lambda x:x[1] if x[5]=='+' else x[2],axis=1)
 	genes[1]=t1
 	genes[2]=t1
 	genes.drop_duplicates(inplace=True)
-	assert len(genes[4].unique())==len(genes)
+	assert len(genes[3].unique())==len(genes)
 	genes=genes.to_csv(None,sep='\t',header=False,index=False)
 	genes=BedTool(genes,from_string=True)
 
@@ -417,14 +420,14 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_gff:str,fo_dist:str,cut:int=500000,n
 		raise RuntimeError('Too few region-target relations found: {}'.format(len(ans2)))
 	if len(ans2)>nmax:
 		raise RuntimeError('Too many region-target relations found: {}'.format(len(ans2)))
-	assert ans2[3].isin({'+','-'}).all()
-	if signed and ans2[3].size>=100 and np.abs((ans2[3]=='+').mean()-0.5)>0.4:
+	assert ans2[5].isin({'+','-'}).all()
+	if signed and ans2[5].size>=100 and np.abs((ans2[5]=='+').mean()-0.5)>0.4:
 		logging.warning('Heavily unbalanced strand found.')
 	#Simplify output
-	ans2['region']=ans2.apply(lambda x:'{}:{}:{}'.format(x[5],x[6],x[7]),axis=1)
-	ans2['target']=ans2[4]
-	ans2['dist1']=ans2.apply(lambda x:x[6]-x[1] if x[3]=='+' else x[2]-x[6],axis=1)
-	ans2['dist2']=ans2.apply(lambda x:x[7]-x[1] if x[3]=='+' else x[2]-x[7],axis=1)
+	ans2['region']=ans2.apply(lambda x:'{}:{}:{}'.format(x[6],x[7],x[8]),axis=1)
+	ans2['target']=ans2[3]
+	ans2['dist1']=ans2.apply(lambda x:x[7]-x[1] if x[5]=='+' else x[2]-x[7],axis=1)
+	ans2['dist2']=ans2.apply(lambda x:x[8]-x[1] if x[5]=='+' else x[2]-x[8],axis=1)
 	t1=np.array([ans2['dist1'].values,ans2['dist2'].values])
 	t2=t1[np.argmin(np.abs(t1),axis=0),np.arange(t1.shape[1])]
 	t2[np.sign(t1).prod(axis=0)<=0]=0
