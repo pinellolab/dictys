@@ -5,7 +5,8 @@ Dictys
    :target: https://pypi.python.org/pypi/dictys
 
 TBA: copy abstract.
-.. image:: images/Dictys_overview.png
+
+.. image:: images/logo.png
    :width: 20
    
 .. image:: images/Dictys_overview.png
