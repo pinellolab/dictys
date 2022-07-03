@@ -8,7 +8,7 @@ license="BSD-3-Clause"
 url="https://github.com/pinellolab/"+pkgname
 author="Lingfei Wang, Nikolaos Trasanidis"
 author_email="Lingfei.Wang.github@outlook.com, NTRASANIDIS@mgh.harvard.edu"
-packages=[pkgname,'docstring2argparse']
+packages=['docstring2argparse','dictys','dictys.net','dictys.utils','dictys.plot']
 
 def pkg_setup():
 	from setuptools import setup
@@ -27,7 +27,6 @@ def pkg_setup():
 		# download_url=url,
 		scripts=['bin/dictys'],
 		# include_package_data=True,
-		# install_requires='numpy,scipy,pandas,h5py,networkx'.split(','),
 		install_requires='numpy pandas docutils h5py pyro-ppl scipy networkx pybedtools pyDNase threadpoolctl joblib torch matplotlib'.split(' '),
 		classifiers=['Development Status :: 2 - Pre-Alpha ',
 			'License :: OSI Approved :: BSD License',
@@ -41,6 +40,7 @@ def pkg_setup():
 		license=license,
 		packages=packages,
 		package_dir={x:path.join('src',x) for x in packages},
+		package_data={'dictys':['scripts/*.'+x for x in 'sh,py'.split(',')]}
 	)
 
 pkg_setup()
