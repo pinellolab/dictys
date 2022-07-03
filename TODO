@@ -1,3 +1,5 @@
+Add scripts for bam split (/data/pinello/PROJECTS/2020_08_dynet/dynet1/lingfei/00-raw/prog/atac/split-per-cell) and read count conversion.
+
 White list mode and white list ka for command line.
 
 Example for traj inf on granja.
