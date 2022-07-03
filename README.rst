@@ -6,6 +6,11 @@ Dictys
 
 TBA: copy abstract.
 
+Overview
+.. image:: Dictys overview.png
+   :width: 600
+
+
 Installation
 =============
 Dictys depends on multiple softwares. Creating an `Anaconda <https://www.anaconda.com/>`_ environment can resolve the dependencies easily. We also provide docker and singularity containers (WHERE?). Dictys can be installed from `PyPI <https://pypi.org/project/dictys>`_ with: ``pip install dictys``, but it does not auto-resolve some dependencies.
