@@ -39,7 +39,7 @@ def pkg_setup():
 			'Topic :: Scientific/Engineering :: Bio-Informatics'],
 		license=license,
 		packages=packages,
-		package_dir={x:path.join('src',x) for x in packages},
+		package_dir={x:path.join('src',*x.split('.')) for x in packages},
 		package_data={'dictys':['scripts/*.'+x for x in 'sh,py'.split(',')]}
 	)
 
