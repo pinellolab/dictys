@@ -7,7 +7,7 @@ Dictys
 TBA: copy abstract.
 
 .. image:: images/logo.png
-   :width: 250
+   :width: 180
    
 .. image:: images/Dictys_overview.png
    :width: 1000
