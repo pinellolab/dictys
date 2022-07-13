@@ -1,0 +1,12 @@
+**.pyc
+**/__pycache__
+**/._*
+.DS_Store
+._*
+*.log
+.ipynb_checkpoints
+examples/*/data
+examples/*/output
+examples/*/test
+examples/*/tmp_static
+examples/*/tmp_dynamic
