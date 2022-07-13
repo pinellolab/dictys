@@ -31,6 +31,10 @@ To install Dictys **with CPU computation** from Anaconda:
 	. activate dictys_env_name
 	#Install pypi dependencies
 	pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter
+	#Correcting matplotlib version due to pyDNase dependency
+	pip uninstall -y pyDNase
+	pip install -U matplotlib
+	pip install --no-deps pyDNase 
 	#Install Dictys
 	pip install git+https://github.com/pinellolab/dictys.git
 	conda deactivate

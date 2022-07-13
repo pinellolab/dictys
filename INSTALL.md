@@ -7,11 +7,15 @@ Dictys relies on `pytorch` for GPU capacity. To enable GPU support, simply insta
 
 	#Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2
 	#Replace cudatoolkit version with what's supported by your driver. See https://stackoverflow.com/questions/9727688/how-to-get-the-cuda-version.
-	conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch pytorch torchvision torchaudio cudatoolkit=11.1 bedtools homer samtools macs2
+	conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch pytorch torchvision torchaudio cudatoolkit=11.3 bedtools homer samtools macs2
 	#You may need "conda activate ..." instead
 	. activate dictys_env_name
 	#Install pypi dependencies
 	pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter
+	#Correcting matplotlib version due to pyDNase dependency
+	pip uninstall -y pyDNase
+	pip install -U matplotlib
+	pip install --no-deps pyDNase
 	#Install Dictys
 	pip install git+https://github.com/pinellolab/dictys.git
 	conda deactivate
@@ -22,6 +26,7 @@ Dictys depends on several softwares. There are often multiple methods to install
 * For `bedtools`, `homer`, `samtools`, and `macs2`, you can install them through `conda`, `module add`, or manually.
 * For `pytorch`, you can use any [supported method](https://pytorch.org/get-started/locally/) for your computing platform.
 * For other dependencies, you can install with `pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter`. This is based on [pyro](https://pyro.ai) 1.6.0.
+* For upgrading `matplotlib`, you need to uninstall `pyDNase` first, upgrade `matplotlib`, and then reinstall `pyDNase` ignoring its dependencies.
 * For `dictys`, you can install with `pip install git+https://github.com/pinellolab/dictys.git`
 
 You can also use precompiled docker or singularity containers (TBA).
