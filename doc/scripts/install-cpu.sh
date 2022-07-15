@@ -1,7 +1,8 @@
-set -e -o pipefail
+set -ex -o pipefail
+if [ "a$PYTHONVERSION_CONDA" == "a" ]; then exit 1; fi
 
 #Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2, ffmpeg
-conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch pytorch torchvision torchaudio cpuonly bedtools homer samtools macs2 ffmpeg
+conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch python=$PYTHONVERSION_CONDA pytorch torchvision torchaudio cpuonly bedtools homer samtools macs2 ffmpeg
 #You may need "conda activate ..." instead
 . activate dictys_env_name
 #Install pypi dependencies

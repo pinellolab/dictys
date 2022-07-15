@@ -12,12 +12,12 @@ Dictys relies on `pytorch` for GPU capacity. To enable GPU support, simply insta
 	. activate dictys_env_name
 	#Install pypi dependencies
 	pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter
+	#Install Dictys
+	pip install git+https://github.com/pinellolab/dictys.git
 	#Correcting matplotlib version due to pyDNase dependency
 	pip uninstall -y pyDNase
 	pip install -U matplotlib
 	pip install --no-deps pyDNase
-	#Install Dictys
-	pip install git+https://github.com/pinellolab/dictys.git
 	conda deactivate
 
 ## Custom installation
@@ -34,4 +34,3 @@ You can also use precompiled docker or singularity containers (TBA).
 ## Issues
 
 Please raise an issue on [github](https://github.com/pinellolab/dictys/issues/new) if none of the above works.
-
