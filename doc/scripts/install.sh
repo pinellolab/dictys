@@ -1,4 +1,4 @@
-set -e -o pipefaile
+set -e -o pipefail
 
 #Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2, ffmpeg
 conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch pytorch torchvision torchaudio cpuonly bedtools homer samtools macs2 ffmpeg
