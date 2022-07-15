@@ -31,12 +31,12 @@ To install Dictys **with CPU computation** from Anaconda:
 	. activate dictys_env_name
 	#Install pypi dependencies
 	pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter
+	#Install Dictys
+	pip install git+https://github.com/pinellolab/dictys.git
 	#Correcting matplotlib version due to pyDNase dependency
 	pip uninstall -y pyDNase
 	pip install -U matplotlib
 	pip install --no-deps pyDNase 
-	#Install Dictys
-	pip install git+https://github.com/pinellolab/dictys.git
 	conda deactivate
 
 For more advanced installation such as GPU support, see `INSTALL.md`. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
