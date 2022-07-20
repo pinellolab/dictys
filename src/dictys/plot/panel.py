@@ -6,14 +6,15 @@ Visualization panels of networks
 """
 
 import abc
-from typing import Union,Optional
+from typing import Union,Optional,Callable,Any,Tuple
+import dictys
 from dictys.net import stat
 
 class base(metaclass=abc.ABCMeta):
 	"""
 	Abstract base class for dynamic network plotting panel
 	"""
-	def __init__(self,ax,pts):
+	def __init__(self,ax,pts:dictys.traj.point):
 		"""
 		Base class to visualize single panel for dynamic network
 
@@ -21,7 +22,7 @@ class base(metaclass=abc.ABCMeta):
 		----------
 		ax:		matplotlib.pyplot.axes
 			Axes to draw on
-		pts:	dictys.traj.point
+		pts:
 			Points of path to visualize network
 		"""
 		self.ax=ax
@@ -57,7 +58,7 @@ class overlay(base):
 	"""
 	Overlay class that draws several panel classes in the same panel.
 	"""
-	def __init__(self,ax,pts,panels):
+	def __init__(self,ax,pts:dictys.traj.point,panels:list[base]):
 		"""
 		Overlay class that draws several panel classes in the same panel.
 
@@ -65,9 +66,9 @@ class overlay(base):
 		----------
 		ax:		matplotlib.pyplot.axes
 			Axes to draw on
-		pts:	dictys.traj.point
+		pts:
 			Points of path to visualize network
-		panesl:	list of dictys.panel.base
+		panels:
 			Panel objects to draw on the same panel
 		"""
 		assert len(panels)>=1
@@ -78,7 +79,7 @@ class overlay(base):
 		import itertools
 		objs=[x.init() for x in self.panels]
 		return list(itertools.chain.from_iterable(objs))
-	def draw(self,t,**ka):
+	def draw(self,t:int,**ka):
 		import itertools
 		objs=[x.draw(t,**ka) for x in self.panels]
 		return list(itertools.chain.from_iterable(objs))
@@ -87,10 +88,10 @@ class statscatter(base):
 	"""
 	Draw scatter plots from two stats.
 	"""
-	def __init__(self,ax,pts,statx,staty,names:Optional[list[str]]=None,annotate:Union[str,list[str],dict[str,str]]=[],
+	def __init__(self,ax,pts:dictys.traj.point,statx:stat.base,staty:stat.base,names:Optional[list[str]]=None,annotate:Union[str,list[str],dict[str,str]]=[],
 			annotate_err:bool=True,
-			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict={},statka:dict={},
-			staty2=None,scatterka2:dict={},aspect:Optional[float]=None):
+			lim:Union[list[Union[tuple[float,float]]],set[str],None]=set(),scatterka:dict[str,Any]={},statka:dict[str,Any]={},
+			staty2:Optional[stat.base]=None,scatterka2:dict[str,Any]={},aspect:Optional[float]=None):
 		"""
 		Draw scatter plots from two stats.
 
@@ -98,19 +99,19 @@ class statscatter(base):
 		----------
 		ax:				matplotlib.pyplot.axes
 			Axes to draw on
-		pts:			dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statx:			dictys.net.stat.base
+		statx:
 			Stat instance for X axis. Must be one-dimensional.
-		staty:			dictys.net.stat.base
+		staty:
 			Stat instance for Y axis. Must be one-dimensional.
-		names:			list of str or None
+		names:
 			Names to show. Defaults to all.
-		annotate:		list of str or {str:str}
+		annotate:
 			Names to annotate on scatter plot. Use 'all' for all names. Use dict to rename annotation as {name:annotation}.
-		annotate_err:	bool
+		annotate_err:
 			Whether to report error if any node to annotate is not found.
-		lim:			Union
+		lim:
 			Limits of X and Y axes. Takes several formats.
 			* [[xmin,xmax],[ymin,ymax],[y2min,y2max] if y2 is present]. This exactly specifies lims. Each [min,max] can be None to be determined automatically with `default_lims` method of each stat.
 
@@ -122,13 +123,13 @@ class statscatter(base):
 
 				- 'min': All axes use the min of min limits of all axes. If unset, all axes use their respective min limits.
 
-		scatterka:		dict
+		scatterka:
 			Keyword arguments for ax.scatter.
-		statka:			dict
+		statka:
 			Keyword arguments for ax.scatter whose values are stats. Keys must be settable in matplotlib.collections.PathCollection.set.
-		staty2:			dictys.net.stat.base or None
+		staty2:
 			Stat instance for a second Y axis on right side. Must be one-dimensional. Defaults to staty2=None to disable.
-		scatterka2:		dict
+		scatterka2:
 			Keyword arguments for ax.scatter for second Y.
 		"""
 		import numpy as np
@@ -226,7 +227,7 @@ class statscatter(base):
 					if self.lim[xi][xj] is not None:
 						lim[xi,xj]=self.lim[xi,xj]
 		return lim		
-	def init(self):
+	def init(self)->list:
 		lim=self.autolimits()
 		self.objs=[]
 		#Draw initial panel
@@ -252,15 +253,15 @@ class statscatter(base):
 			self.ax.set_aspect(self.aspect)
 		ans=self.draw(0,force=True)
 		return ans
-	def get_data(self,pts,force=False):
+	def get_data(self,pts:dictys.traj.point,force:bool=False):
 		"""
 		Computes data needed for drawing.
 
 		Parameters
 		----------
-		pts:		dictys.traj.point
+		pts:
 			Points to get data for
-		force:		bool
+		force:
 			Whether to force getting data even if the stats are constant over time.
 
 		Returns
@@ -288,7 +289,7 @@ class statscatter(base):
 		if data is not None:
 			assert all(x.shape[0]==data[0].shape[0] for x in param.values())
 		return [data,param]
-	def draw(self,t,force=False):		# pylint: disable=W0221
+	def draw(self,t:int,force:bool=False):		# pylint: disable=W0221
 		"""Draws the changing part of given frame at given trajectory location.
 
 		Parameters
@@ -337,7 +338,7 @@ class statplot_static(statscatter):
 	"""
 	Draw constant line plots from two stats. This is a static plot and no redraw takes place.
 	"""
-	def __init__(self,ax,pts,statx,staty,colors,annotate=[],plotka={},plotka2={},**ka):
+	def __init__(self,ax,pts:dictys.traj.point,statx:stat.base,staty:stat.base,colors,plotka:dict[str,Any]={},plotka2:dict[str,Any]={},**ka):
 		"""
 		Draw constant line plots from two stats. This is a static plot and no redraw takes place.
 
@@ -345,21 +346,19 @@ class statplot_static(statscatter):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statx:		dictys.net.stat.base
+		statx:
 			Stat instance for X axis. Must be one-dimensional. Each entry is a line to draw.
-		staty:		dictys.net.stat.base
+		staty:
 			Stat instance for Y axis. Must be one-dimensional. Each entry is a line to draw.
 		colors:		list
 			List of colors for each line in matplotlib format.
-		annotate:	list of str or {str:str}
-			Names to annotate on scatter plot. Use 'all' for all names. Use dict to rename annotation as {name:annotation}.
-		plotka:	dict
+		plotka:
 			Keyword arguments for ax.plot.
-		plotka2:	dict
+		plotka2:
 			Keyword arguments for ax.plot for second Y.
-		ka:			dict
+		ka:
 			Keyword arguments in the same format as in dictys.plot.panel.statscatter.
 		"""
 		super().__init__(ax,pts,statx,staty,**ka)
@@ -407,7 +406,7 @@ class statplot(overlay):
 	"""
 	Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
 	"""
-	def __init__(self,ax,pts,statx,staty,names,cmap='tab10',pointer=True,plotka={},pointerka={'s':20,'zorder':99}):
+	def __init__(self,ax,pts:dictys.traj.point,statx:stat.base,staty:stat.base,names:Optional[list[str]],cmap='tab10',pointer:bool=True,plotka:dict[str,Any]={},pointerka:dict[str,Any]={'s':20,'zorder':99}):
 		"""
 		Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
 
@@ -415,21 +414,21 @@ class statplot(overlay):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statx:		dictys.net.stat.base
+		statx:
 			Stat instance for X axis. Must be one-dimensional.
-		staty:		dictys.net.stat.base
+		staty:
 			Stat instance for Y axis. Must be one-dimensional.
-		names:		list of str or None
+		names:
 			Names to show. Defaults to all.
 		cmap:		str or numpy.ndarray(shape=(len(names),3 or 4))
 			Colormap in matplotlib format for different names
-		pointer:	bool
+		pointer:
 			Whether to show the current scatter plot as pointers
-		plotka:	dict
+		plotka:
 			Keyword arguments for ax.plot.
-		pointerka:	dict
+		pointerka:
 			Keyword arguments for ax.scatter for pointers.
 		"""
 		import numpy as np
@@ -451,7 +450,9 @@ class cellscatter_scatter(statscatter):
 	"""
 	Draw scatter plots of cells.
 	"""
-	def __init__(self,ax,d,pts,statx,staty,statw,cmap='tab10',color='type',alphas=[0.05,0.5],legend_loc=[1.1,1],legend_ka={},aspect=1,**ka):
+	def __init__(self,ax,d:dictys.net.network,pts:dictys.traj.point,statx:stat.base,staty:stat.base,statw:stat.base,
+		cmap='tab10',color:str='type',alphas:Tuple[float,float]=(0.05,0.5),legend_loc:Tuple[float,float]=(1.1,1),
+		legend_ka:dict[str,Any]={},aspect:float=1,**ka):
 		"""
 		Draw scatter plots of cells.
 
@@ -459,25 +460,29 @@ class cellscatter_scatter(statscatter):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		d:
+			Dynamic network
+		pts:
 			Points of path to visualize network
-		statx:		dictys.net.stat.base
+		statx:
 			Stat instance for X axis with shape=(n_cell)
-		staty:		dictys.net.stat.base
+		staty:
 			Stat instance for Y axis with shape=(n_cell)
-		statw:		dictys.net.stat.base
+		statw:
 			Stat instance for cell weights with shape=(n_cell)
 		cmap:		str or numpy.ndarray(shape=(len(names),3 or 4))
 			Colormap in matplotlib format for different names
-		color:		str
+		color:
 			Cell property name to use as categorical coloring
-		alphas:		(float,float)
+		alphas:
 			Alpha/transparency for cell weight=0 and 1 respectively.
-		legend_loc:	(float,float)
+		legend_loc:
 			Relative location of cell type legend
-		legend_ka:	dict
+		legend_ka:
 			Keyword arguments for drawing cell type legend with dictys.plot.colorlegend
-		ka:			dict
+		aspect:
+			Aspect ratio
+		ka:
 			Keyword arguments scatterka for drawing cells with dictys.plot.panel.statscatter
 		"""
 		import numpy as np
@@ -517,7 +522,7 @@ class cellscatter_pointer(statscatter):
 	"""
 	Draw pointer for average cell location.
 	"""
-	def __init__(self,ax,pts,statx,staty,statw,**ka):
+	def __init__(self,ax,pts:dictys.traj.point,statx:stat.base,staty:stat.base,statw:stat.base,**ka):
 		"""
 		Draw pointer for average cell location.
 
@@ -525,15 +530,15 @@ class cellscatter_pointer(statscatter):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statx:		dictys.net.stat.base
+		statx:
 			Stat instance for X axis with shape=(n_cell)
-		staty:		dictys.net.stat.base
+		staty:
 			Stat instance for Y axis with shape=(n_cell)
-		statw:		dictys.net.stat.base
+		statw:
 			Stat instance for cell weights with shape=(n_cell)
-		ka:			dict
+		ka:
 			Keyword arguments scatterka for drawing average cell pointer with dictys.plot.panel.statscatter
 		"""
 		statx,staty=[stat.function(lambda *x:((x[0]*x[1]).sum(axis=0)/x[1].sum(axis=0)).reshape(1,-1),[y,statw],names=[['pointer']]) for y in [statx,staty]]
@@ -543,7 +548,7 @@ class cellscatter(overlay):
 	"""
 	Draws overlay plot of scatter plots of cells and average cell pointer.
 	"""
-	def __init__(self,ax,d,pts,fsmooth,pointer=True,scatterka={'s':2,'lw':0},pointerka={'color':'k','s':20,'zorder':99}):
+	def __init__(self,ax,d:dictys.net.network,pts:dictys.traj.point,fsmooth,pointer:bool=True,scatterka:dict[str,Any]={'s':2,'lw':0},pointerka:dict[str,Any]={'color':'k','s':20,'zorder':99}):
 		"""
 		Draws overlay plot of scatter plots of cells and average cell pointer.
 
@@ -551,17 +556,17 @@ class cellscatter(overlay):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		d:			dictys.net.network
+		d:			
 			Dynamic network object to draw cells
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
 		fsmooth:	functools.partial
 			Partial function that produces Gaussian kernel smoothened statistic on an original statistic as its parameter
-		pointer:	bool
+		pointer:
 			Whether to show the current scatter plot as pointers
-		scatterka:	dict
+		scatterka:
 			Keyword arguments for ax.scatter for cells.
-		pointerka:	dict
+		pointerka:
 			Keyword arguments for ax.scatter for pointers.
 		"""
 		#X&Y coordindates
@@ -581,7 +586,8 @@ class statheatmap(base):
 	"""
 	Draw dynamic heatmap for a single stat.
 	"""
-	def __init__(self,ax,pts,stat1,names=None,annotate=[None,None],lim=None,cmap_sym=True,**ka):
+	def __init__(self,ax,pts:dictys.traj.point,stat1:stat.base,names:Optional[Tuple[Optional[list[str]],Optional[list[str]]]]=None,
+		annotate:Optional[Tuple[Optional[list[str]],Optional[list[str]]]]=None,lim:Optional[Tuple[float,float]]=None,cmap_sym:bool=True,**ka):
 		"""
 		Draw dynamic heatmap for a single stat.
 
@@ -589,19 +595,19 @@ class statheatmap(base):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		stat1:		dictys.net.stat.base
+		stat1:
 			Stat instance to draw. Must be two-dimensional.
-		names:		[list of str,list of str] or None
+		names:
 			Names to show. Defaults to all.
-		annotate:	[list of str,list of str] or None
+		annotate:
 			Names to annotate. Defaults to all.
-		lim:		[float,float]
+		lim:
 			Limits in [min,xmax] for coloring. Defaults to min and max values.
-		cmap_sym:	bool
+		cmap_sym:
 			Whether to use symmetric lim if lim is unspecified.
-		ka:	dict
+		ka:
 			Keyword arguments for ax.imshow.
 		"""
 		import numpy as np
@@ -622,6 +628,8 @@ class statheatmap(base):
 		self.names=names
 		self.namesdict=[dict(zip(x,range(len(x)))) for x in self.names]
 		#Rows & columns to annotate
+		if annotate is None:
+			annotate=[None,None]
 		assert len(annotate)==2
 		annotate=list(annotate)
 		for xi in range(2):
@@ -638,21 +646,15 @@ class statheatmap(base):
 			if cmap_sym:
 				lim=np.abs(lim).max()
 				lim=[-lim,lim]
-		self.lim=lim
+		self.lim=list(lim)
 		self.ka=ka
-		#Genes to annotate. Defaults to none
-		# assert all([x in self.nametdict for x in g_ann])
-		# if type(g_ann) is dict:
-		# 	self.g_ann={self.nametdict[x]:y for x,y in g_ann.items()}
-		# else:
-		# 	self.g_ann={self.nametdict[x]:x for x in g_ann}
-	def get_data(self,pts):
+	def get_data(self,pts:dictys.traj.point):
 		"""
 		Obtains stat needed for heatmap
 
 		Parameters
 		----------
-		pts:	dictys.traj.point
+		pts:
 			A single point to compute stat for
 
 		Returns
@@ -677,7 +679,7 @@ class statheatmap(base):
 		self.ax.set_xlabel('Target')
 		self.ax.set_ylabel('Regulator')
 		return self.objs
-	def draw(self,t):
+	def draw(self,t:int):
 		data=self.get_data(self.pts[[t]])
 		self.objs[0].set_array(data)
 		objs=list(self.objs)
@@ -687,7 +689,7 @@ class network_node(statscatter):
 	"""
 	Draw network nodes with scatter plot.
 	"""
-	def __init__(self,ax,pts,statloc,*a,aspect=1,**ka):
+	def __init__(self,ax,pts:dictys.traj.point,statloc:stat.base,*a,aspect:float=1,**ka):
 		"""
 		Draw network nodes with scatter plot.
 
@@ -695,12 +697,14 @@ class network_node(statscatter):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statloc:	dictys.net.stat.base
+		statloc:
 			Stat instance for axes. Must be two-dimensional with shape (n_cell,2).
 		a:			list
 			Arguments for dictys.plot.panel.statscatter
+		aspect:
+			Aspect ratio
 		ka:			dict
 			Keyword arguments for dictys.plot.panel.statscatter
 		"""
@@ -708,56 +712,11 @@ class network_node(statscatter):
 		staty=statloc[:,1]
 		super().__init__(ax,pts,statx,staty,*a,aspect=aspect,**ka)
 
-class network_edge_old(base):
-	"""
-	Draw scatter plots from two stats of TFs.	
-	"""
-	def __init__(self,ax,pts,statloc,statnet,*a,nmax=1000,**ka):
-		"""Draw scatter plots from two stats of TFs.
-		statx,
-		staty:		Stat instances on X and Y axes
-		names:		Dots to show as a list of names. Defaults to all.
-		annotate:	Dots to annotate on scatter plot as list of names or {name:text}. Use 'all' for all dots.
-		lim:		Limits of X and Y axes in [[xmin,xmax],[ymin,ymax]]. Defaults to min and max values on nodes with 2% expansion on each side.
-		scatterka:	Keyword arguments for ax.scatter. 
-		statka:		Keyword arguments for ax.scatter whose values are stats. Keys must be settable in matplotlib.collections.PathCollection.set.
-		staty2,
-		scatterka2:	Respective parameters to draw a second y stat. Defaults to staty2=None to disable second y axis (on right side).
-		ka:			Keyword arguments passed to parent class.
-		"""
-		self.statnet=statnet
-		self.statloc=statloc
-		self.nmax=nmax
-		self.map=[{y:self.statloc.ndict[0][self.statnet.names[x][y]] for y in range(len(self.statnet.names[x])) if self.statnet.names[x][y] in self.statloc.ndict[0]} for x in range(2)]
-		self.ka=ka
-		super().__init__(ax,pts,*a)
-	def init(self):
-		self.objs=[self.ax.arrow(0,0,0,0,alpha=0,**self.ka) for _ in range(self.nmax)]
-		return self.objs
-	def draw(self,t):
-		import numpy as np
-		pts=self.pts[[t]]
-		net,loc=[np.take(x.compute(pts),0,axis=-1) for x in [self.statnet,self.statloc]]
-		net=np.abs(net)
-		t1=np.unravel_index(np.argpartition(net.ravel(),-self.nmax)[-self.nmax:],net.shape)
-		t2=net[t1[0],t1[1]].min()
-		if t2==0:
-			t1=np.nonzero(net)
-		assert len(t1[0])<=len(self.objs)
-		for xi in range(len(t1[0])):
-			t3=[self.map[x][t1[x][xi]] for x in range(2)]
-			# t3=[self.statloc.ndict[0][self.statnet.names[x][t1[x][xi]]] for x in range(2)]
-			self.objs[xi].set_data(x=loc[t3[0],0],y=loc[t3[0],1],dx=loc[t3[1],0]-loc[t3[0],0],dy=loc[t3[1],1]-loc[t3[0],1])
-			self.objs[xi].set_alpha(1)
-		for xi in self.objs[len(t1[0]):]:
-			xi.set_alpha(0)
-		return self.objs
-
 class network_edge(base):
 	"""
 	Draw network edges.
 	"""
-	def __init__(self,ax,pts,statloc,statnet,**ka):
+	def __init__(self,ax,pts:dictys.traj.point,statloc:stat.base,statnet:stat.base,**ka):
 		"""
 		Draw network edges.
 
@@ -765,13 +724,13 @@ class network_edge(base):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statloc:	dictys.net.stat.base
+		statloc:
 			Stat instance for axes. Must be two-dimensional with shape (n_cell,2).
-		statnet:	dictys.net.stat.base
+		statnet:
 			Stat instance for edge strengths. Must be two-dimensional with shape (n_reg,n_target).
-		ka:			dict
+		ka:
 			Keyword arguments for ax.arrow
 		"""
 		self.statnet=statnet
@@ -783,7 +742,7 @@ class network_edge(base):
 		self.objs=[]
 		self.nlast=0
 		return self.objs
-	def draw(self,t):
+	def draw(self,t:int):
 		import numpy as np
 		pts=self.pts[[t]]
 		net,loc=[np.take(x.compute(pts),0,axis=-1) for x in [self.statnet,self.statloc]]
@@ -810,7 +769,7 @@ class network(overlay):
 	"""
 	Draws overlay plot of network.
 	"""
-	def __init__(self,ax,pts,statloc,statnet,nodeka={},edgeka={}):
+	def __init__(self,ax,pts:dictys.traj.point,statloc:stat.base,statnet:stat.base,nodeka:dict[str,Any]={},edgeka:dict[str,Any]={}):
 		"""
 		Draws overlay plot of network.
 
@@ -818,17 +777,15 @@ class network(overlay):
 		----------
 		ax:			matplotlib.pyplot.axes
 			Axes to draw on
-		d:			dictys.net.network
-			Dynamic network object to draw
-		pts:		dictys.traj.point
+		pts:
 			Points of path to visualize network
-		statloc:	dictys.net.stat.base
+		statloc:
 			Stat instance for node coordindates. Must be two-dimensional with shape (n_node,2).
-		statnet:	dictys.net.stat.base
+		statnet:
 			Stat instance for edge strengths. Must be two-dimensional with shape (n_reg,n_target).
-		nodeka:		dict
+		nodeka:
 			Keyword arguments for drawing nodes with dictys.plot.panel.network_node
-		edgeka:		dict
+		edgeka:
 			Keyword arguments for drawing edges with dictys.plot.panel.network_edge
 		"""
 		panels=[]
@@ -850,16 +807,16 @@ class animate_generic:
 	"""
 	Engine class to visualize animations
 	"""
-	def __init__(self,pts,fig,panels):
+	def __init__(self,pts:dictys.traj.point,fig,panels:list[base]):
 		"""Animation engine.
 
 		Parameters
 		----------
-		pts:	dictys.traj.point
+		pts:
 			Points for drawing animation
 		fig:	matplotlib.pyplot.Figure
 			Figure for drawing animation
-		panels:	list of dictys.plots.panel.base
+		panels:
 			Panels to animate
 		"""
 		assert all(isinstance(x,base) for x in panels)
@@ -867,7 +824,7 @@ class animate_generic:
 		self.fig=fig
 		self.hasinit=False
 		self.pts=pts
-	def init(self):
+	def init(self,post_init:Callable[[Any],list]=lambda _:[])->list:
 		"""
 		Initialize canvas.
 
@@ -882,14 +839,15 @@ class animate_generic:
 		for xi in self.panels:
 			objs+=xi.init()
 		self.hasinit=True
+		objs+=post_init(self)
 		return objs
-	def draw(self,t):
+	def draw(self,t:int)->list:
 		"""
 		Update canvas at frame t.
 
 		Parameters
 		----------
-		t:	int
+		t:
 			Frame ID
 		
 		Returns
@@ -901,22 +859,27 @@ class animate_generic:
 		for xi in self.panels:
 			objs+=xi.draw(t)
 		return objs
-	def animate(self,blit=True,**ka):
+	def animate(self,blit:bool=True,post_init:Callable[[Any],list]=lambda _:[],**ka):
 		"""
 		Draw animation.
 
 		Parameters
 		----------
-		blit:	Whether to redraw only the needed parts.
-		ka:  Keyword arguments passed to matplotlib.animation.FuncAnimation.
+		blit:
+			Whether to redraw only the needed parts.
+		post_init:
+			Function to call after initialization.
+		ka: 
+			Keyword arguments passed to matplotlib.animation.FuncAnimation.
 
 		Returns
 		----------
 		matplotlib.animation.FuncAnimation
 			Animation
 		"""
+		from functools import partial
 		from matplotlib.animation import FuncAnimation
-		return FuncAnimation(self.fig,self.draw,init_func=self.init,frames=len(self.pts),blit=blit,**ka)
+		return FuncAnimation(self.fig,self.draw,init_func=partial(self.init,post_init=post_init),frames=len(self.pts),blit=blit,**ka)
 
 
 
