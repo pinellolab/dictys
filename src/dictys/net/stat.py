@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2020-2022. All rights reserved.
+# Lingfei Wang, 2022. All rights reserved.
 
 """
 Statistics of networks for data visualization and export.
@@ -301,13 +301,15 @@ class fsmooth(base):
 		assert len(smoothen_func)==3
 		if isinstance(pts,dictys.traj.point):
 			n=len(pts)
+			pts2=pts
 		elif isinstance(pts,dictys.traj.trajectory):
 			n=pts.nn
+			pts2=np.arange(n)
 		else:
 			raise TypeError('pts must be dictys.traj.trajectory or distys.traj.point')
 		self.stat=stat
 		super().__init__(**ka)
-		self.func_smooth=pts.smoothened(stat.compute(np.arange(n)),*smoothen_func[1],func_name=smoothen_func[0],**smoothen_func[2])
+		self.func_smooth=pts.smoothened(stat.compute(pts2),*smoothen_func[1],func_name=smoothen_func[0],**smoothen_func[2])
 	def default_names(self):
 		return self.stat.names
 	def default_label(self):

@@ -4,7 +4,8 @@
 """
 Statistics of networks
 """
-import networkx
+import networkx as nx
+from dictys.utils.networkx import random_state
 
 def _fruchterman_reingold(
 	A,pos, k=None, fixed=None, iterations=50, threshold=1e-4, dim=2, pretendIterations = None, stop = None
@@ -149,7 +150,7 @@ def _sparse_fruchterman_reingold(
 			break
 	return pos
 
-@networkx.drawing.layout.random_state(10)
+@random_state(10)
 def fruchterman_reingold_layout(
 	G,
 	k=None,
@@ -236,7 +237,6 @@ def fruchterman_reingold_layout(
 	>>> pos = nx.fruchterman_reingold_layout(G)
 	"""
 	import numpy as np
-	import networkx as nx
 	from networkx.drawing.layout import _process_params,rescale_layout
 
 	G, center = _process_params(G, center, dim)

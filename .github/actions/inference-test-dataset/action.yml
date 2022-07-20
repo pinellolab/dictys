@@ -1,0 +1,73 @@
+name: Test inference results with dataset
+
+inputs:
+  url:
+    description: URL of test dataset
+    required: true
+  test-path:
+    description: Folder to perform test
+    required: true
+  makefile:
+    description: Name of makefile
+    required: true
+  expected-folder:
+    description: Folder of expected output
+    required: true
+  actual-folder:
+    description: Folder of actual output
+    required: true
+  expected-h5:
+    description: Network h5 file of expected output
+    required: true
+  actual-h5:
+    description: Network h5 file of actual output
+    required: true
+  makefile-params:
+    description: config.mk makefile variable update as json string
+    required: true
+  exclusions:
+    description: file names to exclude from comparisons
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Download dataset
+      shell: bash
+      run: |
+        set -eo pipefail
+        mkdir ${{ inputs.test-path }}
+        pushd .
+        cd ${{ inputs.test-path }}
+        wget -q -O download.tar.xz "${{ inputs.url }}"
+        tar xf download.tar.xz
+        rm download.tar.xz
+        popd
+    - name: Copy makefile template
+      shell: bash
+      run: cp -R --preserve=all ./doc/templates/makefiles ${{ inputs.test-path }}/
+    - name: Update makefile
+      shell: bash
+      run: |
+        set -eo pipefail
+        . activate dictys_env_name
+        python3 ./.github/scripts/update-makefile-variables.py ${{ inputs.test-path }}/makefiles/config.mk '${{ inputs.makefile-params }}'
+        conda deactivate
+    - name: Run pipeline
+      shell: bash
+      run: |
+        set -eo pipefail
+        . activate dictys_env_name
+        pushd .
+        cd ${{ inputs.test-path }}
+        make -f makefiles/${{ inputs.makefile }} -j 1 cpu
+        make -f makefiles/${{ inputs.makefile }} combine
+        popd
+        conda deactivate
+    - name: Test outputs
+      shell: bash
+      run: |
+        set -eo pipefail
+        . activate dictys_env_name
+        python3 ./.github/scripts/inference-test-dataset.py ${{ inputs.test-path }}/${{ inputs.expected-folder }} ${{ inputs.test-path }}/${{ inputs.actual-folder }} ${{ inputs.test-path }}/${{ inputs.expected-h5 }} ${{ inputs.test-path }}/${{ inputs.actual-h5 }} ${{ inputs.exclusions }}
+        conda deactivate

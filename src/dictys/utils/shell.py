@@ -1,4 +1,4 @@
-# Lingfei Wang, 2018. All rights reserved.
+# Lingfei Wang, 2022. All rights reserved.
 """
 Shell script wrapper
 """

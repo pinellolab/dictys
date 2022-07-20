@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# Lingfei Wang, 2022. All rights reserved.
 
 """
 Module for network class and stats.

@@ -1,3 +1,5 @@
+# Nikolaos Trasanidis, Lingfei Wang, 2022. All rights reserved.
+
 import numpy as np
 import pandas as pd
 d=pd.read_csv("15-tf.bed",header=0,index_col=None,sep='\t')

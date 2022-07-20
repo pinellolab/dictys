@@ -36,6 +36,7 @@ def subsets_rna(fi_traj:str,fi_traj_cell_rna:str,fi_coord_rna:str,fo_subsets:str
 	dmax:
 		Soft upper bound of pseudotime distance between neighboring subsets
 	"""
+	#Note: this function is not tested in continuous integration
 	import logging
 	from os import makedirs,linesep
 	from os.path import join as pjoin

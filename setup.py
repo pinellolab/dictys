@@ -38,11 +38,11 @@ def pkg_setup():
 			'Intended Audience :: Science/Research',
 			'License :: OSI Approved :: GNU Affero General Public License v3',
 			'Operating System :: OS Independent',
-			'Programming Language :: Python :: 3',
+			'Programming Language :: Python :: 3.9',
 			'Topic :: Scientific/Engineering :: Bio-Informatics',
 			'Topic :: Scientific/Engineering :: Visualization',
 		],
-		python_requires='>=3.8',
+		python_requires='>=3.9',
 		packages=packages,
 		package_dir={x:path.join('src',*x.split('.')) for x in packages},
 		package_data={'dictys':['scripts/*.'+x for x in 'sh,py'.split(',')]}

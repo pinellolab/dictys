@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2020-2022. All rights reserved.
+# Lingfei Wang, 2022. All rights reserved.
 
 """
 Pretending to import unimportable modules when not needed

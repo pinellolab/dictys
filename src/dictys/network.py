@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2018-2022. All rights reserved.
+# Lingfei Wang, 2022. All rights reserved.
 
 """
 Gene regulatory network reconstruction with TF binding network and transcriptome data

@@ -29,12 +29,15 @@ runs:
         # Install command in doc/scripts/install-cpu.sh (after first empty line)
         slinestart=$(grep -n '^$' doc/scripts/install-cpu.sh | awk -F: '{print $1}' | head -n 1)
         s2="$(tail -n +$(( slinestart + 1 )) doc/scripts/install-cpu.sh)"
-        s2="${s2/\$PYTHONVERSION_CONDA/3.8}"
+        s2="${s2/\$PYTHONVERSION_CONDA/3.9}"
         echo "$s2"
         cmp <(echo "$s1") <(echo "$s2")
     - name: Test install
       shell: bash
-      run: PYTHONVERSION_CONDA=${{ inputs.python-version }} . doc/scripts/install-cpu.sh
+      run: |
+        echo '::group::Test install output'
+        PYTHONVERSION_CONDA=${{ inputs.python-version }} . doc/scripts/install-cpu.sh
+        echo '::endgroup::'
     - name: Test python version
       shell: bash
       run: |
@@ -44,4 +47,14 @@ runs:
         v="Python ${v/./[.]}"
         python --version
         python --version 2>&1 | grep "$v"
+        python3 --version
+        python3 --version 2>&1 | grep "$v"
+        conda deactivate
+    - name: Test run
+      shell: bash
+      run: |
+        set -e -o pipefail
+        . activate dictys_env_name
+        python -m dictys -h
+        python -m dictys preproc selects_rna -h
         conda deactivate

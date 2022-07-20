@@ -5,7 +5,7 @@ Dictys relies on `pytorch` for GPU capacity. To enable GPU support, simply insta
 ```
 #Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2, ffmpeg
 #Replace cudatoolkit version with what's supported by your driver. See https://stackoverflow.com/questions/9727688/how-to-get-the-cuda-version.
-conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch python=3.8 pytorch torchvision torchaudio cudatoolkit=11.3 bedtools homer samtools macs2 ffmpeg
+conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch python=3.9 pytorch torchvision torchaudio cudatoolkit=11.3 bedtools homer samtools macs2 ffmpeg
 #You may need "conda activate ..." instead
 . activate dictys_env_name
 #Install pypi dependencies

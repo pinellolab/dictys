@@ -26,7 +26,7 @@ To install Dictys **with CPU computation** from Anaconda:
 .. code-block::
 
 	#Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2, ffmpeg
-	conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch python=3.8 pytorch torchvision torchaudio cpuonly bedtools homer samtools macs2 ffmpeg
+	conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch python=3.9 pytorch torchvision torchaudio cpuonly bedtools homer samtools macs2 ffmpeg
 	#You may need "conda activate ..." instead
 	. activate dictys_env_name
 	#Install pypi dependencies

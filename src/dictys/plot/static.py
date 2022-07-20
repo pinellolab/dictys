@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2020-2022. All rights reserved.
+# Lingfei Wang, 2022. All rights reserved.
 
 """
 Static GRN visualization
@@ -497,8 +497,9 @@ def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulator
 	p.draw(0)
 	nodes=p.panels[1].get_data(pts)[0][:,:,0].T
 	nodes=pd.DataFrame(nodes,index=stat1_layout.names[0],columns=['x','y'])
-	edges=np.nonzero(stat1_subnetbin.compute(pts)[:,:,0])
-	edges=pd.DataFrame([stat1_subnetbin.names[0][edges[0]],stat1_subnetbin.names[1][edges[1]]],index=['Regulator','Target']).T
+	edges=stat1_subnet_trunc.compute(pts)[:,:,0]
+	t1=np.nonzero(edges)
+	edges=pd.DataFrame([stat1_subnet_trunc.names[0][t1[0]],stat1_subnet_trunc.names[1][t1[1]],edges[t1[0],t1[1]]],index=['Regulator','Target','Strength']).T
 	return (nodes,edges)
 
 

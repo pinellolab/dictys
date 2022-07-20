@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 """
 Converts docstring and typing to command-line interface
 """

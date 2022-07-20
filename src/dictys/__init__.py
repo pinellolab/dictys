@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2020-2022. All rights reserved.
 
 """
 Dictys for dynamic gene regulatory network reconstruction from single-cell multi-omic data

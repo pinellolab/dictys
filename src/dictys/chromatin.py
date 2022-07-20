@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2018-2022. All rights reserved.
+# Lingfei Wang, Nikolaos Trasanidis, 2022. All rights reserved.
 """Chromatin accessibility analyses
 """
 

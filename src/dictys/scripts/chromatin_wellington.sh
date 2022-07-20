@@ -1,4 +1,5 @@
 #!/bin/bash
+# Nikolaos Trasanidis, Lingfei Wang, 2022. All rights reserved.
 
 # TF Footprinting with wellington
 # Parameters:

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2020-2022. All rights reserved.
+# Lingfei Wang, 2022. All rights reserved.
 
 
 """
@@ -1003,7 +1003,7 @@ class point:
 		#Linear formula by distance
 		t3=(t1>=0).all(axis=0)
 		t2=np.array([d[t1[1],np.arange(n)],d[t1[0],np.arange(n)]])
-		t2=t2[0]/t2.sum(axis=0)
+		t2=(t2[0]+1E-300)/(t2.sum(axis=0)+2E-300)
 		w=np.zeros((len(self),n),dtype=float)
 		w[t1[0],np.arange(n)]=t2*t3
 		w[t1[1],np.arange(n)]=(1-t2)*t3
