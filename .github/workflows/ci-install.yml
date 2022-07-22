@@ -1,6 +1,8 @@
-name: CI for installation
+name: Weekly test for installation
 
-on: [push]
+on:
+  schedule:
+    - cron: '20 6 * * 1'
 
 jobs:
   install-linux-cpu:
@@ -20,7 +22,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9"]
-        cuda-version: ["11.1"]
+        cuda-version: ["11.3"]
     steps:
     - uses: actions/checkout@v3
     - name: Install

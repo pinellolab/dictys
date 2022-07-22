@@ -5,8 +5,5 @@
 ._*
 *.log
 .ipynb_checkpoints
-examples/*/data
-examples/*/output
-examples/*/test
-examples/*/tmp_static
-examples/*/tmp_dynamic
+dist
+dictys.egg-info

@@ -10,10 +10,10 @@ Dictys infers and analyzes dynamic GRN from scRNA-seq and scATAC-seq datasets al
 Overview
 =============
 
-.. image:: doc/images/logo.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/logo.png
    :width: 180
 
-.. image:: doc/images/Dictys_overview.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Dictys_overview.png
    :width: 1000
 
 
@@ -39,7 +39,7 @@ To install Dictys **with CPU computation** from Anaconda:
 	pip install --no-deps pyDNase 
 	conda deactivate
 
-For more advanced installation such as GPU support, see `INSTALL.md`. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
+For more advanced installation such as GPU support, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
 
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
 
@@ -55,34 +55,34 @@ Cell-type specific GRN analyses
 -------------------------------
 `Regulation marker TF discovery <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/global-dotplot.ipynb>`_
 
-.. image:: doc/images/Global_dotplot.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Global_dotplot.png
    :width: 300
 
 `Top activation target heatmap for select TFs <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/global-heatmap.ipynb>`_
 
-.. image:: doc/images/Global_heatmap.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Global_heatmap.png
    :width: 400
 
 `Differential regulation v.s. differential expression scatter plot; integrative TF rank plot <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/pair-diff.ipynb>`_
 
-.. image:: doc/images/Diff_analysis.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Diff_analysis.png
    :width: 750
 
 `Subnetwork for select TF <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/subnet.ipynb>`_
 
-.. image:: doc/images/Subnet.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Subnet.png
    :width: 300
    
 Dynamic GRN analysis
 --------------------
 `Driver TF discovery based on regulatory activity curve <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/dynamic/discover.ipynb>`_
 
-.. image:: doc/images/Dynamic_discovery.png
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Dynamic_discovery.png
    :width: 1050
 
 `Dynamic GRN animation <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/dynamic/animation.ipynb>`_
 
-.. image:: doc/images/animation.gif
+.. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/animation.gif
    :width: 800
 
 Issues

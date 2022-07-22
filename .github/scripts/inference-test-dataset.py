@@ -6,6 +6,7 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 import pandas as pd
 from os.path import join as pjoin
+from os.path import isdir
 import os
 from os import linesep, listdir
 from collections import defaultdict
@@ -100,7 +101,7 @@ h5s=sys.argv[3:5]
 exclusions=set(x.strip() for x in sys.argv[5:])
 
 err=False
-celltypes=[listdir(x) for x in diris]
+celltypes=[list(filter(lambda y:isdir(pjoin(x,y)),listdir(x))) for x in diris]
 assert all(set(celltypes[0])==set(x) for x in celltypes[1:])
 celltypes=celltypes[0]
 for celltype in celltypes:

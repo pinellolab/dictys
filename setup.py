@@ -22,9 +22,7 @@ def pkg_setup():
 		long_description=long_description,
 		long_description_content_type='text/x-rst',
 		url=url,
-		# download_url=url,
 		scripts=['bin/dictys'],
-		# include_package_data=True,
 		install_requires='numpy pandas docutils h5py pyro-ppl scipy networkx pybedtools pyDNase threadpoolctl joblib torch matplotlib'.split(' '),
 		classifiers=[
 			'Development Status :: 3 - Alpha ',
@@ -32,7 +30,6 @@ def pkg_setup():
 			'Environment :: GPU :: NVIDIA CUDA',
 			'Framework :: Jupyter',
 			'Framework :: Matplotlib',
-			# 'Framework :: Pytest',
 			'Intended Audience :: Developers',
 			'Intended Audience :: End Users/Desktop',
 			'Intended Audience :: Science/Research',
