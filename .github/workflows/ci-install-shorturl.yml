@@ -1,8 +1,6 @@
 name: Weekly test for installation from short URL
 
-on:
-  schedule:
-    - cron: '20 7 * * 1'
+on: [push]
 
 jobs:
   install-script:
