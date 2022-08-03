@@ -50,14 +50,14 @@ runs:
       shell: bash
       run: |
         set -eo pipefail
-        . activate dictys_env_name
+        . activate dictys
         python3 ./.github/scripts/update-makefile-variables.py ${{ inputs.test-path }}/makefiles/config.mk '${{ inputs.makefile-params }}'
         conda deactivate
     - name: Run pipeline
       shell: bash
       run: |
         set -eo pipefail
-        . activate dictys_env_name
+        . activate dictys
         pushd .
         cd ${{ inputs.test-path }}
         make -f makefiles/${{ inputs.makefile }} -j 1 cpu
@@ -68,6 +68,6 @@ runs:
       shell: bash
       run: |
         set -eo pipefail
-        . activate dictys_env_name
+        . activate dictys
         python3 ./.github/scripts/inference-test-dataset.py ${{ inputs.test-path }}/${{ inputs.expected-folder }} ${{ inputs.test-path }}/${{ inputs.actual-folder }} ${{ inputs.test-path }}/${{ inputs.expected-h5 }} ${{ inputs.test-path }}/${{ inputs.actual-h5 }} ${{ inputs.exclusions }}
         conda deactivate

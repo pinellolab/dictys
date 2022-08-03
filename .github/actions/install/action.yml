@@ -1,0 +1,48 @@
+name: Install with anaconda & install checks
+
+inputs:
+  python-version:
+    description: Python version within anaconda. Not the python version anaconda is based on
+    required: true
+  cuda-version:
+    description: cudatoolkit version within anaconda. If omited, install CPU version instead.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.8
+    - name: Add conda to system path
+      shell: bash
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Test install
+      shell: bash
+      run: |
+        echo '::group::Test install output'
+        PYTHONVERSION_CONDA=${{ inputs.python-version }} CUDAVERSION_CONDA=${{ inputs.cuda-version }} COMMIT_VERSION=$(git rev-parse HEAD) . doc/scripts/install.sh
+        echo '::endgroup::'
+    - name: Test python version
+      shell: bash
+      run: |
+        set -e -o pipefail
+        . activate dictys
+        v="${{ inputs.python-version }}"
+        v="Python ${v/./[.]}"
+        python --version
+        python --version 2>&1 | grep "$v"
+        python3 --version
+        python3 --version 2>&1 | grep "$v"
+        conda deactivate
+    - name: Test run
+      shell: bash
+      run: |
+        set -e -o pipefail
+        . activate dictys
+        python -m dictys -h
+        python -m dictys preproc selects_rna -h
+        conda deactivate

@@ -19,27 +19,27 @@ Overview
 
 Installation
 =============
-Dictys depends on multiple softwares. Creating an `Anaconda <https://www.anaconda.com/>`_ environment can resolve the dependencies easily. Dictys can be installed with: ``pip install git+https://github.com/pinellolab/dictys.git``, but it does not auto-resolve some dependencies.
-
-To install Dictys **with CPU computation** from Anaconda:
+First install `Anaconda <https://www.anaconda.com/>`_. Then, install Dictys **with CPU computation**:
 
 .. code-block::
 
-	#Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2, ffmpeg
-	conda create -y -n dictys_env_name -c bioconda -c conda-forge -c pytorch python=3.9 pytorch torchvision torchaudio cpuonly bedtools homer samtools macs2 ffmpeg
-	#You may need "conda activate ..." instead
-	. activate dictys_env_name
-	#Install pypi dependencies
-	pip install numpy pandas docutils h5py pyro-ppl==1.6.0 scipy networkx pybedtools pyDNase threadpoolctl joblib matplotlib jupyter adjustText
-	#Install Dictys
-	pip install git+https://github.com/pinellolab/dictys.git
-	#Correcting matplotlib version due to pyDNase dependency
-	pip uninstall -y pyDNase
-	pip install -U matplotlib
-	pip install --no-deps pyDNase 
-	conda deactivate
+	wget https://tinyurl.com/dictys -O - | bash
 
-For more advanced installation such as GPU support, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
+This will create a conda environment `dictys`.
+
+Alternatively, under a different conda environment name:
+
+.. code-block::
+
+	wget https://tinyurl.com/dictys -O - | CONDAENV_NAME=your_favorite_name bash
+
+Alternatively, **with GPU computation** (here with CUDA 11.3):
+
+.. code-block::
+
+	wget https://tinyurl.com/dictys -O - | CUDAVERSION_CONDA=11.3 bash
+
+For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_ and/or edit `install.sh <https://github.com/pinellolab/dictys/blob/master/doc/scripts/install.sh>`_. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
 
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
 

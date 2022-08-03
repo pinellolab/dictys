@@ -5,28 +5,16 @@ on:
     - cron: '20 6 * * 1'
 
 jobs:
-  install-linux-cpu:
+  install-linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.9",""]
+        cuda-version: ["11.3",""]
     steps:
     - uses: actions/checkout@v3
     - name: Install
-      uses: ./.github/actions/install-cpu
-      with:
-        python-version: ${{ matrix.python-version }}
-
-  install-linux-gpu:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9"]
-        cuda-version: ["11.3"]
-    steps:
-    - uses: actions/checkout@v3
-    - name: Install
-      uses: ./.github/actions/install-gpu
+      uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
         cuda-version: ${{ matrix.cuda-version }}
