@@ -1,16 +1,15 @@
-# Usage: python3 $0 makefile_path json_string
-# Updates makefile variable assignments with values provided in json file
-# Only edits final assignment. Supports = and := assignments. 
-# Json string format {"variable_name":"new_value"}. Variable names can have "+" suffix to indicate addition to current value.
-# New makefile will overwrite the input makefile
-
+#!/usr/bin/env python3
 import json
-import sys
 import numpy as np
+import argparse
 
-assert len(sys.argv)==3
-fmake=sys.argv[1]
-vs=sys.argv[2]
+parser = argparse.ArgumentParser(description="Updates makefile variable assignments with values provided in json string")
+parser.add_argument('makefile_path',type=str,help='Path of makefile to update and rewritten.')
+parser.add_argument('json_string',type=str,help='Update to be made in json format: {"variable_name":"new_value"}. Variable names can have "+" suffix to indicate appending to current value.')
+
+args=parser.parse_args()
+fmake=args.makefile_path
+vs=args.json_string
 
 #Load files
 vs=json.loads(vs)

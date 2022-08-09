@@ -36,4 +36,8 @@ pip install git+https://github.com/pinellolab/dictys.git@$COMMIT_VERSION
 pip uninstall -y pyDNase
 pip install -U matplotlib
 pip install --no-deps pyDNase
+#Update homer
+cd "$(dirname "$(dirname "$(realpath "$(which homer)")")")"
+./configureHomer.pl -update
+chmod u+x configureHomer.pl
 conda deactivate

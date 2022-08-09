@@ -43,15 +43,18 @@ runs:
         tar xf download.tar.xz
         rm download.tar.xz
         popd
-    - name: Copy makefile template
-      shell: bash
-      run: cp -R --preserve=all ./doc/templates/makefiles ${{ inputs.test-path }}/
-    - name: Update makefile
+    - name: Create makefile
       shell: bash
       run: |
         set -eo pipefail
         . activate dictys
-        python3 ./.github/scripts/update-makefile-variables.py ${{ inputs.test-path }}/makefiles/config.mk '${{ inputs.makefile-params }}'
+        pushd .
+        cd ${{ inputs.test-path }}
+        mkdir -p makefiles
+        cd makefiles
+        dictys_helper makefile_template.sh
+        popd
+        dictys_helper makefile_update.py ${{ inputs.test-path }}/makefiles/config.mk '${{ inputs.makefile-params }}'
         conda deactivate
     - name: Run pipeline
       shell: bash

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Nikolaos Trasanidis, Lingfei Wang, 2022. All rights reserved.
 
 import numpy as np

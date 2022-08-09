@@ -5,7 +5,7 @@
 # Parameters:
 # $1 : Path of input bed file of regions
 # $2 : Path of input motif list file in homer format
-# $3 : Reference genome for homer (e.g. hg19, mm10)
+# $3 : Path of reference genome folder for homer
 # $4 : Python script path
 # $5 : number of threads
 
@@ -14,7 +14,7 @@ set -e -o pipefail
 #arguements
 bedfile="$1"
 motifdb="$2"
-genome=$3 #hg19, mm10
+genome="$3"
 fi_r="$4"
 nodes="$5"
 
@@ -26,7 +26,8 @@ split -l $nline -a 5 "$bedfile" 14-reform-split/
 ls -1 14-reform-split | while read l; do
 {
 	mkdir 15-motifscan/$l
-	findMotifsGenome.pl 14-reform-split/$l $genome 15-motifscan/$l -size given -mask -find "$motifdb" > 15-tfs/$l || true
+	#Remove error message: ERROR: outstripped buffer
+	findMotifsGenome.pl 14-reform-split/$l $genome 15-motifscan/$l -size given -mask -find "$motifdb" 2>&1 > 15-tfs/$l | grep -v 'ERROR: outstripped buffer' >&2 || true
 	touch 15-tfs/$l.done
 } &
 done

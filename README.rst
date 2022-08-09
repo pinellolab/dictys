@@ -25,7 +25,7 @@ First install `Anaconda <https://www.anaconda.com/>`_. Then, install Dictys **wi
 
 	wget https://tinyurl.com/dictys -O - | bash
 
-This will create a conda environment `dictys`.
+This will create a conda environment named `dictys`.
 
 Alternatively, under a different conda environment name:
 
@@ -33,7 +33,7 @@ Alternatively, under a different conda environment name:
 
 	wget https://tinyurl.com/dictys -O - | CONDAENV_NAME=your_favorite_name bash
 
-Alternatively, **with GPU computation** (here with CUDA 11.3):
+Alternatively, **with GPU computation** (here CUDA 11.3):
 
 .. code-block::
 

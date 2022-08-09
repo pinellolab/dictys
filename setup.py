@@ -22,7 +22,7 @@ def pkg_setup():
 		long_description=long_description,
 		long_description_content_type='text/x-rst',
 		url=url,
-		scripts=['bin/dictys'],
+		scripts=['bin/dictys','bin/dictys_helper'],
 		install_requires=['numpy','pandas','docutils','h5py','pyro-ppl','scipy','networkx','pybedtools','pyDNase','threadpoolctl','joblib','torch','matplotlib','adjustText'],
 		classifiers=[
 			'Development Status :: 3 - Alpha ',
@@ -42,7 +42,12 @@ def pkg_setup():
 		python_requires='>=3.9',
 		packages=packages,
 		package_dir={x:path.join('src',*x.split('.')) for x in packages},
-		package_data={'dictys':['scripts/*.'+x for x in 'sh,py'.split(',')]}
+		package_data={
+			'dictys':
+				['scripts/*.'+x for x in 'sh,py'.split(',')]+
+				['scripts/helper/*.'+x for x in 'sh,py'.split(',')]+
+				['scripts/makefiles/*.'+x for x in 'mk'.split(',')],
+		}
 	)
 
 pkg_setup()
