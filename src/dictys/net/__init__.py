@@ -46,7 +46,7 @@ class network:
 			Other:	Tuple of multiple owners. Each character represents a owner. Shape factors are concatenated.
 					For example, ss means state-state properties with shape factor (sn,sn).
 		value:	numpy.ndarray
-			Vluae of each property. The trailing axes in its shape must exactly match the shape factor from `type`.
+			Value of each property. The trailing axes in its shape must exactly match the shape factor from `type`.
 	traj:	dictys.traj.trajectory
 		Trajectory object. Only needed for dynamic network
 	point:	{x:dictys.traj.point for x in ['c','s']}
@@ -115,6 +115,31 @@ class network:
 		assert self.traj is None or isinstance(self.traj,trajectory)
 		assert (self.traj is None and len(self.point)==0) or (self.traj is not None and frozenset(self.point)==frozenset({'c','s'}))
 		assert all(len(self.point[x])==getattr(self,x+'n') for x in self.point)
+	#Rename dimensions
+	def rename(self,dim:str,vals:Union[list[str],dict[str,str]])->None:
+		"""
+		Rename any dimension
+		dim:
+			Dimension to rename: c/s/n for cells/states/nodes
+		vals:
+			New names. If as a dict, names not included will not be renamed.
+		"""
+		import numpy as np
+		if dim not in 'csn':
+			raise ValueError("Can only renames cells/states/nodes with dim='c', 's', or 'n'")
+		names=getattr(self,dim+'name')
+			
+		if isinstance(vals,list):
+			if len(vals)!=len(names):
+				raise TypeError('Unequal size between new ({}) and old ({}) names when using vals as a list'.format(len(vals),len(names)))
+			vals=dict(zip(names,vals))
+		elif not isinstance(vals,dict):
+			raise TypeError('vals should be list or dict.')
+		names=[vals[x] if x in vals else x for x in names]
+		if len(names)!=len(set(names)):
+			raise ValueError('Duplicate names found after renaming.')
+		setattr(self,dim+'name',np.array(names))
+		setattr(self,dim+'dict',dict(zip(names,range(len(names)))))
 	#I/O
 	@classmethod
 	def from_file(cls,path:str)->network:

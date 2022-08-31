@@ -41,10 +41,10 @@ awk -F "\t" '{if(!($1 ~ /^chr/))$1="chr"$1;print $1"\t"$2"\t"$3"\t"$4"\t"$5}' "$
 #Merge to single file
 paste "$fbed".step3 "$fbed".step2 | awk '{print $1"\t"$2"\t"$3"\t"$6"\t"$4"\t"$5}'> "$fbed".step4
 #Remove entries with duplicates in designated field
-sort gene.bed.step2 | uniq -c | awk '$1!="1"{print "\t"$2"\t"}' > "$fbed".step5
-grep -vf "$fbed".step5 -F gene.bed.step4 > "$fbed".step6
+sort "$fbed".step2 | uniq -c | awk '$1!="1"{print "\t"$2"\t"}' > "$fbed".step5
+grep -vf "$fbed".step5 -F "$fbed".step4 > "$fbed".step6
 #Then add back the first entry for each duplicate value in designated field
-grep -f "$fbed".step5 -F gene.bed.step4 > "$fbed".step7
+grep -f "$fbed".step5 -F "$fbed".step4 > "$fbed".step7
 cat "$fbed".step5 | while read l; do grep -F -m 1 "$l" "$fbed".step7 >> "$fbed".step6; done
 #Sort
 grep '^chr[1-9]' "$fbed".step6 | sort -k2g,3g | sort -s -k1.4g > "$fbed"

@@ -45,7 +45,6 @@ if namemap is not None:
 	assert len(namemap)==3
 	t1=pd.read_csv(namemap[0],index_col=None,header=None,sep='\t')
 	t1=t1[[int(x) for x in namemap[1:]]].values[:,::-1]
-	print(t1.shape)
 	namemap=dict(t1)
 	if ref is not None:
 		ref=set(x[0] for x in namemap.items() if x[1] in ref)

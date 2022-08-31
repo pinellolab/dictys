@@ -10,40 +10,46 @@ import pandas as pd
 import dictys
 from dictys.utils.importing import matplotlib
 
-def compute_reg_spec(d0:dictys.net.network,min_entropy:float=0.5,ncut:float=0.4,nmin:int=20,nmax_reg:int=10,select_state:Optional[list[str]]=None):
+def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut:float=0.4,vmin:float=20,nmax:int=10,sparsity:float=0.01,select_state:Optional[list[str]]=None):
 	"""
-	Compute state specificity of regulators with out-degree centrality and CPM.
-	Specificity is defined as value in this state / sum across all states.
+	Search for regulation (default) or expression marker TFs/genes based on context(/state) specificity computed from out-degree centrality (for regulation markers) and CPM (for expression markers).
+	Context specificity is defined as value in this context / sum across all contexts.
 
 	Parameters
 	----------
-	d0:				dictys.net.network
+	d0:
 		Input network class
-	min_entropy:	float
-		State specificity entropy level required (relative to random assignment) to select regulator. Lower means more specific.
-	ncut:			float
-		Minimum probability required
-	nmin:			int
-		Minimum number of targets required
-	nmax_reg:		int
-		Maximum TF count for each state, selected based on probability
-	select_state:	list of str
-		Only compute specificity among given states
+	base:
+		Base variable to select context specific regulators. Accepts:
+		deg:	out-degree centrality, for regulation marker TFs
+		cpm:	CPM, for expression marker genes
+	min_entropy:
+		Context specificity entropy level required (relative to random assignment) to select regulator. Lower means more specific.
+	ncut:
+		Minimum context specificity required
+	vmin:
+		Minimum value required. Note different metrics for out-degree and CPM.
+	nmax:
+		Maximum marker gene count for each context, selected based on probability
+	sparsity:
+		Network sparsity (proportion of positive edges) when binarized
+	select_state:
+		Only compute specificity among given contexts
 
 	Returns
 	-------
-	n:		numpy.ndarray(shape=[n_reg,n_state])
-		Number of targets
-	v:		numpy.ndarray(shape=[n_reg,n_state])
-		Degree centrality specificity (value in this state/sum across all states)
-	cpm:	numpy.ndarray(shape=[n_reg,n_state])
+	deg:		pandas.DataFrame(shape=[n_reg,n_state])
+		Degree centrality, i.e. number of targets
+	deg_spec:		pandas.DataFrame(shape=[n_reg,n_state])
+		Degree centrality specificity (value in this context/sum across all contexts)
+	cpm:		pandas.DataFrame(shape=[n_gene,n_state])
 		CPM
-	cpm_v:	numpy.ndarray(shape=[n_reg,n_state])
-		CPM specificity (value in this state/sum across all states)
-	reg:	numpy.ndarray
-		Regulators selected from given constraints
-	reg_s:	numpy.ndarray
-		Each regulator's specific state corresponding to reg
+	cpm_spec:	pandas.DataFrame(shape=[n_gene,n_state])
+		CPM specificity (value in this context/sum across all contexts)
+	marker:		numpy.ndarray
+		Regulation or expression marker genes selected with the given base variable
+	marker_state:	numpy.ndarray
+		Each marker gene's specific context
 	"""
 	from dictys.net import stat
 	import numpy as np
@@ -55,68 +61,78 @@ def compute_reg_spec(d0:dictys.net.network,min_entropy:float=0.5,ncut:float=0.4,
 	#Network mask
 	mask=stat.net(d0,varname='mask')
 	#Binary network
-	binnet=stat.fbinarize(stat.net(d0),statmask=mask)
+	binnet=stat.fbinarize(stat.net(d0),statmask=mask,sparsity=sparsity)
 	#Target count
-	na=stat.fcentrality_degree(binnet,roleaxis=0).compute(select_state)
+	deg=stat.fcentrality_degree(binnet,roleaxis=0).compute(select_state)
 	#Degree centrality rate
 	dcrate=stat.fcentrality_degree(binnet,statmask=mask,roleaxis=0).compute(select_state)
 	#Degree centrality specificity
-	va=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
+	deg_spec=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
 	#CPM
-	cpm=2**(stat.lcpm(d0,cut=-1,constant=1).compute(select_state)[d0.nids[0]])-1
-
-	assert (na>=0).all() and (va>=0).all() and (va<=1).all()
-	assert na.shape==va.shape
-	s=np.arange(va.shape[0])
-
-	#Remove regulators not having any target
-	t1=(va>0).any(axis=1)
-	s=s[t1]
-	v=va[t1]
-	n=na[t1]
+	cpm=2**(stat.lcpm(d0,cut=-1,constant=1).compute(select_state))-1
+	#CPM specificity
+	cpm_spec=(cpm.T/(cpm.sum(axis=1)+1E-300)).T
+	assert (deg>=0).all() and (deg_spec>=0).all() and (deg_spec<=1).all()
+	assert deg_spec.shape==deg.shape
+	assert (cpm>=0).all() and (cpm_spec>=0).all() and (cpm_spec<=1).all()
+	assert cpm_spec.shape==cpm.shape
 	
-	#Filter regulators by entropy
+	if base=='deg':
+		n=deg
+		v=deg_spec
+		name=d0.nname[d0.nids[0]]
+	elif base=='cpm':
+		n=cpm
+		v=cpm_spec
+		name=d0.nname
+	else:
+		raise ValueError("Unknown value for parameter 'base'")
+	#Remove markers not having any target/CPM
+	s=np.arange(len(name))
+	t1=(v>0).any(axis=1)
+	s=s[t1]
+	n=n[t1]
+	v=v[t1]
+	
+	#Filter markers by entropy of specificity
 	t1=(v*np.log(v+1E-300)).sum(axis=1)
 	t1=t1>=np.log(1/v.shape[1])*min_entropy
 	s=s[t1]
 	v=v[t1]
 	n=n[t1]
 	
-	#Filter regulators
-	t1=(v>=ncut)&(n>=nmin)
-	#Limit max regulator count
+	#Limit max marker count
+	t1=(v>=ncut)&(n>=vmin)&(v.T>=v.max(axis=1)).T
 	t1=[np.nonzero(x)[0] for x in t1.T]
-	if nmax_reg is not None:
-		t1=[t1[x][v[t1[x],x]>=np.partition(v[t1[x],x],-nmax_reg)[-nmax_reg]] if len(t1[x])>nmax_reg else t1[x] for x in range(len(t1))]
+	if nmax is not None:
+		t1=[t1[x][v[t1[x],x]>=np.partition(v[t1[x],x],-nmax)[-nmax]] if len(t1[x])>nmax else t1[x] for x in range(len(t1))]
 	t1=np.unique(np.concatenate(t1))
 	
-	#Order regulators: First state, then strength within state
+	#Order markers: First state, then strength within state
 	t1=[t1,v[t1].argmax(axis=1)]
 	t1.append(v[t1[0],t1[1]])
 	t1=[list(x) for x in zip(*t1)]
 	t1=[np.array(list(x)) for x in zip(*sorted(t1,key=lambda x:[x[1],-x[2]]))]
-	# t1=[x[0] for x in t1]
-	s=[d0.nname[d0.nids[0]][s[t1[0]]],d0.sname[select_state[t1[1]]]]
+	s=[name[s[t1[0]]],d0.sname[select_state[t1[1]]]]
 	
-	#CPM specificity
-	cpm_v=(cpm.T/(cpm.sum(axis=1)+1E-300)).T
+	deg,deg_spec=[pd.DataFrame(x,index=d0.nname[d0.nids[0]],columns=d0.sname[select_state]) for x in [deg,deg_spec]]
+	cpm,cpm_spec=[pd.DataFrame(x,index=d0.nname,columns=d0.sname[select_state]) for x in [cpm,cpm_spec]]
+	return (deg,deg_spec,cpm,cpm_spec,s[0],s[1])
 	
-	assert all(x.shape==na.shape for x in [va,cpm,cpm_v])
-	assert (na>=0).all()
-	assert (va>=0).all() and (va<=1).all()
-	assert (cpm>=0).all()
-	assert (cpm_v>=0).all() and (cpm_v<=1).all()
-	na,va,cpm,cpm_v=[pd.DataFrame(x,index=d0.nname[d0.nids[0]],columns=d0.sname[select_state]) for x in [na,va,cpm,cpm_v]]
-	return (na,va,cpm,cpm_v,s[0],s[1])
+def compute_reg_spec(*a,**ka):
+	"""
+	This function is obsolete. Use compute_spec instead.
+	"""
+	return compute_spec(*a,base=deg,**ka)
 
 def fig_heatmap_reg_spec(v:pd.DataFrame,aspect:float=0.3,figscale:float=0.15,g_ann:Optional[list[str]]=None,**ka):
 	"""
-	Draw heatmap for regulators' state specificity.
+	Draw heatmap for regulators' context specificity.
 
 	Parameters
 	----------
 	v:			pandas.DataFrame
-		State specificity with states as rows and regulator genes as columns
+		Context specificity with contexts as rows and regulator genes as columns
 	aspect:		float
 		Aspect ratio of each entry
 	figscale:	float
@@ -154,14 +170,14 @@ def fig_heatmap_reg_spec(v:pd.DataFrame,aspect:float=0.3,figscale:float=0.15,g_a
 
 def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:int=10,direction:int=0,gann:Union[str,list[str]]=[],cmap_value:str='coolwarm',cmap_type:str='tab10',color_type:Optional[dict]=None,normalization:str='column',aspect:float=0.2,topheight:float=0.7,topspace:float=0.3,figscale:float=0.15):
 	"""
-	Draw heatmap for top targets of given regulators in given cell types/states.
+	Draw heatmap for top targets of given regulators in given cell contexts/states.
 
 	Parameters
 	----------
 	d0:				dictys.net.network
 		Input network
 	selection:		list of tuple
-		List of regulator-state pair (or TF-cell type pair) to draw. Each element of list is a tuple (TF, cell type) by name.
+		List of regulator-context pair (or TF-cell type pair) to draw. Each element of list is a tuple (TF, cell type) by name.
 	ntop:			int
 		Number of top targets to draw
 	direction:		int
@@ -171,9 +187,9 @@ def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:in
 	cmap_value:		str
 		Matplotlib colormap name for heatmap
 	cmap_type:		str
-		Matplotlib colormap name for cell state/type bar. Ignored if color_type is specified.
+		Matplotlib colormap name for cell context/state bar. Ignored if color_type is specified.
 	color_type:		dict
-		Dictionary mappping cell state name to bar color.
+		Dictionary mappping cell context name to bar color.
 	normalization:	str
 		Normalization of regulation strength for heatmap. Accepts:
 		column:	All regulations for each heatmap column are scale normalized to -1 to 1 so the strongest is -1 or 1.
@@ -181,7 +197,7 @@ def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:in
 	aspect:			float
 		Aspect ratio of heatmap
 	topheight:		float
-		Relative height of top colorbar for cell types/states
+		Relative height of top colorbar for cell contexts/states
 	topspace:		float
 		Relative spacing between colorbar and heatmap
 	figscale:		float
@@ -247,10 +263,10 @@ def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:in
 	t1=(net2!=0).sum(axis=1)
 	t2=np.nonzero(t1==0)[0]
 	if len(t2)>0:
-		raise ValueError('TF-cell type pair(s) have no targets in the specified direction: '+','.join(names[t1]))
+		raise ValueError('TF-cell type pair(s) have no targets in the specified direction: '+','.join(names[t2]))
 	t2=np.nonzero(t1<ntop)[0]
 	if len(t2)>0:
-		logging.warning('TF-cell type pair(s) have <{} targets in the specified direction: '.format(ntop)+','.join(names[t1]))
+		logging.warning('TF-cell type pair(s) have <{} targets in the specified direction: '.format(ntop)+','.join(names[t2]))
 	#Select target genes to show
 	t1=np.argpartition(net2,-ntop,axis=1)[:,-ntop:]
 	t1=np.array([t1[x,(net2 if direction!=0 else net)[x,t1[x]].argsort()[::-1]] for x in range(len(t1))])
@@ -316,7 +332,7 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	ax:
 		Axes to draw on
 	states:
-		Names of two cell states/types to compare as (reference,alternative)
+		Names of two cell contexts/states to compare as (reference,alternative)
 	annotate:
 		Genes to annotate their locations. Use 'all' to indicate all genes.
 	axes_alpha:
@@ -447,7 +463,7 @@ def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulator
 	ax:
 		Axes to draw on
 	state:
-		Names of cell state/type to draw subnetwork
+		Names of cell context/state to draw subnetwork
 	regulators:
 		Restricting the subnetwork to outgoing edges from these genes
 	targets:

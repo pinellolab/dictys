@@ -43,9 +43,9 @@ For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/d
 
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
 
-Examples
+Tutorials
 ========
-Dictys contains two major functions: network inference and network analysis. Network inference contains multiple command-line steps which are summarized in a `make` based pipeline. Network analysis can be achieved purely in jupyter notebooks. You can download the examples on `Zenodo <https://zenodo.org/record/6787658>`_.
+You can find the tutorials in this repo at https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials. There are additional examples on `Zenodo <https://zenodo.org/record/6787658>`_.
 
 Gallery
 =======

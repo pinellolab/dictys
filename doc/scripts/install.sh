@@ -1,11 +1,32 @@
-# Install Dictys
-# Accepted environmental variables:
-#	CONDAENV_NAME:			Name of conda environment
-#	PYTHONVERSION_CONDA:	Python version
-#	CUDAVERSION_CONDA:		CUDA version for GPU enabled pytorch. Omit or set to null str for CPU powered pytorch.
-#							You need a version supported by your driver and by pytorch.
-#							See https://stackoverflow.com/questions/9727688/how-to-get-the-cuda-version
-#	COMMIT_VERSION:			Dictys commit to install. Accepts hash, branch name, and tag. Defaults to master.
+#!/bin/bash
+
+function usage()
+{
+	fmt='%-25s%s\n'
+	echo "Usage: $(basename "$0") [-h]" >&2
+	echo "Installing Dictys as a conda environment" >&2
+	echo "" >&2	
+	echo "Parameters" >&2
+	printf "$fmt" '-h' 'Display this help.' >&2
+	echo "" >&2	
+	echo "Accepted environmental variables" >&2
+	printf "$fmt" 'CONDAENV_NAME' 'Name of conda environment' >&2
+	printf "$fmt" 'PYTHONVERSION_CONDA' 'Python version' >&2
+	printf "$fmt" 'CUDAVERSION_CONDA' 'CUDA version for GPU enabled pytorch. Omit or set to null str for CPU powered pytorch.' >&2
+	printf "$fmt" '' 'You need a version supported by your driver and by pytorch.' >&2
+	printf "$fmt" '' 'See https://stackoverflow.com/questions/9727688/how-to-get-the-cuda-version' >&2
+	printf "$fmt" 'COMMIT_VERSION' 'Dictys commit to install. Accepts hash, branch name, and tag. Defaults to master.' >&2
+	exit 1
+}
+
+#Parse arguments
+while getopts ':h' o; do case "$o" in
+	f)	field="$OPTARG";;
+	:)	echo "Error: -${OPTARG} requires an argument." >&2;echo >&2;usage;;
+	*)	usage;;
+	esac
+done
+shift $((OPTIND-1))
 
 set -ex -o pipefail
 
