@@ -49,7 +49,7 @@ You can find the tutorials in this repo at https://www.github.com/pinellolab/dic
 
 Gallery
 =======
-The figures below are produced with the blood example dataset. You can reproduce them with the `analysis-blood` example. See `Examples`_. Each figure is linked to the jupyter notebook that produces it.
+The figures below are produced with the blood example dataset. You can reproduce them with the `analysis-blood` example. See `Tutorials`_. Each figure is linked to the jupyter notebook that produces it.
 
 Cell-type specific GRN analyses
 -------------------------------
