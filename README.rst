@@ -19,7 +19,7 @@ Overview
 
 Installation
 =============
-First install `Anaconda <https://www.anaconda.com/>`_. Then, install Dictys **with CPU computation**:
+First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
 
 .. code-block::
 

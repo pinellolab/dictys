@@ -2,14 +2,16 @@
 
 function detect_basedir()
 {
-	echo "$(dirname "$(dirname "$(realpath "$(which homer)")")")"
+	b="$(which homer)"
+	if [ "a$b" == "a" ]; then printf '%s' 'Failed: check if you have homer installed'; return; fi
+	echo "$(dirname "$(dirname "$(realpath "$b")")")"
 }
 
 function usage()
 {
 	echo "Usage: $(basename "$0") [-b basedir] [ (-m mapfile) | (-o organism) ] [-c capitalization] [-h]" >&2
 	echo "Extracts motif file from homer installation to stdout" >&2
-	fmt='%-20s%s\n'
+	fmt='  %-20s%s\n'
 	printf "$fmt" '-b basedir' 'Base directory of homer installation' >&2
 	printf "$fmt" '' 'Default: autodetect ('"$(detect_basedir)"')' >&2
 	printf "$fmt" '-m mapfile' 'Mapfile mode: use motifs in $basedir/motifs/ by specifying a motif to gene mapping file.' >&2

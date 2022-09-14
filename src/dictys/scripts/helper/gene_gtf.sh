@@ -2,14 +2,16 @@
 
 function detect_basedir()
 {
-	echo "$(dirname "$(dirname "$(realpath "$(which homer)")")")"
+	b="$(which homer)"
+	if [ "a$b" == "a" ]; then printf '%s' 'Failed: check if you have homer installed'; return; fi
+	echo "$(dirname "$(dirname "$(realpath "$b")")")"
 }
 
 function usage()
 {
 	echo "Usage: $(basename "$0") [-f field] [-h] gtf_file bed_file" >&2
 	echo "Extracts gene region from GTF file into bed file" >&2
-	fmt='%-16s%s\n'
+	fmt='  %-14s%s\n'
 	printf "$fmt" 'gtf_file' 'Path of input GTF file' >&2
 	printf "$fmt" 'bed_file' 'Path of output BED file' >&2
 	printf "$fmt" '-f field' 'Field name to extract. Default: gene_name' >&2

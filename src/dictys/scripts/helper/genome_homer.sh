@@ -2,14 +2,17 @@
 
 function detect_basedir()
 {
-	echo "$(dirname "$(dirname "$(realpath "$(which homer)")")")"
+	b="$(which homer)"
+	if [ "a$b" == "a" ]; then printf '%s' 'Failed: check if you have homer installed'; return; fi
+	echo "$(dirname "$(dirname "$(realpath "$b")")")"
 }
+
 
 function usage()
 {
 	echo "Usage: $(basename "$0") [-b basedir] [-h] refgenome output_dir" >&2
 	echo "Extracts reference genome from homer installation to output directory" >&2
-	fmt='%-20s%s\n'
+	fmt='  %-14s%s\n'
 	printf "$fmt" 'refgenome' 'Name of reference genome in homer format, e.g. hg38.' >&2
 	printf "$fmt" '' 'You can get reference genomes available in homer with $basedir/configureHomer.pl -list' >&2
 	printf "$fmt" 'output_dir' 'Output directory to export reference genome as' >&2

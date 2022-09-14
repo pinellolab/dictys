@@ -392,6 +392,8 @@ def fig_discover(dcurve:pd.DataFrame,dtime:pd.DataFrame,ntops:Tuple[int,int,int,
 		if isinstance(vrange[xi],str):
 			#Automatically determine vrange
 			t2=list(set(itertools.chain.from_iterable([ans[x][0][1].index for x in t1])))
+			if len(t2)==0:
+				continue
 			t2=dchar.loc[t2][xi].values
 			if vrange[xi]=='extreme':
 				vrange1=[t2.min(),t2.max()]

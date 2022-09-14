@@ -7,7 +7,7 @@ function usage()
 {
 	echo "Usage: $(basename "$0") [-h] whole.bam output_folder [arguments ...]" >&2
 	echo "Splits input whole.bam file by cell barcode and per-barcode bam files to output folder" >&2
-	fmt='%-16s%s\n'
+	fmt='  %-18s%s\n'
 	printf "$fmt" 'whole.bam' 'Input whole bam file containing reads with different barcodes' >&2
 	printf "$fmt" 'output_folder' 'Output folder with one text file per barcode' >&2
 	printf "$fmt" 'arguments' 'Arguments passed to split_bam_text.py' >&2
@@ -48,6 +48,6 @@ fs="$(ls -1)"
 echo "$fs" | while read f; do
 	cat "$fheader" "$f" | samtools view -b -1 -o "$dout/$f".bam
 done
-popd
+popd &> /dev/null
 # Clean up
 rm -Rf "$dtext" "$fheader"
