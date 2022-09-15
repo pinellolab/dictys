@@ -1,0 +1,64 @@
+{% set buildnumber = "0" %}
+{% set version = "1.0.0" %}
+{% set pythonversion = "3.9" %}
+
+package:
+  name: dictys
+  version: {{ version }}
+
+source:
+  path: ../..
+
+build:
+  noarch: python
+  number: {{ buildnumber }}
+  script: |
+    set -eo pipefail
+    {{ PYTHON }} -m pip install https://files.pythonhosted.org/packages/2d/32/af556f3fb5e517ce58b17daa4c7f33140042adfc85d9c7db35c5f1779c10/pyDataverse-0.3.1-py3-none-any.whl
+    {{ PYTHON }} -m pip install --no-deps --ignore-installed .
+    #Correcting matplotlib version due to pyDNase dependency
+    {{ PYTHON }} -m pip uninstall -y pyDNase &> /dev/null || true
+    {{ PYTHON }} -m pip install -U matplotlib &> /dev/null || true
+    {{ PYTHON }} -m pip install --no-deps pyDNase &> /dev/null || true
+    #Update homer: disabled
+    #cd "$(dirname "$(dirname "$(realpath "$(which homer)")")")"
+    #./configureHomer.pl -update
+    #chmod u+x configureHomer.pl
+
+requirements:
+  host:
+    - python={{ pythonversion }}
+    - pip
+  run:
+    - python={{ pythonversion }}
+    - pip
+    - pytorch
+    - make
+    - torchvision
+    - torchaudio
+    - bedtools
+    - homer
+    - samtools
+    - macs2
+    - ffmpeg
+    - numpy
+    - pandas
+    - docutils
+    - h5py
+    - pyro-ppl==1.6.0
+    - scipy
+    - networkx
+    - pybedtools
+    - pyDNase
+    - threadpoolctl
+    - joblib
+    - matplotlib
+    - jupyter
+    - adjustText
+
+test:
+  imports:
+    - dictys
+    - pyDataverse
+  commands:
+    - dictys --help

@@ -1,0 +1,81 @@
+name: "Create pre-test conda package: dictys"
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build conda package
+    steps:
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+      - name: Add conda to system path and conda-build, conda-verify
+        shell: bash
+        run: |
+          echo $CONDA/bin >> $GITHUB_PATH
+          conda install -y conda-build conda-verify
+      - uses: actions/checkout@v3
+      - name: conda build
+        shell: bash
+        run: |
+          cd utils/conda
+          OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_MAX_THREADS=1 NUMEXPR_MAX_THREADS=1 MKL_MAX_THREADS=1 CONDA_NPY=123 conda build --output-folder . -c bioconda -c conda-forge -c pytorch .
+      - name: 'Upload package'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ci-conda
+          path: utils/conda/noarch/dictys-1.0.0-py_0.tar.bz2
+          retention-days: 2
+ 
+  test-blood1:
+    name: Blood static network unit tests
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    steps:
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+      - name: Add conda to system path and conda-build, conda-verify
+        shell: bash
+        run: |
+          echo $CONDA/bin >> $GITHUB_PATH
+          conda install -y conda-build conda-verify
+      - name: Download package
+        uses: actions/download-artifact@v3
+        with:
+          name: ci-conda
+      - name: Install package
+        shell: bash
+        run: |
+          set -e -o pipefail
+          ls
+          mkdir -p channel/noarch
+          mv dictys-1.0.0-py_0.tar.bz2 channel/noarch
+          conda index $(realpath channel)
+          conda create -y -n dictys -c conda-forge python=3.9 mamba
+          . activate dictys
+          mamba install -y -c file://$(realpath channel) -c bioconda -c conda-forge -c pytorch dictys cpuonly
+      - uses: actions/checkout@v3
+      - name: Get dataset URL
+        id: zenodo-url-translate
+        uses: ./.github/actions/zenodo-url-translate
+        with:
+          url: https://zenodo.org/record/6858494/files/inference-blood1.tar.xz?download=1
+      - name: Test dataset
+        uses: ./.github/actions/inference-test-dataset
+        with:
+          url: ${{ steps.zenodo-url-translate.outputs.url }}
+          test-path: ci_testspace
+          makefile: test_static.mk
+          expected-folder: test/tmp_static_expected
+          actual-folder: test/tmp_static
+          expected-h5: test/output/static_expected.h5
+          actual-h5: test/output/static.h5
+          makefile-params: '{"ENVMODE": "none", "NTH": "2", "DEVICE": "cpu", "GENOME_MACS2": "hs", "JOINT": "0", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3"}'
+          exclusions: 'reads.bam reads.bai net_weight.tsv.gz net_covfactor.tsv.gz net_meanvar.tsv.gz net_loss.tsv.gz net_stats.tsv.gz'

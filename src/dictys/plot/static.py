@@ -123,7 +123,7 @@ def compute_reg_spec(*a,**ka):
 	"""
 	This function is obsolete. Use compute_spec instead.
 	"""
-	return compute_spec(*a,base=deg,**ka)
+	return compute_spec(*a,base='deg',**ka)
 
 def fig_heatmap_reg_spec(v:pd.DataFrame,aspect:float=0.3,figscale:float=0.15,g_ann:Optional[list[str]]=None,**ka):
 	"""

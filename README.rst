@@ -19,6 +19,29 @@ Overview
 
 Installation
 =============
+
+With Anaconda
+-------------
+First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
+
+.. code-block::
+
+	conda create -y -n dictys -c conda-forge python=3.9 mamba
+	. activate dictys
+	mamba install -y -c bioconda -c conda-forge -c pytorch -c lingfeiwang dictys cpuonly
+
+This will create a conda environment named `dictys`.
+
+Alternatively, **with GPU computation** (here CUDA 11.3):
+
+.. code-block::
+
+	conda create -y -n dictys -c conda-forge python=3.9 mamba
+	. activate dictys
+	mamba install -y -c bioconda -c conda-forge -c pytorch -c lingfeiwang dictys cudatoolkit=11.3
+
+With `bash script <https://tinyurl.com/dictys>`_
+-------------------------------------------------
 First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
 
 .. code-block::
@@ -39,7 +62,13 @@ Alternatively, **with GPU computation** (here CUDA 11.3):
 
 	wget https://tinyurl.com/dictys -O - | CUDAVERSION_CONDA=11.3 bash
 
-For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_ and/or edit `install.sh <https://github.com/pinellolab/dictys/blob/master/doc/scripts/install.sh>`_. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
+With containers
+----------------
+TBA
+
+Additional notes
+----------------
+For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_ and/or edit the `install script <https://tinyurl.com/dictys>`_. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
 
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
 
