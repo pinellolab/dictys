@@ -1,6 +1,13 @@
 name: CI for code checks
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'src/**'
+      - '.github/workflows/ci-codecheck.yml'
 
 jobs:
   codecheck:

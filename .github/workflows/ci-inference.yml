@@ -1,6 +1,19 @@
 name: CI for network inference tests
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'setup.py'
+      - 'src/**'
+      - 'bin/**'
+      - '.github/workflows/ci-inference.yml'
+      - '.github/actions/zenodo-url-translate/**'
+      - '.github/actions/inference-test-dataset/**'
+      - '.github/scripts/inference-test-dataset.py'
+      - '.github/actions/install/**'
 
 jobs:
   test-skin1:

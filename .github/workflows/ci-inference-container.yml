@@ -1,6 +1,19 @@
 name: CI for network inference tests on container
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'setup.py'
+      - 'src/**'
+      - 'bin/**'
+      - 'utils/docker/**'
+      - '.github/workflows/ci-inference-container.yml'
+      - '.github/actions/zenodo-url-translate/**'
+      - '.github/actions/inference-test-dataset/**'
+      - '.github/scripts/inference-test-dataset.py' 
 
 jobs:
   test-blood1:

@@ -1,6 +1,16 @@
 name: "Create and publish pre-test Docker image in format: dictys-(master|dev)-(cpu|cuda_version)-pretest"
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'setup.py'
+      - 'src/**'
+      - 'bin/**'
+      - 'utils/docker/**'
+      - '.github/workflows/ci-container.yml'
 
 env:
   REGISTRY: ghcr.io
