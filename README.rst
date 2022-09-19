@@ -5,7 +5,7 @@ Dictys reconstructs cell-type specific and dynamic gene regulatory networks (GRN
 
 Dictys provides network analysis and visualization at global (across all cell types), pairwise (between two cell types) and single GRN levels. Dictys directly quantifies TF regulatory activity from GRN and enables a series of analyses such as cell-type specific TF discovery as regulation markers, differential regulation analysis alongside differential expression, and TF regulatory program illustration through its subnetwork and top activation/repression targets. These GRN-based analyses can capture unique biological insights not available from mean expression.
 
-Dictys infers and analyzes dynamic GRN from scRNA-seq and scATAC-seq datasets along (infered) trajectories. This avoids artificial cell subsets and potential biases from population imbalance, and allows (pseudo-)time-resolved discovery and investigation of driver TFs and their individual regulations. Dictys provides an integrative network viewer for dynamic GRN visualization of synchronous panels in animation.
+Dictys infers and analyzes dynamic GRN from scRNA-seq and scATAC-seq datasets along (inferred) trajectories. This avoids artificial cell subsets and potential biases from population imbalance, and allows (pseudo-)time-resolved discovery and investigation of driver TFs and their individual regulations. Dictys provides an integrative network viewer for dynamic GRN visualization of synchronous panels in animation.
 
 Overview
 =============
@@ -28,7 +28,7 @@ First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.htm
 
 	conda create -y -n dictys -c conda-forge python=3.9 mamba
 	. activate dictys
-	mamba install -y -c bioconda -c conda-forge -c pytorch -c lingfeiwang dictys cpuonly
+	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cpuonly
 
 This will create a conda environment named `dictys`.
 
@@ -38,7 +38,7 @@ Alternatively, **with GPU computation** (here CUDA 11.3):
 
 	conda create -y -n dictys -c conda-forge python=3.9 mamba
 	. activate dictys
-	mamba install -y -c bioconda -c conda-forge -c pytorch -c lingfeiwang dictys cudatoolkit=11.3
+	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cudatoolkit=11.3
 
 With `bash script <https://tinyurl.com/dictys>`_
 -------------------------------------------------
@@ -73,8 +73,16 @@ For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/d
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
 
 Tutorials
-========
-You can find the tutorials in this repo at https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials. There are additional examples on `Zenodo <https://zenodo.org/record/6787658>`_.
+=========
+We provide several tutorial for different data types. Please download each tutorial folder structure before running.
+
+1. `short-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/short-multiome>`_: a single-notebook tutorial from data preparation to context specific network analysis on 10x multiome data for human blood.
+
+2. `full-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-multiome>`_: an extended version of the above tutorial with detailed usage.
+
+3. `analysis-blood (TBA) <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood>`_: a simple tutorial for context specific and dynamic network analysis on separate scRNA-seq and scATAC-seq quantifications of human blood (as in manuscript).
+
+We are organizing more tutorials for release. For now, you can explore some of them without technical support on `Zenodo <https://zenodo.org/record/6787658>`_ or `Google Colaboratory <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_. Note these tutorials are subject to structural change.
 
 Gallery
 =======
@@ -113,6 +121,20 @@ Dynamic GRN analysis
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/animation.gif
    :width: 800
+
+FAQ
+==========================
+* How do I perform network inference faster?
+	1. Get a GPU, such as:
+		- `Google Colaboratory <https://colab.research.google.com/>`_ offers free GPU access with zero/minimal setup. You can run Dictys on very small datasets for free, or larger datasets with paid membership. See `our tutorial <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_.
+		- Major cloud computing service providers offer GPU access that is orders of magnitude cheaper than a scRNA-seq experiment.
+		- High-performance computing cluster with GPU access at institution or other levels. Dedicated computing server. Personal computer with high-end consumer level GPU.
+		- People or labs with the above access.
+	2. Reduce the computational load, such as:
+		- For context specific networks, choose only cell clusters of your interest. Details TBA.
+		- For dynamic networks, use fewer windows. This risks reducing time resolution. Details TBA.
+		- Reduce the number of training steps. This risks reducing network quality. Details TBA.
+	3. Configure properly for a powerful CPU. Details TBA.
 
 Issues
 ==========================

@@ -62,3 +62,9 @@ test:
     - pyDataverse
   commands:
     - dictys --help
+
+about:
+  home: https://github.com/pinellolab/dictys
+  license: AGPL-3
+  summary: 'Context specific and dynamic gene regulatory network reconstruction and analysis'
+ 
