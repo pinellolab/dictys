@@ -3,7 +3,7 @@ name: CI for code checks
 on:
   push:
     branches:
-      - main
+      - master
       - dev
     paths:
       - 'src/**'

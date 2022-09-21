@@ -3,7 +3,7 @@ name: CI for network inference tests on container
 on:
   push:
     branches:
-      - main
+      - master
       - dev
     paths:
       - 'setup.py'

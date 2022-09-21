@@ -3,7 +3,7 @@ name: "Create and publish pre-test Docker image in format: dictys-(master|dev)-(
 on:
   push:
     branches:
-      - main
+      - master
       - dev
     paths:
       - 'setup.py'

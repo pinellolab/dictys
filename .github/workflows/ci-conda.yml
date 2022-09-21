@@ -3,7 +3,7 @@ name: "Build & test conda package"
 on:
   push:
     branches:
-      - main
+      - master
       - dev
     paths:
       - 'setup.py'
