@@ -80,7 +80,7 @@ We provide several tutorial for different data types. Please download each tutor
 
 2. `full-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-multiome>`_: an extended version of the above tutorial with detailed usage.
 
-3. `analysis-blood <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood>`_: a simple tutorial for context specific (TBA) and dynamic network analysis on separate scRNA-seq and scATAC-seq quantifications of human blood as in manuscript.
+3. `analysis-blood <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood>`_: a simple tutorial for context specific and dynamic network analysis on separate scRNA-seq and scATAC-seq quantifications of human blood as in manuscript.
 
 We are organizing more tutorials for release. For now, you can explore some of them without technical support on `Zenodo <https://zenodo.org/record/6787658>`_ or `Google Colaboratory <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_. Note these tutorials are subject to structural change.
 
