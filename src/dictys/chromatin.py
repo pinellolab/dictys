@@ -436,7 +436,7 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,n
 	logging.info(f'Writing file {fo_dist}')
 	ans2.to_csv(fo_dist,header=True,index=False,sep='\t')
 
-def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]=None,combine:str='max',mode:int=4)->None:
+def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]=None,whitelist_mode:str='intersect',combine:str='max',mode:int=4)->None:
 	"""
 	Linking regulators and targets with scores.
 
@@ -452,6 +452,10 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]
 		Path of input bed file of potential regulatory target genes of each region.
 		The fourth column (or its first item after split by _) should be taget gene name.
 		Can be used to filter regulatory regions based on co-accessibility or association with target gene expression.
+	whitelist_mode:
+		Criterion of whitelist. Accepts:
+			* intersect: the region must intersect with a whitelisted region (default)
+			* within: the region must be inside a whitelisted region
 	combine:
 		Method to combine scores of motifs of the same TF. Accepts: max, mean, sum.
 	mode:
@@ -496,9 +500,16 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]
 			t2=t2[:,np.argsort(t2[0])]
 			#Cumulative max
 			t2m=np.r_[-1,np.maximum.accumulate(t2[1])]
-			#Find regions in whitelist: start and stop inside any whitelist
-			t3=(t2m[np.searchsorted(t2[0],t1.ravel(),side='right')]>=t1.ravel()).reshape(2,-1).all(axis=0)
+			if whitelist_mode=='within':
+				#Find regions in whitelist: start and stop inside any whitelist
+				t3=(t2m[np.searchsorted(t2[0],t1.ravel(),side='right')]>=t1.ravel()).reshape(2,-1).all(axis=0)
+			elif whitelist_mode=='intersect':
+				#Find regions in whitelist: intersect with any whitelist
+				t3=t2m[np.searchsorted(t2[0],t1[1])]>t1[0]
+			else:
+				raise ValueError(f'Unknown whitelist_mode: {whitelist_mode}')
 			ans+=list(groupd[grp,target][t3])
+				
 		if len(ans)==0:
 			raise RuntimeError('No potential regulation remains after whitelist selection.')
 		logging.info('{}/{} potential regulations remain after whitelist selection.'.format(len(ans),len(dd)))

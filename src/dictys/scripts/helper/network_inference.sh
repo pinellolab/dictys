@@ -43,9 +43,9 @@ mkfile="makefiles/$1.mk"
 if [ "a$1" == "adynamic" ]; then
 	make -f $mkfile subset
 fi
-make -f $mkfile -j $ncpu -k cpu 2>&1 | grep -v '^make: *** No rule to make target' || true
-make -f $mkfile -j $ngpu -k gpu 2>&1 | grep -v '^make: *** No rule to make target' || true
-make -f $mkfile -j $ncpu -k cpu || true
+make -f $mkfile -j $ncpu -k cpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
+make -f $mkfile -j $ngpu -k gpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
+make -f $mkfile -j $ncpu -k cpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
 make -f $mkfile combine
 if [ "a$clean" == "a1" ]; then
 	make -f $mkfile clean
