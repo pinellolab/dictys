@@ -19,6 +19,7 @@ Overview
 
 Installation
 =============
+Installation should take ~<10 mins.
 
 With Anaconda
 -------------
@@ -68,7 +69,9 @@ TBA
 
 Additional notes
 ----------------
-For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_ and/or edit the `install script <https://tinyurl.com/dictys>`_. *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.*
+For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/dictys/blob/master/INSTALL.md>`_ and/or edit the `install script <https://tinyurl.com/dictys>`_.
+
+*Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.* Running time depends on the dataset, but it can take weeks or longer without a GPU.
 
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
 
@@ -142,4 +145,4 @@ Please raise an issue on `github <https://github.com/pinellolab/dictys/issues/ne
 
 References
 ==========================
-Dictys: dynamic gene regulatory network dissects developmental continuum with single-cell multi-omics `bioRxiv <https://doi.org/10.1101/2022.09.14.508036>`_ (2022)
+`Dictys: dynamic gene regulatory network dissects developmental continuum with single-cell multi-omics <https://www.biorxiv.org/content/10.1101/2022.09.14.508036>`_ bioRxiv (2022)
