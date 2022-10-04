@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 pkgname="dictys"
-pkgnamefull="Dictys"
+pkgnamefull="Context specific and dynamic gene regulatory network reconstruction and analysis"
 version=[0,1,0]
 url="https://github.com/pinellolab/"+pkgname
 author="Lingfei Wang, Nikolaos Trasanidis, Luca Pinello"

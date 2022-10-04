@@ -134,7 +134,7 @@ FAQ
 		- High-performance computing cluster with GPU access at institution or other levels. Dedicated computing server. Personal computer with high-end consumer level GPU.
 		- People or labs with the above access.
 	2. Reduce the computational load, such as:
-		- For context specific networks, choose only cell clusters of your interest. Details TBA.
+		- For context specific networks, choose only cell clusters of your interest. For this, delete the uninterested cell clusters in `data/subsets.txt`.
 		- For dynamic networks, use fewer windows. This risks reducing time resolution. Details TBA.
 		- Reduce the number of training steps. This risks reducing network quality. Details TBA.
 	3. Configure properly for a powerful CPU. Details TBA.

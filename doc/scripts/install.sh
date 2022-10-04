@@ -30,7 +30,6 @@ function usage()
 
 #Parse arguments
 while getopts ':h' o; do case "$o" in
-	f)	field="$OPTARG";;
 	:)	echo "Error: -${OPTARG} requires an argument." >&2;echo >&2;usage;;
 	*)	usage;;
 	esac

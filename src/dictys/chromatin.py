@@ -436,7 +436,7 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,n
 	logging.info(f'Writing file {fo_dist}')
 	ans2.to_csv(fo_dist,header=True,index=False,sep='\t')
 
-def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int=4)->None:
+def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]=None,combine:str='max',mode:int=4)->None:
 	"""
 	Linking regulators and targets with scores.
 
@@ -448,6 +448,10 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int
 		Path of input tsv file of distance from TF-bond regions to TSS
 	fo_linking:
 		Path of output matrix file of TF to potential target gene link scores
+	fi_whitelist:
+		Path of input bed file of potential regulatory target genes of each region.
+		The fourth column (or its first item after split by _) should be taget gene name.
+		Can be used to filter regulatory regions based on co-accessibility or association with target gene expression.
 	combine:
 		Method to combine scores of motifs of the same TF. Accepts: max, mean, sum.
 	mode:
@@ -473,6 +477,32 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,combine:str='max',mode:int
 	db=pd.read_csv(fi_binding,header=0,index_col=None,sep='\t')
 	logging.info(f'Reading file {fi_dist}')
 	dd=pd.read_csv(fi_dist,header=0,index_col=None,sep='\t')
+	
+	if fi_whitelist is not None:
+		#Filter distance to TSS table
+		dw=pd.read_csv(fi_whitelist,header=None,index_col=None,sep='\t')
+		dw[3]=dw[3].apply(lambda x:x.split('_')[0])
+		dd['chr']=dd['region'].apply(lambda x:x.split(':')[0])
+		dd['start']=dd['region'].apply(lambda x:x.split(':')[1]).astype(int)
+		dd['stop']=dd['region'].apply(lambda x:x.split(':')[2]).astype(int)
+		groupd=dd.groupby(['chr','target']).groups
+		groupw=dw.groupby([0,3]).groups
+		ans=[]
+		for grp,target in set(groupd)&set(groupw):
+			t1=dd.loc[groupd[grp,target],['start','stop']].values.T
+			t2=dw.loc[groupw[grp,target],[1,2]].values.T
+			t1=np.sort(t1,axis=0)
+			t2=np.sort(t2,axis=0)
+			t2=t2[:,np.argsort(t2[0])]
+			#Cumulative max
+			t2m=np.r_[-1,np.maximum.accumulate(t2[1])]
+			#Find regions in whitelist: start and stop inside any whitelist
+			t3=(t2m[np.searchsorted(t2[0],t1.ravel(),side='right')]>=t1.ravel()).reshape(2,-1).all(axis=0)
+			ans+=list(groupd[grp,target][t3])
+		if len(ans)==0:
+			raise RuntimeError('No potential regulation remains after whitelist selection.')
+		logging.info('{}/{} potential regulations remain after whitelist selection.'.format(len(ans),len(dd)))
+		dd=dd.loc[ans]
 
 	#Chain linking
 	links=[[db['TF'].values,db['loc'].values,db['score'].values],[dd['region'].values,dd['target'].values,_linking_score(None,None,dd['dist'].values,mode=mode&4) if mode&4 else np.zeros(len(dd))]]

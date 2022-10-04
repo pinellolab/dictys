@@ -81,7 +81,7 @@ if len(set([len(x) for x in nameg_bed]))!=1:
 	raise ValueError('Unequal number of columns in gene.bed')
 nameg_bed=list(filter(lambda x:x[3] in snameg,nameg_bed))
 if len(nameg_bed[0])<6:
-	logging.warn('No strand information in gene.bed')
+	logging.warning('No strand information in gene.bed')
 namechr_bed=sorted(set([x[0] for x in nameg_bed]))
 snamechr_bed=set(namechr_bed)
 nameg_bed=[x[3] for x in nameg_bed]
@@ -114,14 +114,14 @@ if pexists(pjoin(dirdata,'blacklist.bed')):
 	namechr_bl=[x.split('\t')[0] for x in namechr_bl if len(x)>0]
 	snamechr_bl=set(namechr_bl)
 	if len(snamechr_bl-namechr_bl)>0:
-		logging.warn('Blacklist chromosomes not found in genome: '+','.join(sorted(snamechr_bl-namechr_bl)))
+		logging.warning('Blacklist chromosomes not found in genome: '+','.join(sorted(snamechr_bl-namechr_bl)))
 
 #############################################
 # Context specific GRN inference checks
 #############################################
 
 if not pexists(pjoin(dirmakefiles,'static.mk')) or not pexists(pjoin(dirdata,'subsets.txt')):
-	logging.warn('Cannot find static.mk or subsets.txt. Skipping static network inference checks.')
+	logging.warning('Cannot find static.mk or subsets.txt. Skipping static network inference checks.')
 else:
 	#Subsets
 	with open(pjoin(dirdata,'subsets.txt'),'r') as f:
@@ -155,7 +155,7 @@ else:
 	if len(t1-snamec_rna)>0:
 		raise ValueError('Subset RNA cells not found in population')
 	if len(snamec_rna-t1)>0:
-		logging.warn('Found RNA cells not assigned to any subset')
+		logging.warning('Found RNA cells not assigned to any subset')
 
 	if isjoint:
 		if any([frozenset(x)!=frozenset(y) for x,y in zip(snamec_srna,snamec_satac)]):
@@ -168,14 +168,14 @@ else:
 		if len(t1-snamec_atac)>0:
 			raise ValueError('Subset ATAC cells not found in population')
 		if len(snamec_atac-t1)>0:
-			logging.warn('Found ATAC cells not assigned to any subset')
+			logging.warning('Found ATAC cells not assigned to any subset')
 
 #############################################
 # Dynamic GRN inference checks
 #############################################
 
 if not pexists(pjoin(dirmakefiles,'dynamic.mk')) or not pexists(pjoin(dirdata,'traj_node.h5')):
-	logging.warn('Cannot find dynamic.mk or traj_node.h5. Skipping dynamic network inference checks.')
+	logging.warning('Cannot find dynamic.mk or traj_node.h5. Skipping dynamic network inference checks.')
 else:
 	#For RNA
 	traj=trajectory.from_file(pjoin(dirdata,'traj_node.h5'))

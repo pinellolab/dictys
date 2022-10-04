@@ -314,6 +314,8 @@ class network:
 				logging.warning('Skipping cell subset {} due to error: {}'.format(sname[xi],repr(e)))
 				success[xi]=False
 				nets[xi]=pd.DataFrame([],index=[],columns=[])
+		if not success.any():
+			raise RuntimeError('No network found.')
 
 		#Network nodes: source & target
 		nidss=[[x.index,x.columns] for x in nets]

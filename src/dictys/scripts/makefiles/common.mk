@@ -46,11 +46,13 @@ endif
 ifneq (a$(wildcard $(DIRI)/blacklist.bed),a)
 KPARAMS-CHROMATIN-WELLINGTON+=--fi_blacklist $(DIRI)/blacklist.bed
 endif
+ifneq (a$(wildcard $(DIRI)/whitelist.bed),a)
+KPARAMS-CHROMATIN-LINKING+=--fi_whitelist $(DIRI)/whitelist.bed
+endif
 
 ############################################################
 # Products by computing mode
 ############################################################
-
 PRODUCT_NAMES_CPU:=names_rna.txt names_atac0.txt names_atac.txt expression0.tsv.gz expression.tsv.gz names_atac.txt reads.bam reads.bai peaks.bed footprints.bed motifs.bed homer.tsv.gz wellington.tsv.gz binding.tsv.gz tssdist.tsv.gz linking.tsv.gz binlinking.tsv.gz net_nweight.tsv.gz net_iweight.tsv.gz net_inweight.tsv.gz
 PRODUCT_NAMES_GPU:=net_weight.tsv.gz net_meanvar.tsv.gz net_covfactor.tsv.gz net_loss.tsv.gz net_stats.tsv.gz
 DPRODUCT_NAMES=
