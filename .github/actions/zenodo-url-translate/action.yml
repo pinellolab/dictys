@@ -23,4 +23,4 @@ runs:
         s2="$s1/${s0#http[s]*://zenodo.org/record/[^/]*/}"
         echo "Old URL: $s0"
         echo "New URL: $s2"
-        echo "::set-output name=url::$s2"
+        echo "url=$s2" >> $GITHUB_OUTPUT
