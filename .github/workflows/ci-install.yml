@@ -33,7 +33,7 @@ jobs:
             exit 1
         fi
         echo "$v"
-        echo "::set-output name=version::$v"
+        echo "version=$v" >> $GITHUB_OUTPUT
     - uses: actions/checkout@v3
       with:
         ref: ${{ steps.version.outputs.version }}
@@ -71,7 +71,7 @@ jobs:
         echo "Step 8"
         echo "$s1"
         cmp <(echo "$s1") <(echo "wget https://tinyurl.com/dictys -O - | bash") || exit 1
-        echo "::set-output name=run::$s1"
+        echo "run=$s1" >> $GITHUB_OUTPUT
     
   install-linux-bash:
     runs-on: ubuntu-latest
@@ -109,7 +109,7 @@ jobs:
             exit 1
         fi
         echo "$v"
-        echo "::set-output name=version::$v"
+        echo "version=$v" >> $GITHUB_OUTPUT
     - uses: actions/checkout@v3
       with:
         ref: ${{ steps.version.outputs.version }}
@@ -191,7 +191,7 @@ jobs:
             exit 1
         fi
         echo "$v"
-        echo "::set-output name=version::$v"
+        echo "version=$v" >> $GITHUB_OUTPUT
     - uses: actions/checkout@v3
       with:
         ref: ${{ steps.version.outputs.version }}

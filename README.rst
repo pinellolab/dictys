@@ -77,7 +77,7 @@ If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://ww
 
 Tutorials
 =========
-We provide several tutorial for different data types. Please download each tutorial folder structure before running. Note that these tutorials are not intended to replicate the results in the paper due to differences in software versions, computing platforms, various randomness e.g. in `HOMER genome preparsing<http://homer.ucsd.edu/homer/ngs/peakMotifs.html>`_ or `Pytorch algorithms<https://pytorch.org/docs/stable/notes/randomness.html>`_, etc.
+We provide several tutorial for different data types. Please download each tutorial folder structure before running. Note that these tutorials are not intended to replicate the results in the paper due to differences in software versions, computing platforms, various randomness e.g. in `HOMER genome preparsing <http://homer.ucsd.edu/homer/ngs/peakMotifs.html>`_ or `Pytorch algorithms <https://pytorch.org/docs/stable/notes/randomness.html>`_, etc.
 
 1. `short-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/short-multiome>`_: a single-notebook tutorial from data preparation to context specific network analysis on 10x multiome data for human blood.
 
