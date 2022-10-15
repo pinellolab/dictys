@@ -129,17 +129,29 @@ Dynamic GRN analysis
 
 FAQ
 ==========================
-* How do I perform network inference faster?
-	1. Get a GPU, such as:
-		- `Google Colaboratory <https://colab.research.google.com/>`_ offers free GPU access with zero/minimal setup. You can run Dictys on very small datasets for free, or larger datasets with paid membership. See `our tutorial <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_.
-		- Major cloud computing service providers offer GPU access that is orders of magnitude cheaper than a scRNA-seq experiment.
-		- High-performance computing cluster with GPU access at institution or other levels. Dedicated computing server. Personal computer with high-end consumer level GPU.
-		- People or labs with the above access.
-	2. Reduce the computational load, such as:
-		- For context specific networks, choose only cell clusters of your interest. For this, delete the uninterested cell clusters in `data/subsets.txt`.
-		- For dynamic networks, use fewer windows. This risks reducing time resolution. Details TBA.
-		- Reduce the number of training steps. This risks reducing network quality. Details TBA.
-	3. Configure properly for a powerful CPU. Details TBA.
+* **How do I perform network inference faster**?
+
+  1. Get a GPU, such as:
+  
+     - `Google Colaboratory <https://colab.research.google.com/>`_ offers free GPU access with zero/minimal setup. You can run Dictys on very small datasets for free, or larger datasets with paid membership. See `our tutorial <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_.
+     - Major cloud computing service providers offer GPU access that is orders of magnitude cheaper than a scRNA-seq experiment.
+     - High-performance computing cluster with GPU access at institution or other levels. Dedicated computing server. Personal computer with high-end consumer level GPU.
+     - People or labs with the above access.
+		
+  2. Reduce the computational load, such as:
+  
+     - For context specific networks, choose only cell clusters of your interest. For this, delete the uninterested cell clusters in `data/subsets.txt`.
+     - For dynamic networks, use fewer windows. This risks reducing time resolution. Details TBA.
+     - Reduce the number of training steps. This risks reducing network quality. Details TBA.
+		
+  3. Configure properly for a powerful CPU. Details TBA.
+
+* **Why do I see this error:** ``AssertionError: Torch not compiled with CUDA enabled``?
+  
+  This is because you installed a CPU-only pytorch but tried to run it on GPU. You have several options:
+  
+  1. To run pytorch on CPU, run ``dictys_helper makefile_update.py path/to/config.mk '{"DEVICE": "cpu"}'`` to configure to CPU mode. See `Tutorials`_ to find the right place to run this command.
+  2. To run pytorch on GPU, reinstall Dictys with the correct options to enable GPU support at `Installation`_.
 
 Issues
 ==========================
