@@ -21,8 +21,8 @@ Installation
 =============
 Installation should take ~<10 mins.
 
-With Anaconda
--------------
+Option 1: with Anaconda
+-----------------------
 First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
 
 .. code-block::
@@ -41,8 +41,8 @@ Alternatively, **with GPU computation** (here CUDA 11.3):
 	. activate dictys
 	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cudatoolkit=11.3
 
-With `bash script <https://tinyurl.com/dictys>`_
--------------------------------------------------
+Option 2: with `bash script <https://tinyurl.com/dictys>`_
+----------------------------------------------------------
 First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
 
 .. code-block::
@@ -63,8 +63,8 @@ Alternatively, **with GPU computation** (here CUDA 11.3):
 
 	wget https://tinyurl.com/dictys -O - | CUDAVERSION_CONDA=11.3 bash
 
-With containers
-----------------
+Option 3: with containers
+-------------------------
 TBA
 
 Additional notes
@@ -77,13 +77,15 @@ If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://ww
 
 Tutorials
 =========
-We provide several tutorial for different data types. Please download each tutorial folder structure before running.
+We provide several tutorial for different data types. Please download each tutorial folder structure before running. Note that these tutorials are not intended to replicate the results in the paper due to differences in software versions, computing platforms, various randomness e.g. in `HOMER genome preparsing<http://homer.ucsd.edu/homer/ngs/peakMotifs.html>`_ or `Pytorch algorithms<https://pytorch.org/docs/stable/notes/randomness.html>`_, etc.
 
 1. `short-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/short-multiome>`_: a single-notebook tutorial from data preparation to context specific network analysis on 10x multiome data for human blood.
 
 2. `full-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-multiome>`_: an extended version of the above tutorial with detailed usage.
 
-3. `analysis-blood <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood>`_: a simple tutorial for context specific and dynamic network analysis on separate scRNA-seq and scATAC-seq quantifications of human blood as in manuscript.
+The network analysis tutorials below use the same reconstructed networks as in the paper and are designed to replicate the results.
+
+1. `analysis-blood <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood>`_: a simple tutorial for context specific and dynamic network analysis on separate scRNA-seq and scATAC-seq quantifications of human blood as in manuscript.
 
 We are organizing more tutorials for release. For now, you can explore some of them without technical support on `Zenodo <https://zenodo.org/record/6787658>`_ or `Google Colaboratory <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_. Note these tutorials are subject to structural change.
 

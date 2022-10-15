@@ -20,9 +20,23 @@ jobs:
     outputs:
       run: ${{ steps.run.outputs.run }}
     steps:
+    - name: Show version
+      id: version
+      run: |
+        if [ "a${{ inputs.ref }}" != "a" ]; then
+            v="${{ inputs.ref }}"
+        elif [ "a${GITHUB_REF}" != "a" ]; then
+            v="${GITHUB_REF}"
+        elif [ "a${{ github.event.repository.default_branch }}" != "a" ]; then
+            v="${{ github.event.repository.default_branch }}"
+        else
+            exit 1
+        fi
+        echo "$v"
+        echo "::set-output name=version::$v"
     - uses: actions/checkout@v3
       with:
-        ref: ${{ inputs.ref || github.devent.push.ref || github.event.repository.default_branch }}
+        ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
       uses: actions/setup-python@v3
       with:
@@ -34,12 +48,27 @@ jobs:
         # Get first code-block in section Installation
         linestart=$(grep -n '^Installation' README.rst | awk -F: '{print $1}' | head -n 1)
         lineend=$(tail -n +$(( linestart + 2 )) README.rst  | grep -n '^==' | awk -F: '{print $1}' | head -n 1)
-        linestart2=$(tail -n +$linestart README.rst | head -n $lineend | grep -n '^With .*bash script' | awk -F: '{print $1}' | head -n 1)
+        linestart2=$(tail -n +$linestart README.rst | head -n $lineend | grep -n '^Option [0-9]: with .*bash script' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 1"
+        tail -n +$linestart README.rst | head -n $lineend
         linestart=$(( linestart + linestart2 ))
         lineend=$(tail -n +$(( linestart + 2 )) README.rst | head -n $lineend | grep -n '^--' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 2"
+        tail -n +$(( linestart + 2 )) README.rst | head -n $lineend
         linestart2=$(tail -n +$linestart README.rst | head -n $lineend | grep -n '^.. code-block::' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 3"
+        tail -n +$linestart README.rst | head -n $lineend
         lineend2=$(tail -n +$linestart README.rst | head -n $lineend | tail -n +$(( linestart2 + 1 )) | grep -n '^.. code-block::' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 4"
+        tail -n +$linestart README.rst | head -n $lineend
+        echo "Step 5"
+        tail -n +$linestart README.rst | head -n $lineend | tail -n +$(( linestart2 + 1 ))
         s1="$(tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2 | grep '^[[:blank:]]' | sed 's/^[[:space:]]*//g')"
+        echo "Step 6"
+        tail -n +$linestart README.rst | head -n $lineend
+        echo "Step 7"
+        tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2
+        echo "Step 8"
         echo "$s1"
         cmp <(echo "$s1") <(echo "wget https://tinyurl.com/dictys -O - | bash") || exit 1
         echo "::set-output name=run::$s1"
@@ -59,7 +88,7 @@ jobs:
     - name: Test install
       run: |
         echo '::group::Test install output'
-        ${{needs.install-script-bash.outputs.run}}
+        ${{ needs.install-script-bash.outputs.run }}
         echo '::endgroup::'
 
   install-script-conda:
@@ -67,9 +96,23 @@ jobs:
     outputs:
       run: ${{ steps.run.outputs.run }}
     steps:
+    - name: Show version
+      id: version
+      run: |
+        if [ "a${{ inputs.ref }}" != "a" ]; then
+            v="${{ inputs.ref }}"
+        elif [ "a${GITHUB_REF}" != "a" ]; then
+            v="${GITHUB_REF}"
+        elif [ "a${{ github.event.repository.default_branch }}" != "a" ]; then
+            v="${{ github.event.repository.default_branch }}"
+        else
+            exit 1
+        fi
+        echo "$v"
+        echo "::set-output name=version::$v"
     - uses: actions/checkout@v3
       with:
-        ref: ${{ inputs.ref || github.devent.push.ref || github.event.repository.default_branch }}
+        ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
       uses: actions/setup-python@v3
       with:
@@ -81,11 +124,25 @@ jobs:
         # Get first code-block in section Installation
         linestart=$(grep -n '^Installation' README.rst | awk -F: '{print $1}' | head -n 1)
         lineend=$(tail -n +$(( linestart + 2 )) README.rst  | grep -n '^==' | awk -F: '{print $1}' | head -n 1)
-        linestart2=$(tail -n +$linestart README.rst | head -n $lineend | grep -n '^With .*conda$' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 1"
+        tail -n +$linestart README.rst | head -n $lineend
+        linestart2=$(tail -n +$linestart README.rst | head -n $lineend | grep -n '^Option [0-9]: with .*conda$' | awk -F: '{print $1}' | head -n 1)
         linestart=$(( linestart + linestart2 ))
+        echo "Step 2"
+        tail -n +$(( linestart + 2 )) README.rst | head -n $lineend
         lineend=$(tail -n +$(( linestart + 2 )) README.rst | head -n $lineend | grep -n '^--' | awk -F: '{print $1}' | head -n 1)
         linestart2=$(tail -n +$linestart README.rst | head -n $lineend | grep -n '^.. code-block::' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 3"
+        tail -n +$linestart README.rst | head -n $lineend | tail -n +$(( linestart2 + 1 ))
         lineend2=$(tail -n +$linestart README.rst | head -n $lineend | tail -n +$(( linestart2 + 1 )) | grep -n '^.. code-block::' | awk -F: '{print $1}' | head -n 1)
+        echo "Step 4"
+        echo "$linestart"
+        echo "$lineend"
+        tail -n +$linestart README.rst | head -n $lineend
+        echo "Step 5"
+        echo "$linestart2"
+        echo "$lineend2"
+        tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2
         s1="$(tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2 | grep '^[[:blank:]]' | sed 's/^[[:space:]]*//g')"
         echo "run<<EOF" >> $GITHUB_ENV
         echo "$s1" >> $GITHUB_ENV
@@ -121,9 +178,23 @@ jobs:
         python-version: ["3.9",""]
         cuda-version: ["11.3",""]
     steps:
+    - name: Show version
+      id: version
+      run: |
+        if [ "a${{ inputs.ref }}" != "a" ]; then
+            v="${{ inputs.ref }}"
+        elif [ "a${GITHUB_REF}" != "a" ]; then
+            v="${GITHUB_REF}"
+        elif [ "a${{ github.event.repository.default_branch }}" != "a" ]; then
+            v="${{ github.event.repository.default_branch }}"
+        else
+            exit 1
+        fi
+        echo "$v"
+        echo "::set-output name=version::$v"
     - uses: actions/checkout@v3
       with:
-        ref: ${{ inputs.ref || github.devent.push.ref || github.event.repository.default_branch }}
+        ref: ${{ steps.version.outputs.version }}
     - name: Install
       uses: ./.github/actions/install
       with:
