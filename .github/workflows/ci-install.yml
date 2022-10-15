@@ -148,7 +148,7 @@ jobs:
         echo "$s1" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
     - id: run
-      uses: actions/github-script@v5
+      uses: actions/github-script@v6
       with:
         script: |
           core.setOutput("run", `${{ env.run }}`);
