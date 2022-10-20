@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 #This file contains the definition for running environment through singularity
 #To use this running environment, set ENVMODE=singularity in config.mk
 #This file should be edited to configure the run (top part only)
@@ -78,4 +79,3 @@ FULL_TMPDIR=$(SINGULARITY_TMPDIR)
 
 
 #
-

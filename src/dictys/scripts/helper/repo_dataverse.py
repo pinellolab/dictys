@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Lingfei Wang, 2022. All rights reserved.
+
 import argparse
 
 class dvd:
@@ -111,4 +113,3 @@ subparser.set_defaults(func=ls)
 
 args=parser.parse_args()
 args.func(args)
-

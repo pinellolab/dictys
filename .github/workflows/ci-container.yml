@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 name: "Create and publish pre-test Docker image in format: dictys-(master|dev)-(cpu|cuda_version)-pretest"
 
 on:

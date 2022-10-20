@@ -1,4 +1,5 @@
 #!/bin/bash
+# Lingfei Wang, 2022. All rights reserved.
 
 function detect_basedir()
 {

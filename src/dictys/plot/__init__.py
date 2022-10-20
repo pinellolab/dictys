@@ -5,7 +5,7 @@
 Network visualization
 """
 
-__all__=['dynamic','panel','static']
+__all__=['dynamic','layout','panel','static']
 
 from typing import Tuple,Optional,Union
 from dictys.utils.importing import matplotlib

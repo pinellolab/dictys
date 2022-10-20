@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 #This file contains variables & targets only for cell-type specific GRN inference
 #This file should NOT be edited to configure the run
 #This file should be directly used for cell-type specific GRN inference with `makefile -f` 

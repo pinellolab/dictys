@@ -1,3 +1,4 @@
 #!/bin/bash
+# Lingfei Wang, 2022. All rights reserved.
 
 env OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_MAX_THREADS=1 NUMEXPR_MAX_THREADS=1 MKL_MAX_THREADS=1 python3 -m dictys "$@"

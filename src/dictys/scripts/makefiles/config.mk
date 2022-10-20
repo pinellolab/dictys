@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 #This file contains parameters for whole run and individual steps to be edited for your dataset
 #This file should be edited to configure the run
 #This file should NOT be directly used for any run with `makefile -f` 

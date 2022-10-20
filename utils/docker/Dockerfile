@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 ARG BASEIMG=ubuntu:20.04
 FROM $BASEIMG
 USER root
@@ -49,6 +50,3 @@ RUN echo '#!/bin/bash' > /usr/bin/run_dictys \
 
 #ENTRYPOINT ["/usr/bin/run_dictys"]
 	
-
-
-

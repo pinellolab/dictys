@@ -1,4 +1,5 @@
 #!/bin/bash
+# Lingfei Wang, 2022. All rights reserved.
 
 function detect_basedir()
 {
@@ -48,10 +49,18 @@ grep -vf "$fbed".step5 -F "$fbed".step4 > "$fbed".step6
 #Then add back the first entry for each duplicate value in designated field
 grep -f "$fbed".step5 -F "$fbed".step4 > "$fbed".step7
 cat "$fbed".step5 | while read l; do grep -F -m 1 "$l" "$fbed".step7 >> "$fbed".step6; done
+#Remove duplicate genes
+t1="$(awk '{print $4}' "$fbed".step6 | uniq -c | grep -v '^[[:blank:]]*1[[:blank:]]' | awk '{print $2}' || true )"
+if [ "a$(printf "$t1" | wc -c )" != "a0" ]; then
+	echo "Warning. Duplicate TSS found. Only one is used for genes: $(printf "$t1" | tr "\n" ",")" > /dev/stderr
+	sort -k4 -u "$fbed".step6 > "$fbed".step8
+else
+	cp "$fbed".step6 "$fbed".step8
+fi
 #Sort
-grep '^chr[1-9]' "$fbed".step6 | sort -k2g,3g | sort -s -k1.4g > "$fbed"
-grep -v '^chr[1-9]' "$fbed".step6 | sort -k2g,3g | sort -s -k1 >> "$fbed"
-rm -f "$fbed".step[1-7]
+grep '^chr[1-9]' "$fbed".step8 | sort -k2g,3g | sort -s -k1.4g > "$fbed"
+grep -v '^chr[1-9]' "$fbed".step8 | sort -k2g,3g | sort -s -k1 >> "$fbed"
+rm -f "$fbed".step[1-8]
 
 
 

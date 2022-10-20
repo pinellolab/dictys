@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 #This file contains the definition for running environment of no special environment setting
 #To use this running environment, set ENVMODE=none in config.mk
 #This file should NOT be edited to configure the run

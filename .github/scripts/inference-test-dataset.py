@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 # Usage: python3 $0 expected_folder output_folder expected_h5 output_h5 [exclusion_filename_1 ...]
 # Performs comparison between expected and actual outputs in network inference
 import sys

@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 #This file contains variables & targets shared between cell-type specific and dynamic GRN inference
 #This file should NOT be edited to configure the run
 #This file should NOT be directly used for any run with `makefile -f` 

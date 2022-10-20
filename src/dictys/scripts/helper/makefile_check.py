@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Lingfei Wang, 2022. All rights reserved.
 import json
 import argparse
 import sys
@@ -113,7 +114,7 @@ if pexists(pjoin(dirdata,'blacklist.bed')):
 	namechr_bl=[x.strip() for x in namechr_bl]
 	namechr_bl=[x.split('\t')[0] for x in namechr_bl if len(x)>0]
 	snamechr_bl=set(namechr_bl)
-	if len(snamechr_bl-namechr_bl)>0:
+	if len(snamechr_bl-set(namechr_bl))>0:
 		logging.warning('Blacklist chromosomes not found in genome: '+','.join(sorted(snamechr_bl-namechr_bl)))
 
 #############################################

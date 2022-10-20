@@ -587,7 +587,7 @@ class statheatmap(base):
 	Draw dynamic heatmap for a single stat.
 	"""
 	def __init__(self,ax,pts:dictys.traj.point,stat1:stat.base,names:Optional[Tuple[Optional[list[str]],Optional[list[str]]]]=None,
-		annotate:Optional[Tuple[Optional[list[str]],Optional[list[str]]]]=None,lim:Optional[Tuple[float,float]]=None,cmap_sym:bool=True,**ka):
+		annotate:Optional[Tuple[Optional[list[str]],Optional[list[str]]]]=None,lim:Optional[Tuple[float,float]]=None,cmap_sym:bool=True,aspect='auto',**ka):
 		"""
 		Draw dynamic heatmap for a single stat.
 
@@ -607,6 +607,8 @@ class statheatmap(base):
 			Limits in [min,xmax] for coloring. Defaults to min and max values.
 		cmap_sym:
 			Whether to use symmetric lim if lim is unspecified.
+		aspect:
+			Aspect ratio
 		ka:
 			Keyword arguments for ax.imshow.
 		"""
@@ -647,6 +649,7 @@ class statheatmap(base):
 				lim=np.abs(lim).max()
 				lim=[-lim,lim]
 		self.lim=list(lim)
+		ka['aspect']=aspect
 		self.ka=ka
 	def get_data(self,pts:dictys.traj.point):
 		"""

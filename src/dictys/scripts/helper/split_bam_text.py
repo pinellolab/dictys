@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Lingfei Wang, 2022. All rights reserved.
 import sys
 from os import linesep,mkdir
 from os.path import join as pjoin

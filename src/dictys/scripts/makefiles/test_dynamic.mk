@@ -1,3 +1,4 @@
+# Lingfei Wang, 2022. All rights reserved.
 #This file contains file I/O folder redirections for unit testing for dynamic GRN inference
 #This file should NOT be edited to configure the run
 #This file should be directly used for unit testing dynamic GRN inference with `makefile -f` 
