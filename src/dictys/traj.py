@@ -179,9 +179,9 @@ class trajectory:
 			Point object converted.
 		"""
 		return point.fromnodes(self)
-	def conform_locs(self,locs:NDArray[float],edges:NDArray[int],rel_err:float=1E-7)->NDArray:
+	def conform_locs(self,locs:NDArray[float],edges:NDArray[int],abs_err:float=1E-7,rel_err:float=1E-7)->NDArray:
 		"""
-		Conform point locations by clipping small deviations under float precision.
+		Conform point locations by clipping small deviations under float precision. An error will be trigger if the relative and absolute errors both exceed the given bounds.
 
 		Parameters
 		----------
@@ -189,6 +189,10 @@ class trajectory:
 			Points' locations on each edge to conform
 		edges:	numpy.ndarray(shape=n)
 			Points' edges to conform
+		abs_err:
+			Bound for absolute errors
+		rel_err:
+			Bound for relative errors
 
 		Returns
 		----------
@@ -196,9 +200,12 @@ class trajectory:
 			Conformed locs
 		"""
 		import numpy as np
-		errbound=rel_err*self.lens[edges]
-		if (locs<-errbound).any() or (locs-self.lens[edges]>errbound).any():
-			raise ValueError(f'Some locs are beyond relative error {rel_err}.')
+		t1=self.lens[edges]+1E-300
+		eabs=np.max([-locs,locs-self.lens[edges]],axis=0)
+		erel=eabs/t1
+		t1=np.nonzero((eabs>abs_err)&(erel>rel_err))[0]
+		if len(t1)>0:
+			raise ValueError(f'Absolute error {eabs[t1[0]]}>{abs_err} and relative error {erel[t1[0]]}>{rel_err} both exceed the given bounds.')
 		locs=np.clip(locs,0,self.lens[edges])
 		return locs
 	def linspace(self,start:int,end:int,n:int)->point:
@@ -249,10 +256,12 @@ class trajectory:
 		aorder=np.argsort(lengths)
 		lengths=lengths[aorder]
 		lengths[lengths<0]=0
+		#Nodes on the path
 		path=self.path(start,end)
 		# lens=np.array([g.edges[path[x],path[x+1]][weight] for x in range(len(path)-1)]) if weight is not None else np.ones(len(path)-1,dtype=float)
 		steps=np.zeros(n,dtype=int)
 		nstart=0
+		#Convert length from starting node to intermediate node and length from that node
 		for xi in range(len(path)-2):
 			l=self.lens[self.edgedict[path[xi],path[xi+1]][0]]
 			t1=np.searchsorted(lengths[nstart:],l)
@@ -971,6 +980,29 @@ class point:
 		return self.__class__(self.p,self.edges[key],self.locs[key],dist=self.dist[key])
 	def __len__(self)->int:
 		return self.npt
+	def drop_duplicates(self,selection:bool=False)->Union[point,Tuple[point,NDArray]]:
+		"""
+		Remove duplicate points.
+		
+		Parameters
+		----------
+		selection:
+			Whether to return which points are selected
+
+		Returns
+		----------
+		pts_new:	point
+			New object with random point order
+		selection:	numpy,ndarray(dtype=int)
+			Indices of points that remained. Only included if selection=True.
+		"""
+		import numpy as np
+		from dictys.utils.numpy import groupby
+		t1=groupby(self.edges).values()
+		t1=np.concatenate([x[np.unique(self.locs[x],return_index=True)[1]] for x in t1])
+		if selection:
+			return (self[t1],t1)
+		return self[t1]
 	def weight_linear(self,other:point)->NDArray:
 		"""
 		Smoothing function to compute data on other points with data on current (self's) points with linear interpolation between points.
