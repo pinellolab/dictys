@@ -8,3 +8,4 @@
 /dist
 dictys.egg-info
 /build
+/Makefile
