@@ -45,7 +45,7 @@ requirements:
     - pandas
     - docutils
     - h5py
-    - pyro-ppl==1.6.0
+    - pyro-ppl
     - scipy
     - networkx
     - pybedtools

@@ -23,7 +23,7 @@ def pkg_setup():
 		long_description_content_type='text/x-rst',
 		url=url,
 		scripts=['bin/dictys','bin/dictys_helper'],
-		install_requires=['numpy','pandas','docutils','h5py','pyro-ppl==1.6.0','scipy','networkx','pybedtools','pyDNase','threadpoolctl','joblib','torch','matplotlib','adjustText','jupyter'],
+		install_requires=['numpy','pandas','docutils','h5py','pyro-ppl','scipy','networkx','pybedtools','pyDNase','threadpoolctl','joblib','torch','matplotlib','adjustText','jupyter'],
 		classifiers=[
 			'Development Status :: 4 - Beta ',
 			'Environment :: Console',
