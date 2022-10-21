@@ -31,7 +31,7 @@ First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.htm
 	. activate dictys
 	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cpuonly
 
-This will create a conda environment named `dictys`.
+This will create a conda environment named ``dictys``.
 
 Alternatively, **with GPU computation** (here CUDA 11.3):
 
@@ -74,6 +74,12 @@ For more advanced installation, see `INSTALL.md <https://github.com/pinellolab/d
 *Note: dynamic network inference is computationally intensive and GPU availability is highly recommended.* Running time depends on the dataset, but it can take weeks or longer without a GPU.
 
 If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://www.archrproject.com/>`_, or other softwares upstream of Dictys, we recommend to install them in separate environments following their official instructions.
+
+Updating Dictys
+----------------
+If your minor version **is the latest** (e.g. your installed version is **0.1**.0 and the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **0.1**.9), you can update Dictys to the latest github version with ``pip3 install --no-deps git+https://github.com/pinellolab/dictys`` inside your Dictys conda environment.
+
+If your minor version **is not the latest** (e.g. your installed version is **0.1**.0 but the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **0.2**.0), you should reinstall Dictys in a new conda environment with any option above.
 
 Tutorials
 =========
