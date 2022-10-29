@@ -84,12 +84,7 @@ class notch(base):
 		bcde_tfs:list[list[str]]=[],
 		e_targets:list[str]=[],
 		f_weight_func:Tuple[str,list,dict]=('linear',[],{}),f_tfs:list[list[str]]=[],f_stop:int=20,f_niteration:int=50,
-		a_ka:dict={},
-		b_ka:dict={'aspect':1,'lim':{'sym','min','max'}},
-		c_ka:dict={},
-		d_ka:dict={},
-		e_ka:dict={'cmap':'coolwarm'},
-		f_ka:dict={'nodeka':{'scatterka':{'s':5,'lw':0}},'edgeka':{'lw':0.05}},
+		a_ka:dict={},b_ka:dict={},c_ka:dict={},d_ka:dict={},e_ka:dict={},f_ka:dict={},
 		)->Tuple[dictys.traj.point,matplotlib.figure.Figure,'list[dictys.plot.panel.base]',dict]:
 		"""
 		Draws animation for dynamic network with the notch layout.
@@ -123,11 +118,11 @@ class notch(base):
 		c_ka:
 			Keyword arguments passed to c panels (dictys.plot.panel.statplot).
 		d_ka:
-			Keyword arguments passed to c panels (dictys.plot.panel.statplot).
+			Keyword arguments passed to d panels (dictys.plot.panel.statplot).
 		e_ka:
-			Keyword arguments passed to c panels (dictys.plot.panel.statheatmap).
+			Keyword arguments passed to e panels (dictys.plot.panel.statheatmap).
 		f_ka:
-			Keyword arguments passed to c panels (dictys.plot.panel.network).
+			Keyword arguments passed to f panels (dictys.plot.panel.network).
 			
 		Returns
 		----------
@@ -147,6 +142,20 @@ class notch(base):
 		from dictys.net.layout import _fruchterman_reingold
 		from dictys.net import stat
 		from dictys.plot import panel
+		
+		#Keyword arguments
+		a_ka_default=dict({})
+		b_ka_default=dict({'aspect':1,'lim':{'sym','min','max'}})
+		c_ka_default=dict({})
+		d_ka_default=dict({})
+		e_ka_default=dict({'cmap':'coolwarm'})
+		f_ka_default=dict({'nodeka':{'scatterka':{'s':5,'lw':0}},'edgeka':{'lw':0.05}})
+		a_ka_default.update(a_ka)
+		b_ka_default.update(b_ka)
+		c_ka_default.update(c_ka)
+		d_ka_default.update(d_ka)
+		e_ka_default.update(e_ka)
+		f_ka_default.update(f_ka)
 		
 		n=len(bcde_tfs)
 		if len(f_tfs)!=n:
@@ -214,25 +223,24 @@ class notch(base):
 		panels=[]
 		axes_iter=iter(axes)
 		# Panel a
-		panels.append(panel.cellscatter(next(axes_iter),net,pts,fsmooth,**a_ka))
+		panels.append(panel.cellscatter(next(axes_iter),net,pts,fsmooth,**a_ka_default))
 		# Create two empty panels to skip
 		next(axes_iter)
 		next(axes_iter)
 		# Panel b
-		panels.append(panel.statscatter(next(axes_iter),pts,stat.fdiff(stat1_lcpm,stat.finitial(stat1_lcpm,pts),label=f'Differential expression{linesep}logFC in CPM'),stat.fdiff(stat1_lntarget,stat.finitial(stat1_lntarget,pts),label=f'Differential regulation{linesep}logFC in target count'),annotate=b_tfs,**b_ka))
+		panels.append(panel.statscatter(next(axes_iter),pts,stat.fdiff(stat1_lcpm,stat.finitial(stat1_lcpm,pts),label=f'Differential expression{linesep}logFC in CPM'),stat.fdiff(stat1_lntarget,stat.finitial(stat1_lntarget,pts),label=f'Differential regulation{linesep}logFC in target count'),annotate=b_tfs,**b_ka_default))
 		# Each row
 		for xi in range(n):
 			# Panel c
-			panels.append(panel.statplot(next(axes_iter),pts,stat1_pseudotime,stat1_lcpm,names=bcde_tfs[xi],**c_ka))
+			panels.append(panel.statplot(next(axes_iter),pts,stat1_pseudotime,stat1_lcpm,names=bcde_tfs[xi],**c_ka_default))
 			# Panel d
-			panels.append(panel.statplot(next(axes_iter),pts,stat1_pseudotime,stat1_lntarget,names=bcde_tfs[xi],**d_ka))
+			panels.append(panel.statplot(next(axes_iter),pts,stat1_pseudotime,stat1_lntarget,names=bcde_tfs[xi],**d_ka_default))
 			# Panel e
-			panels.append(panel.statheatmap(next(axes_iter),pts,stat1_net,names=[bcde_tfs[xi],e_targets],**e_ka))
+			panels.append(panel.statheatmap(next(axes_iter),pts,stat1_net,names=[bcde_tfs[xi],e_targets],**e_ka_default))
 			# Panel f
-			fka=dict(f_ka)
-			fka['nodeka']=dict(fka['nodeka'] if 'nodeka' in fka else {})
-			fka['nodeka']['annotate']=f_tfs[xi]
-			panels.append(panel.network(next(axes_iter),pts,stat1_layouts[xi],stat1_subnet_truncs[xi],**fka))
+			f_ka_default['nodeka']=dict(f_ka_default['nodeka'] if 'nodeka' in f_ka_default else {})
+			f_ka_default['nodeka']['annotate']=f_tfs[xi]
+			panels.append(panel.network(next(axes_iter),pts,stat1_layouts[xi],stat1_subnet_truncs[xi],**f_ka_default))
 		return (pts,fig,panels,{'post_init':post_init})
 
 

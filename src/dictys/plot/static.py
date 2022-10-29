@@ -154,9 +154,9 @@ def fig_heatmap_reg_spec(v:pd.DataFrame,aspect:float=0.3,figscale:float=0.15,g_a
 	vrange=[v.values.min(),v.values.max()]
 	#Draw heatmap
 	figscale=figscale*aspect
-	ka1=dict(metric=[lambda u,v:1-np.sqrt(u*v).sum()]*2,method='average',vmin=vrange[0],vmax=vrange[1],aspect=aspect,dtop=0.25,dright=0,figscale=figscale,xtick=False,ytick=True,cmap='viridis',optimal_ordering=False,wcolorbar=0.5/aspect/v.shape[0],wedge=0.75/aspect/v.shape[0])
-	ka1.update(ka)
-	g=heatmap(v.T,**ka1)
+	ka_default=dict(metric=[lambda u,v:1-np.sqrt(u*v).sum()]*2,method='average',vmin=vrange[0],vmax=vrange[1],aspect=aspect,dtop=0.25,dright=0,figscale=figscale,xtick=False,ytick=True,cmap='viridis',optimal_ordering=False,wcolorbar=0.5/aspect/v.shape[0],wedge=0.75/aspect/v.shape[0])
+	ka_default.update(ka)
+	g=heatmap(v.T,**ka_default)
 	fig1=plt.gcf()
 	ax=fig1.axes[-2]
 	#Annotate select regulators
@@ -321,7 +321,7 @@ def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:in
 	
 	return (fig,fig2,net)
 
-def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],cut_cpm:float=1,cut_ntarget:float=5,annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka)->pd.DataFrame:
+def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],cut_cpm:float=1,cut_ntarget:float=5,annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={},**ka)->pd.DataFrame:
 	"""
 	Draw scatter plot for differential regulation and differential expresison logFCs.
 
@@ -355,8 +355,10 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	from adjustText import adjust_text
 	from dictys.net import stat
 	from dictys.plot import panel
-	ka_default={'s':20,'c':([0.3]*3,),'lw':0,'alpha':0.7}
+	ka_default=dict({'s':20,'c':([0.3]*3,),'lw':0,'alpha':0.7})
+	ka_adjust_text_default=dict({'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}})
 	ka_default.update(ka)
+	ka_adjust_text_default.update(ka_adjust_text)
 	cut_lcpm=np.log2(cut_cpm+1)
 	cut_lntarget=np.log2(cut_ntarget+1)
 
@@ -380,7 +382,7 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	p.init()
 	objs=p.draw(0)
 	if len(annotate)>0 and ka_adjust_text is not None:
-		adjust_text(list(filter(lambda x:isinstance(x,matplotlib.text.Text),objs)),**ka_adjust_text)
+		adjust_text(list(filter(lambda x:isinstance(x,matplotlib.text.Text),objs)),**ka_adjust_text_default)
 	if axes_alpha<1:
 		t1=[ax.get_xlim(),ax.get_ylim()]
 		ax.plot([t1[0][0],t1[0][1]],[0,0],'k-',alpha=axes_alpha,zorder=0)
@@ -390,7 +392,7 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	ans.dropna(inplace=True)
 	return ans
 
-def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={'rotation':90},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}},**ka):
+def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotate:list[str]=[],ka_text:dict={},cmap:str='coolwarm',ka_adjust_text:Optional[dict]={},**ka):
 	"""
 	Draw bar plot for TF rankings based on differential regulation and differential expresison logFCs.
 
@@ -418,9 +420,13 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 	import numpy as np
 	import matplotlib.pyplot as plt
 	from adjustText import adjust_text
-	#Default barplot parameters
+	#Default parameters
+	ka_text_default=dict({'rotation':90})
+	ka_adjust_text_default=dict({'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}})
 	ka_bar={'lw':0,'width':1}
 	#Parameter preprocessing
+	ka_text_default.update(ka_text)
+	ka_adjust_text_default.update(ka_adjust_text)
 	ka_bar.update(ka)
 	cmap=plt.get_cmap(cmap)
 	data=data.copy()
@@ -443,13 +449,13 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 		#Draw bar plot
 		ax.bar(dx,t1,color=cs,**ka_bar)
 		#Annotations
-		t2=[ax.text(dx[tdict[x]],t1[tdict[x]],x,**ka_text) for x in annotate]
+		t2=[ax.text(dx[tdict[x]],t1[tdict[x]],x,**ka_text_default) for x in annotate]
 		xlim=np.array([dx[0]-0.5-0.01*n,dx[-1]+0.5+0.01*n])
 		ax.set_xlim(xlim)
 		ax.set_xticks([])
 		ax.set_ylabel(data.columns[xi].replace('_',' '))
 		if len(t2)>0 and ka_adjust_text is not None:
-			adjust_text(t2,**ka_adjust_text)
+			adjust_text(t2,**ka_adjust_text_default)
 	return fig
 
 def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulators:Optional[list[str]]=None,targets:Optional[list[str]]=None,annotate:Union[str,list[str]]=[],sparsity:float=0.01,ka_node:dict={},ka_edge:dict={})->Tuple[pd.DataFrame,pd.DataFrame]:

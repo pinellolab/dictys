@@ -187,8 +187,8 @@ def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:Optional[pd.Seri
 	import matplotlib.pyplot as plt
 	import numpy as np
 	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-	ka_curve_default={'lw':1,'c':'k'}
-	ka_heatmap_default={'aspect':'auto'}
+	ka_curve_default=dict({'lw':1,'c':'k'})
+	ka_heatmap_default=dict({'aspect':'auto'})
 	ka_curve_default.update(ka_curve)
 	ka_heatmap_default.update(ka_heatmap)
 

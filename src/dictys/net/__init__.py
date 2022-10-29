@@ -53,6 +53,7 @@ class network:
 		Point objects for cells and states on the `traj` object. Only needed for dynamic network.
 	"""
 	_name_='network'
+	_version_=[0,1,0]
 	_shape_={'e':lambda x:tuple(x.nns)}
 	def _get_prop_shape_(self,propname:str)->Tuple:
 		"""
@@ -142,9 +143,9 @@ class network:
 		setattr(self,dim+'dict',dict(zip(names,range(len(names)))))
 	#I/O
 	@classmethod
-	def from_file(cls,path:str)->network:
+	def _from_file_0_1_0(cls,path:str)->network:
 		"""
-		Load class instance from file.
+		Load class instance from file version 0.1.0.
 
 		Parameters
 		-------------
@@ -183,7 +184,36 @@ class network:
 					params['point'][xi]=point.from_fileobj(params['traj'],f['point'][xi])
 		params['nids']=[params['nids1'],params['nids2']]
 		del params['nids1'],params['nids2']
+		if '_version_' in params:
+			del params['_version_']
 		return cls(**params)
+	@classmethod
+	def from_file(cls,path:str)->network:
+		"""
+		Load class instance from file.
+
+		Parameters
+		-------------
+		path:	str
+			Path of file to load from.
+
+		Returns
+		---------
+		net:	dictys.net.network
+			network class instance
+		"""
+		import numpy as np
+		import h5py
+		import logging
+		logging.info(f'Reading file {path}.')
+		with h5py.File(path,'r') as f:
+			if '_version_' not in f:
+				v=(0,1,0)
+			else:
+				v=tuple(np.array(f['_version_']))
+		if v==(0,1,0):
+			return cls._from_file_0_1_0(path)
+		raise TypeError('Unknown network version {}'.format('.'.join([str(x) for x in v])))
 	def to_file(self,path:str,compression:str="gzip",**ka)->None:
 		"""
 		Save class instance to file.
@@ -197,14 +227,16 @@ class network:
 		ka:	dict
 			Keyword arguments passed to h5py.File.create_dataset.
 		"""
-		import h5py
 		import logging
+		import numpy as np
+		import h5py
 		params={x:getattr(self,x) for x in 'cname,sname,nname,nids'.split(',')}
 		params['nids1']=params['nids'][0]
 		params['nids2']=params['nids'][1]
 		del params['nids']
 		logging.info(f'Writing file {path}.')
 		with h5py.File(path,'w') as f:
+			f.create_dataset('_version_',len(self._version_),dtype='i')[:]=np.array(self._version_)
 			for xi in params:
 				p=dict(ka)
 				p['compression']=compression
@@ -226,6 +258,42 @@ class network:
 				t=f.create_group('point')
 				for xi in self.point:
 					self.point[xi].to_fileobj(t.create_group(xi))
+	@staticmethod
+	def _load_subsets(fi_subsets:str,path_cname:Optional[str]=None)->Optional[Tuple[list[str],list[list[str]]]]:
+		"""
+		Load cell subsets from folder.
+		
+		Parameters
+		----------
+		fi_subsets:
+			Path of input txt file of cell subset names
+		path_cname:
+			Path of folder containing subfolders of cell subsets. Defaults to basedir of fi_subsets.
+			
+		Returns
+		-------
+		sname:
+			List of cell subset names
+		cnames:
+			List of list of cell names in each cell subset		
+		"""
+		from os.path import join as pjoin
+		from os.path import dirname
+		from dictys.utils.file import read_txt
+		if path_cname is None:
+			path_cname=pjoin(dirname(fi_subsets),'subsets')
+		#Cells & states/subsets
+		try:
+			sname=read_txt(fi_subsets,unique=True)
+		except FileNotFoundError:
+			sname=[]
+		n=len(sname)
+		if n==0:
+			return None
+		cnames=[]
+		for xi in range(n):
+			cnames.append(read_txt(pjoin(path_cname,sname[xi],'names_rna.txt')))
+		return (sname,cnames)
 	@classmethod
 	def from_folders(cls,path_data:str,path_work:str,fi_subsets:str,dynamic:bool=False,nettype:str='n',optional:Set[str]={'readcount'},fi_c:Optional[str]=None)->network:
 		"""
@@ -269,7 +337,6 @@ class network:
 		import itertools
 		from os.path import join as pjoin
 		from dictys.traj import trajectory,point
-		from dictys.utils.file import read_txt
 		from dictys.utils.numpy import dtype_min
 		import numpy as np
 
@@ -279,14 +346,11 @@ class network:
 
 		params={}
 		#Cells & states/subsets
-		sname=read_txt(fi_subsets,unique=True)
-		n=len(sname)
-		if n==0:
+		ans=cls._load_subsets(fi_subsets,path_cname=path_work)
+		if ans is None:
 			raise RuntimeError('Could not find cell subsets.')
-		success=np.ones(n,dtype=bool)
-		cnames=[]
-		for xi in range(n):
-			cnames.append(read_txt(pjoin(path_work,sname[xi],'names_rna.txt')))
+		sname,cnames=ans
+		n=len(sname)
 		cname=list(itertools.chain.from_iterable(cnames))
 		if not dynamic:
 			assert len(cname)==len(set(cname))
@@ -303,6 +367,7 @@ class network:
 
 		#Network
 		nets=[None]*n
+		success=np.ones(n,dtype=bool)
 		for xi in range(n):
 			try:
 				fi=pjoin(path_work,sname[xi],f'net_{nettype}weight.tsv.gz')
@@ -349,6 +414,13 @@ class network:
 			logging.info(f'Reading file {fi}')
 			t1=pd.read_csv(fi,header=0,index_col=0,sep='\t')
 			cprop['coord']=t1.loc[cname].values.T
+			#Cell type/context
+			ans=cls._load_subsets(pjoin(path_data,'subsets.txt'))
+			if ans is None:
+				logging.warning('Could not find cell contexts.')
+			else:
+				t1=dict(itertools.chain.from_iterable([[(y,x[0]) for y in x[1]] for x in zip(*ans)]))
+				cprop['type']=np.array([t1[x] for x in cname])
 
 		#Node-cell properties
 		fi=pjoin(path_data,'expression.tsv.gz')

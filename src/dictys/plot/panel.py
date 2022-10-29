@@ -406,7 +406,7 @@ class statplot(overlay):
 	"""
 	Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
 	"""
-	def __init__(self,ax,pts:dictys.traj.point,statx:stat.base,staty:stat.base,names:Optional[list[str]],cmap='tab10',pointer:bool=True,plotka:dict[str,Any]={},pointerka:dict[str,Any]={'s':20,'zorder':99}):
+	def __init__(self,ax,pts:dictys.traj.point,statx:stat.base,staty:stat.base,names:Optional[list[str]],cmap='tab10',pointer:bool=True,plotka:dict[str,Any]={},pointerka:dict[str,Any]={}):
 		"""
 		Draw line plots from two stats by overlaying a line plot with a scatter point for pointer.
 
@@ -433,6 +433,10 @@ class statplot(overlay):
 		"""
 		import numpy as np
 		from dictys.plot import get_cmap
+		
+		#Keyword arguments
+		pointerka_default=dict({'s':20,'zorder':99})
+		pointerka_default.update(pointerka)
 		#Determine colors for cell types
 		if isinstance(cmap,str):
 			cmap=get_cmap(cmap,len(names))
@@ -443,7 +447,7 @@ class statplot(overlay):
 		if pointer:
 			#Color stat
 			statc=stat.const(cmap,[names,list('RGBA')])
-			panels.append(statscatter(ax,pts,statx,staty,names=names,scatterka=pointerka,statka={'color':statc}))
+			panels.append(statscatter(ax,pts,statx,staty,names=names,scatterka=pointerka_default,statka={'color':statc}))
 		return super().__init__(ax,pts,panels[::-1])
 
 class cellscatter_scatter(statscatter):
@@ -548,7 +552,7 @@ class cellscatter(overlay):
 	"""
 	Draws overlay plot of scatter plots of cells and average cell pointer.
 	"""
-	def __init__(self,ax,d:dictys.net.network,pts:dictys.traj.point,fsmooth,pointer:bool=True,scatterka:dict[str,Any]={'s':2,'lw':0},pointerka:dict[str,Any]={'color':'k','s':20,'zorder':99}):
+	def __init__(self,ax,d:dictys.net.network,pts:dictys.traj.point,fsmooth,pointer:bool=True,scatterka:dict[str,Any]={},pointerka:dict[str,Any]={}):
 		"""
 		Draws overlay plot of scatter plots of cells and average cell pointer.
 
@@ -569,6 +573,11 @@ class cellscatter(overlay):
 		pointerka:
 			Keyword arguments for ax.scatter for pointers.
 		"""
+		#Keyword arguments
+		scatterka_default=dict({'s':2,'lw':0})
+		pointerka_default=dict({'color':'k','s':20,'zorder':99})
+		scatterka_default.update(scatterka)
+		pointerka_default.update(pointerka)
 		#X&Y coordindates
 		statx=stat.const(d.prop['c']['coord'][0],[d.cname],label='Dim1')
 		staty=stat.const(d.prop['c']['coord'][1],[d.cname],label='Dim2')
@@ -577,9 +586,9 @@ class cellscatter(overlay):
 		statw=stat.function(lambda *x:(x[0]/x[0].max(axis=0)),[statw],names=[d.cname])
 		panels=[]
 		#Scatter
-		panels.append(cellscatter_scatter(ax,d,pts,statx,staty,statw,**scatterka))
+		panels.append(cellscatter_scatter(ax,d,pts,statx,staty,statw,**scatterka_default))
 		if pointer:
-			panels.append(cellscatter_pointer(ax,pts,statx,staty,statw,**pointerka))
+			panels.append(cellscatter_pointer(ax,pts,statx,staty,statw,**pointerka_default))
 		return super().__init__(ax,pts,panels[::-1])
 
 class statheatmap(base):
