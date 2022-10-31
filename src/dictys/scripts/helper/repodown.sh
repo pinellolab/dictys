@@ -10,15 +10,13 @@ function usage()
 	echo "Downloads and decompresses split tar.xz file from repository to current folder." >&2
 	echo "Overwrites destination and intermediate files." >&2
 	fmt='  %-12s%s\n'
-	printf "$fmt" 'repo' 'Repository name to download from. Determines which helper script to use. Accepts: dataverse.' >&2
+	printf "$fmt" 'repo' 'Repository name to download from. Determines which helper script to use. Accepts: zenodo, dataverse.' >&2
 	printf "$fmt" 'file' 'File name to download and decompress' >&2
 	printf "$fmt" 'arguments' 'Arguments passed to repository based script' >&2
 	printf "$fmt" '-n' 'No decompression with tar xf' >&2
 	printf "$fmt" '-h' 'Display this help' >&2
 	exit 1
 }
-
-set -eo pipefail
 
 decompress='1'
 #Parse arguments
@@ -51,7 +49,7 @@ fi
 #Download files
 rm -f "$fname"
 isdone='0'
-f1="$($cmd_ls | grep '^'"$fname"'$' | sort )"
+f1="$($cmd_ls | grep '^'"$fname"'$' | sort || true )"
 if [ "a$f1" != "a" ]; then
 	#Download single file
 	$cmd_down1 $fname $cmd_down2

@@ -45,6 +45,8 @@ if [ "a$1" == "adynamic" ]; then
 	make -f $mkfile subset
 fi
 make -f $mkfile -j $ncpu -k cpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
+#Run again in case of segfault from homer due to preparsed genome being overwritten in the first runs.
+make -f $mkfile -j $ncpu -k cpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
 make -f $mkfile -j $ngpu -k gpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
 make -f $mkfile -j $ncpu -k cpu 2> >( grep -v '^make: [*][*][*] No rule to make target' >&2 ) || true
 make -f $mkfile combine

@@ -358,7 +358,8 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	ka_default=dict({'s':20,'c':([0.3]*3,),'lw':0,'alpha':0.7})
 	ka_adjust_text_default=dict({'arrowprops': {'arrowstyle': "-",'color': 'k','lw': 1}})
 	ka_default.update(ka)
-	ka_adjust_text_default.update(ka_adjust_text)
+	if ka_adjust_text is not None:
+		ka_adjust_text_default.update(ka_adjust_text)
 	cut_lcpm=np.log2(cut_cpm+1)
 	cut_lntarget=np.log2(cut_ntarget+1)
 
@@ -426,7 +427,8 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 	ka_bar={'lw':0,'width':1}
 	#Parameter preprocessing
 	ka_text_default.update(ka_text)
-	ka_adjust_text_default.update(ka_adjust_text)
+	if ka_adjust_text is not None:
+		ka_adjust_text_default.update(ka_adjust_text)
 	ka_bar.update(ka)
 	cmap=plt.get_cmap(cmap)
 	data=data.copy()
