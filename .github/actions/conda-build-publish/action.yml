@@ -1,0 +1,58 @@
+# Lingfei Wang, 2022. All rights reserved.
+name: Build and publish conda package
+
+inputs:
+  base-dir:
+    description: basedirectory of meta.yml file
+    required: true
+  user:
+    description: Anaconda user
+    required: true
+  token:
+    description: Anaconda token
+    required: true  
+  preproc:
+    description: Preprocessing scripts
+    required: false
+outputs:
+  name:
+    value: ${{ steps.build.outputs.name }}
+  version:
+    value: ${{ steps.build.outputs.version }}
+  buildstr:
+    value: ${{ steps.build.outputs.buildstr }}
+
+runs:
+  using: composite
+  steps:
+    - name: Add conda to system path and conda-build, conda-verify, anaconda-client
+      shell: bash
+      run: |
+        echo $CONDA/bin >> $GITHUB_PATH
+        conda install -y conda-build conda-verify anaconda-client
+    - name: "conda build"
+      id: build
+      shell: bash
+      run: |
+        cd ${{ inputs.base-dir }}
+        ${{ inputs.preproc }}
+        OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_MAX_THREADS=1 NUMEXPR_MAX_THREADS=1 MKL_MAX_THREADS=1 CONDA_NPY=123 conda build --output-folder . -c bioconda -c conda-forge -c pytorch .
+        cd noarch
+        pkgfile="$(ls -1 *.tar.bz2)"
+        cd ..
+        if [ "a$(echo "$pkgfile" | wc -l)" != "a1" ]; then echo "More than one build files found."; exit 1; fi
+        s1="$(echo "$pkgfile" | tr "-" "\n" | head -n -2 | head -c "-1" | tr "\n" "-")"
+        s2="$(echo "$pkgfile" | tr "-" "\n" | tail -n 2 | head -n 1 | head -c "-1" | tr "\n" "-")"
+        s3="$(echo "$pkgfile" | tr "-" "\n" | tail -n 1 | head -c "-1" | tr "\n" "-")"
+        s3="$(echo "${s3%%[.]tar[.]bz2}")"
+        echo "name=$s1" >> $GITHUB_OUTPUT
+        echo "version=$s2" >> $GITHUB_OUTPUT
+        echo "buildstr=$s3" >> $GITHUB_OUTPUT
+    - name: "anaconda upload"
+      shell: bash
+      run: |
+        cd ${{ inputs.base-dir }}
+        anaconda -t ${{ inputs.token }} upload -u ${{ inputs.user }} noarch/*.tar.bz2
+    - name: "Check upload"
+      shell: bash
+      run: conda search -i -c lingfeiwang ${{ steps.build.outputs.name }}

@@ -19,7 +19,7 @@ Overview
 
 Installation
 =============
-Installation should take ~<10 mins.
+Dictys has dependencies not in python. The options below automatically installs these dependencies. Installation should take ~<10 mins.
 
 Option 1: with Anaconda
 -----------------------

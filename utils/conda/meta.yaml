@@ -1,5 +1,5 @@
-{% set buildnumber = "0" %}
-{% set version = "1.0.0" %}
+{% set data = load_setup_py_data(from_recipe_dir=true,recipe_dir='../..') %}
+{% set version = data.get('version') %}
 {% set pythonversion = "3.9" %}
 
 package:
@@ -11,7 +11,8 @@ source:
 
 build:
   noarch: python
-  number: {{ buildnumber }}
+  number: {{ GIT_DESCRIBE_NUMBER }}
+  string: h{{ GIT_DESCRIBE_HASH }}
   script: |
     set -eo pipefail
     {{ PYTHON }} -m pip install https://files.pythonhosted.org/packages/2d/32/af556f3fb5e517ce58b17daa4c7f33140042adfc85d9c7db35c5f1779c10/pyDataverse-0.3.1-py3-none-any.whl

@@ -1,31 +1,26 @@
 # Lingfei Wang, 2022. All rights reserved.
-name: Install with anaconda & install checks
+name: Install with anaconda & install checks through conda scripts
 
 inputs:
-  python-version:
-    description: Python version within anaconda. Not the python version anaconda is based on
+  package:
+    description: Package name and optionally version to install
     required: true
   cuda-version:
     description: cudatoolkit version within anaconda. If omited, install CPU version instead.
-    required: true
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.8
-    - name: Add conda to system path
+    - name: Install
       shell: bash
       run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-    - name: Test install
-      shell: bash
-      run: |
-        echo '::group::Test install output'
-        PYTHONVERSION_CONDA=${{ inputs.python-version }} CUDAVERSION_CONDA=${{ inputs.cuda-version }} COMMIT_VERSION=$(git rev-parse HEAD) . doc/scripts/install.sh
+        echo '::group::Installation'
+        if [ "a${{ inputs.cuda-version }}" == "a" ]; then pkgadd="cpuonly"; else pkgadd="cudatoolkit=${{ inputs.cuda-version }}"; fi
+        conda create -y -n dictys -c conda-forge python=3.9 mamba
+        . activate dictys
+        mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch ${{ inputs.package }} $pkgadd
         echo '::endgroup::'
     - name: Test python version
       shell: bash

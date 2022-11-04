@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - '.github/workflows/ci-install.yml'
+      - '.github/actions/install-bash/**'
       - README.rst
   workflow_dispatch:
     inputs:
@@ -19,7 +20,7 @@ jobs:
   install-script-bash:
     runs-on: ubuntu-latest
     outputs:
-      run: ${{ steps.run.outputs.run }}
+      run: ${{ steps.runscript.outputs.run }}
     steps:
     - name: Show version
       id: version
@@ -43,7 +44,7 @@ jobs:
       with:
         python-version: 3.8
     - name: Obtain install script
-      id: run
+      id: runscript
       run: |
         # Install command in README.rst (indented in Installation section)
         # Get first code-block in section Installation
@@ -71,6 +72,7 @@ jobs:
         tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2
         echo "Step 8"
         echo "$s1"
+        #If failed here: update this line and the same line in /.github/actions/install-bash/action.yml to match the lines in /README.rst
         cmp <(echo "$s1") <(echo "wget https://tinyurl.com/dictys -O - | bash") || exit 1
         echo "run=$s1" >> $GITHUB_OUTPUT
     
@@ -95,7 +97,7 @@ jobs:
   install-script-conda:
     runs-on: ubuntu-latest
     outputs:
-      run: ${{ steps.run.outputs.run }}
+      run: ${{ steps.runscript.outputs.run }}
     steps:
     - name: Show version
       id: version
@@ -145,10 +147,12 @@ jobs:
         echo "$lineend2"
         tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2
         s1="$(tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2 | grep '^[[:blank:]]' | sed 's/^[[:space:]]*//g')"
+        #If failed here: update this line and the same line in /.github/actions/install-conda/action.yml to match the lines in /README.rst
+        cmp <(echo "$s1") <(echo "conda create -y -n dictys -c conda-forge python=3.9 mamba"; echo ". activate dictys"; echo "mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cpuonly") || exit 1
         echo "run<<EOF" >> $GITHUB_ENV
         echo "$s1" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-    - id: run
+    - id: runscript
       uses: actions/github-script@v6
       with:
         script: |
@@ -197,7 +201,7 @@ jobs:
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Install
-      uses: ./.github/actions/install
+      uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
         cuda-version: ${{ matrix.cuda-version }}

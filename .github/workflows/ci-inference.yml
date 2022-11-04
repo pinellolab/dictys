@@ -11,10 +11,10 @@ on:
       - 'src/**'
       - 'bin/**'
       - '.github/workflows/ci-inference.yml'
+      - '.github/actions/install-bash/**'
       - '.github/actions/zenodo-url-translate/**'
       - '.github/actions/inference-test-dataset/**'
       - '.github/scripts/inference-test-dataset.py'
-      - '.github/actions/install/**'
 
 jobs:
   test-skin1:
@@ -26,7 +26,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install
-      uses: ./.github/actions/install
+      uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
         cuda-version:
@@ -57,7 +57,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install
-      uses: ./.github/actions/install
+      uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
         cuda-version:
@@ -88,7 +88,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install
-      uses: ./.github/actions/install
+      uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
         cuda-version:

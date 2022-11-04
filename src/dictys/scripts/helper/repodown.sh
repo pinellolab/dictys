@@ -48,22 +48,27 @@ fi
 
 #Download files
 rm -f "$fname"
-isdone='0'
 f1="$($cmd_ls | grep '^'"$fname"'$' | sort || true )"
 if [ "a$f1" != "a" ]; then
 	#Download single file
+	echo "Downloading $fname"
 	$cmd_down1 $fname $cmd_down2
-	if [ -e "$fname" ]; then 
-		isdone='1'
+	if ! [ -e "$fname" ]; then 
+		echo "Downloading failed for $fname. Now exit."
+		exit 1
 	fi
-fi
-if [ "a$isdone" == "a0" ]; then
+else
 	#Download split files
-	fs="$($cmd_ls | grep '^'"$fname"'[.][0-9]*$' | sort )"
+	fs="$($cmd_ls | grep '^'"$fname"'[.][0-9]*$' | sort || true )"
+	if [ "a$fs" == "a" ]; then
+		echo "File not found: $f. Now exit."
+		exit 1
+	fi
 	for f in $fs; do
+		echo "Downloading $f"
 		$cmd_down1 $f $cmd_down2
 		if ! [ -e "$f" ]; then 
-			echo "Cannot find file $f"
+			echo "Downloading failed for $f. Now exit."
 			exit 1
 		fi
 		cat "$f" >> "$fname"
