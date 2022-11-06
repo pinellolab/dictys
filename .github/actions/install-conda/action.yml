@@ -9,6 +9,10 @@ inputs:
     description: cudatoolkit version within anaconda. If omited, install CPU version instead.
     required: false
     default: ""
+  python-version:
+    description: python version within anaconda, e.g. "3.9". Defaults to 3.9.
+    required: false
+    default: "3.9"
 
 runs:
   using: composite
@@ -18,7 +22,7 @@ runs:
       run: |
         echo '::group::Installation'
         if [ "a${{ inputs.cuda-version }}" == "a" ]; then pkgadd="cpuonly"; else pkgadd="cudatoolkit=${{ inputs.cuda-version }}"; fi
-        conda create -y -n dictys -c conda-forge python=3.9 mamba
+        conda create -y -n dictys -c conda-forge python=${{ inputs.python-version }} mamba
         . activate dictys
         mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch ${{ inputs.package }} $pkgadd
         echo '::endgroup::'

@@ -22,14 +22,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.9","3.10"]
     steps:
     - uses: actions/checkout@v3
     - name: Install
       uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
-        cuda-version:
     - name: Get dataset URL
       id: zenodo-url-translate
       uses: ./.github/actions/zenodo-url-translate
@@ -53,14 +52,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.9","3.10"]
     steps:
     - uses: actions/checkout@v3
     - name: Install
       uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
-        cuda-version:
     - name: Get dataset URL
       id: zenodo-url-translate
       uses: ./.github/actions/zenodo-url-translate
@@ -84,14 +82,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.9","3.10"]
     steps:
     - uses: actions/checkout@v3
     - name: Install
       uses: ./.github/actions/install-bash
       with:
         python-version: ${{ matrix.python-version }}
-        cuda-version:
     - name: Get dataset URL
       id: zenodo-url-translate
       uses: ./.github/actions/zenodo-url-translate

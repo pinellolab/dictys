@@ -12,6 +12,7 @@ on:
       - 'bin/**'
       - 'utils/conda/**'
       - '.github/actions/conda-build-publish/**'
+      - '.github/actions/install-conda/**'
       - '.github/workflows/ci-conda.yml'
       - '.github/actions/zenodo-url-translate/**'
       - '.github/actions/inference-test-dataset/**'
@@ -52,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.9","3.10"]
     steps:
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
@@ -67,6 +68,7 @@ jobs:
         uses: ./.github/actions/install-conda
         with:
           package: ${{ needs.build.outputs.package }}=${{ needs.build.outputs.version }}=${{ needs.build.outputs.buildstr }}
+          python-version: ${{ matrix.python-version }}
       - name: Get dataset URL
         id: zenodo-url-translate
         uses: ./.github/actions/zenodo-url-translate

@@ -19,7 +19,7 @@ Overview
 
 Installation
 =============
-Dictys has dependencies not in python. The options below automatically installs these dependencies. Installation should take ~<10 mins.
+Dictys has dependencies not in python. The options below automatically install these dependencies. Installation should take ~<10 mins.
 
 Option 1: with Anaconda
 -----------------------
@@ -83,7 +83,7 @@ If your minor version **is not the latest** (e.g. your installed version is **0.
 
 Tutorials
 =========
-We provide several tutorials for different data types. Please download each tutorial folder structure before running. Note that these tutorials are not intended to replicate the results in the paper due to differences in software versions, computing platforms, various randomness e.g. in `HOMER genome preparsing <http://homer.ucsd.edu/homer/ngs/peakMotifs.html>`_ or `Pytorch algorithms <https://pytorch.org/docs/stable/notes/randomness.html>`_, etc.
+We provide several tutorials for different data types. Please download each tutorial folder structure before running. Note that these tutorials are not intended to fully replicate the results in the paper due to differences in software versions, computing platforms, various randomness e.g. in `HOMER genome preparsing <http://homer.ucsd.edu/homer/ngs/peakMotifs.html>`_ or `Pytorch algorithms <https://pytorch.org/docs/stable/notes/randomness.html>`_, etc.
 
 1. `short-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/short-multiome>`_: a single-notebook tutorial for the data preparation, inference, and analysis of context specific networks on 10x multiome data for human blood.
 
@@ -91,7 +91,7 @@ We provide several tutorials for different data types. Please download each tuto
 
 3. `full-skin <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-skin>`_: a short tutorial for the inference and analysis of dynamic networks on SHARE-seq data for mouse skin.
 
-The network analysis tutorials below use the same reconstructed networks as in the paper and are designed to replicate the results.
+The network analysis tutorials below use the same reconstructed networks as in the paper and are designed to fully replicate the results.
 
 1. `analysis-blood <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood>`_: a simple tutorial for context specific and dynamic network analysis on separate scRNA-seq and scATAC-seq quantifications of human blood as in manuscript.
 
@@ -103,34 +103,34 @@ The figures below are produced with the blood example dataset. You can reproduce
 
 Cell-type specific GRN analyses
 -------------------------------
-`Regulation marker TF discovery <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/global-dotplot.ipynb>`_
+`Regulation marker TF discovery <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood/notebooks/static/main.ipynb#Regulation-marker-TF-discovery-with-dot-plot-(global-dotplot.ipynb)>`_
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Global_dotplot.png
    :width: 300
 
-`Top activation target heatmap for select TFs <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/global-heatmap.ipynb>`_
+`Top activation target heatmap for select TFs <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood/notebooks/static/main.ipynb#Heatmap-of-regulation-strengths-between-select-TFs-and-their-top-targets-in-select-cell-types-(global-heatmap.ipynb)>`_
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Global_heatmap.png
    :width: 400
 
-`Differential regulation v.s. differential expression scatter plot; integrative TF rank plot <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/pair-diff.ipynb>`_
+`Differential regulation v.s. differential expression scatter plot; integrative TF rank plot <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood/notebooks/static/main.ipynb#Scatter-plot-and-bar-plot-of-differential-regulation-&-differential-expression-between-two-cell-clusters--(pair-diff.ipynb)>`_
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Diff_analysis.png
    :width: 750
 
-`Subnetwork for select TF <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/static/subnet.ipynb>`_
+`Subnetwork for select TF <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood/notebooks/static/main.ipynb#Draw-target-gene-subnetwork-of-a-TF-(subnet.ipynb)>`_
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Subnet.png
    :width: 300
    
 Dynamic GRN analysis
 --------------------
-`Driver TF discovery based on regulatory activity curve <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/dynamic/discover.ipynb>`_
+`Driver TF discovery based on regulatory activity curve <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood/notebooks/dynamic/main.ipynb#TF-discovery-based-on-4-patterns-of-highly-variable-regulatory-activity-over-developmental-trajectory-(discovery.ipynb)>`_
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/Dynamic_discovery.png
    :width: 1050
 
-`Dynamic GRN animation <https://www.github.com/pinellolab/dictys/blob/master/doc/notebooks/dynamic/animation.ipynb>`_
+`Dynamic GRN animation <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/analysis-blood/notebooks/dynamic/main.ipynb#Animation-visualization-of-dynamic-networks>`_
 
 .. image:: https://raw.githubusercontent.com/pinellolab/dictys/master/doc/images/animation.gif
    :width: 800
@@ -158,8 +158,8 @@ FAQ
   
   This is because you installed a CPU-only pytorch but tried to run it on GPU. You have several options:
   
-  1. To run pytorch on CPU, run ``dictys_helper makefile_update.py path/to/config.mk '{"DEVICE": "cpu"}'`` to configure to CPU mode. See `Tutorials`_ to find the right place to run this command.
-  2. To run pytorch on GPU, reinstall Dictys with the correct options to enable GPU support at `Installation`_.
+  1. To run pytorch on **CPU**, run ``dictys_helper makefile_update.py path/to/config.mk '{"DEVICE": "cpu"}'`` to configure to CPU mode. See `Tutorials`_ to find the right place to run this command.
+  2. To run pytorch on **GPU**, reinstall Dictys with the correct options to enable GPU support at `Installation`_.
 
 Issues
 ==========================

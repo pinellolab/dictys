@@ -180,7 +180,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9",""]
+        python-version: ["3.9","3.10",""]
         cuda-version: ["11.3",""]
     steps:
     - name: Show version
