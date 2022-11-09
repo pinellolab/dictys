@@ -52,7 +52,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.base-dir }}
-        anaconda -t ${{ inputs.token }} upload -u ${{ inputs.user }} noarch/*.tar.bz2
+        anaconda -t ${{ inputs.token }} upload -u ${{ inputs.user }} --register noarch/*.tar.bz2
     - name: "Check upload"
       shell: bash
       run: conda search -i -c lingfeiwang ${{ steps.build.outputs.name }}
