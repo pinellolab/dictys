@@ -46,6 +46,7 @@ jobs:
           user: lingfeiwang
           token: ${{ secrets.ANACONDA_TOKEN }}
           preproc: "sed -i 's/  name: dictys/  name: dictys-pretest/' meta.yaml"
+          options: "--force"
  
   test-blood1:
     name: Blood static network unit tests

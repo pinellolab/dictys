@@ -14,6 +14,11 @@ inputs:
   preproc:
     description: Preprocessing scripts
     required: false
+  options:
+    description: Extra options for anaconda upload
+    required: false
+    default: ""
+      
 outputs:
   name:
     value: ${{ steps.build.outputs.name }}
@@ -52,7 +57,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.base-dir }}
-        anaconda -t ${{ inputs.token }} upload -u ${{ inputs.user }} --register noarch/*.tar.bz2
+        anaconda -t ${{ inputs.token }} upload -u ${{ inputs.user }} ${{ inputs.options }} --register noarch/*.tar.bz2
     - name: "Check upload"
       shell: bash
       run: conda search -i -c lingfeiwang ${{ steps.build.outputs.name }}
