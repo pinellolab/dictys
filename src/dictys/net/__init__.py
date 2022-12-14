@@ -659,10 +659,19 @@ class dynamic_network(network):
 
 			* 'regulation': based on target count
 
+			* 'weighted_regulation': based on weighted outdegree without the need to binarize network
+
 			* 'expression': based on CPM
 
 		sparsity:
-			The number of edges to regard as positive when binarizing network. Only relevant when mode=='regulation'
+			The number of edges to regard as positive when binarizing network. Function depends on mode:
+			
+			* For mode='regulation': effective
+
+			* For mode='weighted_regulation': determines the overall scale of outdegree to be comparable with a binarized network of the specified sparsity
+			
+			* for mode='expression': no effect
+
 		ka:
 			Keyword arguments passed to dictys.plot.dynamic.fig_discover
 
@@ -678,6 +687,10 @@ class dynamic_network(network):
 			stat1_net=fsmooth(stat.net(self))
 			stat1_netbin=stat.fbinarize(stat1_net,sparsity=sparsity)
 			stat1_y=stat.flnneighbor(stat1_netbin)
+		elif mode=='weighted_regulation':
+			#Log weighted outdegree
+			stat1_net=fsmooth(stat.net(self))
+			stat1_y=stat.flnneighbor(stat1_net,weighted_sparsity=sparsity)
 		elif mode=='expression':
 			stat1_y=fsmooth(stat.lcpm(self,cut=0))
 		else:

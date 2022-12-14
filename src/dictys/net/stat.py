@@ -331,13 +331,14 @@ class fbinarize(base):
 	"""
 	Convert continuous network stat to binary network stat.
 	"""
-	def __init__(self,stat:base,*a,statmask:Optional[base]=None,sparsity:float=0.01,signed:bool=True,**ka):
+	def __init__(self,stat:base,*a,statmask:Optional[base]=None,sparsity:Optional[float]=0.01,signed:bool=True,**ka):
 		"""
 		Convert continuous network stat to binary network stat.
 		stat:		Stat for continuous network as numpy.ndarray(shape=(n_reg,n_target),dtype=float)
 		statmask:	Stat for network mask indicating which edges are tested in the continuous network,
 					as numpy.ndarray(shape=(n_reg,n_target),dtype=bool)
 		sparsity:	Proportion of significant edges when converting to binary network.
+					If None, sets all non-zero (if signed) or positive (if not signed) edges as significant.
 		signed:		Whether continuous network is signed.
 					If so, larger absolute values indicate stronger edge.
 					If not, larger values indicate stronger edge.
@@ -365,13 +366,17 @@ class fbinarize(base):
 		if self.signed:
 			ans=np.abs(ans)
 		#Determine cutoff for each point
-		if self.mask is None:
-			cut=np.repeat(int(self.sparsity*np.prod(ans.shape[:-1])),ans.shape[-1])
+		if self.sparsity is None:
+			cut=np.array([ans[...,x][ans[...,x]>0].min() for x in range(ans.shape[-1])])
 		else:
-			mask=self.mask.compute(pts)
-			cut=(self.sparsity*mask.sum(axis=0).sum(axis=0)).astype(int)
+			if self.mask is None:
+				cut=np.repeat(int(self.sparsity*np.prod(ans.shape[:-1])),ans.shape[-1])
+			else:
+				mask=self.mask.compute(pts)
+				cut=(self.sparsity*mask.sum(axis=0).sum(axis=0)).astype(int)
+			assert cut.shape==(ans.shape[-1],)
+			cut=np.array([np.partition(x.ravel(),-y)[-y] for x,y in zip(ans.transpose(2,0,1),cut)])
 		assert cut.shape==(ans.shape[-1],)
-		cut=[np.partition(x.ravel(),-y)[-y] for x,y in zip(ans.transpose(2,0,1),cut)]
 		ans=ans>=cut
 		assert ans.shape==tuple([len(y) for y in self.names]+[len(pts)])
 		return ans
@@ -531,34 +536,6 @@ class netmask(sprop):
 	def __init__(self,d:dictys.net.network,*a,varname:str='mask',**ka):
 		super().__init__(d,'es',varname,*a,label='Network edge mask',**ka)
 
-# class netmask_cpm(function):
-# 	def __init__(self,netmask,lcpm,cut_lcpm=1):
-# 		# netmask1=netmask(d)
-# 		# lcpm1=lcpm(d,cut=cut_cpm)
-# 		self.cut_lcpm=cut_lcpm
-# 		super().__init__(self._function_,[netmask,lcpm],self)
-# 	def default_names(self):
-# 		return self.stats[0].default_names()
-# 	def default_label(self):
-# 		return 'Network edge mask'
-# 	@staticmethod
-# 	def _function_(netmask1,lcpm1,self):
-# 		n=netmask1.shape[-1]
-# 		ans=np.zeros([len(x) for x in self.names]+[n],dtype=bool)
-# 		t1=dict(zip(self.stats[1].names[0],range(len(self.stats[1].names[0]))))
-# 		#ID in netmask in shape [2,..]
-# 		t2=[np.nonzero([y[x] in t1 for x in range(len(y))])[0] for y in self.stats[0].names]
-# 		#ID in lcpm
-# 		t3=[np.array([t1[y] for y in x[0][x[1]]]) for x in zip(self.stats[0].names,t2)]
-# 		#ID passed cut in lcpm in shape [2,n,...]
-# 		t3=[[np.nonzero(np.isfinite(lcpm1[x,y])&(lcpm1[x,y]>self.cut_lcpm))[0] for y in range(n)] for x in t3]
-# 		# t3=[[x[np.isfinite(lcpm1[x,y])] for y in range(n)] for x in t3]
-# 		for xi in range(n):
-# 			ans[np.ix_(t2[0][t3[0][xi]],t2[1][t3[1][xi]],[xi])]=True
-# 		ans&=netmask1
-# 		# ans=(ans.transpose(1,0,2)&(netmask1.sum(axis=1)>=self.cut_ntarget)).transpose(1,0,2)
-# 		return ans
-
 class fcentrality_base(base):
 	"""
 	Base class for centrality measure from network stat
@@ -608,20 +585,24 @@ class fcentrality_base(base):
 
 class fcentrality_degree(base):
 	"""
-	Degree centrality stat for network.
+	Degree centrality stat for network. 
 	"""
-	def __init__(self,statnet:base,roleaxis:int=0,statmask:Optional[base]=None,constant:float=0):
+	def __init__(self,statnet:base,roleaxis:int=0,statmask:Optional[base]=None,weighted_sparsity:Optional[float]=None,constant:float=0):
 		"""
 		Degree centrality stat for network.
-		statnet:	stat for network
+		statnet:	stat for network. Both binarized or continuous networks are accepted.
 		roleaxis:	Axis to compute degree for. 0 for outdegree and 1 for indegree.
 		statmask:	stat for mask. When specified, computes the degree centrality rate, i.e. (degree+constant)/(node_count+constant), instead of degree
+		weighted_sparsity:	If set, treat statnet as a continuous network and compute weighted degree centrality.
+							Value is used to normalize centrality so the sum equals to that of unweighted degree centrality of the same network binarized under the specified sparsity.
+							Ignored if statmask is set.
 		constant:	Constant to add to degree centrality. Particularly useful when statmask is set. Always used.
 		"""
 		self.stat=statnet
 		self.mask=statmask
 		self.roleaxis=roleaxis
 		self.constant=constant
+		self.weighted_sparsity=weighted_sparsity
 		super().__init__()
 	def default_names(self):
 		return [self.stat.names[self.roleaxis]]
@@ -634,8 +615,13 @@ class fcentrality_degree(base):
 		Return:
 		Centrality as numpy.array(shape=(n,len(pts))). Use nan to hide value or set as invalid.
 		"""
-		dynet=self.stat.compute(pts)
+		dynet=np.abs(self.stat.compute(pts))
 		if self.mask is None:
+			if self.weighted_sparsity is not None:
+				#Current sparsity
+				t1=dynet.sum(axis=0).sum(axis=0)/(dynet.shape[0]*dynet.shape[1])
+				#Normalized to specified sparsity
+				dynet=dynet*(self.weighted_sparsity/(t1+1E-300))
 			dynet=dynet.sum(axis=1-self.roleaxis)+self.constant
 		else:
 			mask=self.mask.compute(pts)
@@ -788,7 +774,8 @@ class flayout_base(base):
 		if self.netscale is not None:
 			t1=m[(~np.isnan(m))&(m!=0)]
 			if not t1.any():
-				return np.ones((m.shape[0],self.ndim),dtype=float)*np.nan
+				self.pos=np.ones((m.shape[0],self.ndim,len(self.pts)),dtype=float)*np.nan
+				return
 			m=m*(self.netscale/np.sqrt((t1**2).mean()))
 
 		del stat

@@ -79,7 +79,8 @@ class notch(base):
 	e: Dynamic heatmap for regulation strength from select TFs to select target genes
 	f: Dynamic subnetwork graph from select TF to its targets
 	"""
-	def draw(self,net:dictys.net.network,branch:Tuple[int,int],panelsize:Tuple[float,float]=(6,4),
+	def draw(self,net:dictys.net.network,branch:Tuple[int,int],
+		weighted:bool=False,sparsity:float=0.01,panelsize:Tuple[float,float]=(6,4),
 		subplots_adjust:Optional[dict]={'wspace':0.35,'hspace':0.2},
 		bcde_tfs:list[list[str]]=[],
 		e_targets:list[str]=[],
@@ -95,6 +96,10 @@ class notch(base):
 			Dynamic network to draw
 		branch:
 			Branch to draw defined as (start node id, end node id)
+		weighted:
+			Whether to use weighted instead of binarized network for panels b,d.
+		sparsity:
+			Overall configuration of binarized network sparsity (or equilvalent for weighted network). Affects panels b,d,f.
 		panelsize:
 			Size of each panel
 		subplots_adjust:
@@ -173,11 +178,14 @@ class notch(base):
 		# Kernel smoothed network
 		stat1_net=fsmooth(stat.net(net))
 		# Binarized network
-		stat1_netbin=stat.fbinarize(stat1_net)
+		stat1_netbin=stat.fbinarize(stat1_net,sparsity=sparsity)
 		# You can change network sparsity (proportion of positive edges) with:
 		# stat1_netbin=stat.fbinarize(stat1_net,sparsity=0.001)
 		# Regulatory activity, quantified with log target count
-		stat1_lntarget=stat.flnneighbor(stat1_netbin)
+		if weighted:
+			stat1_lntarget=stat.flnneighbor(stat1_net,weighted_sparsity=sparsity)
+		else:
+			stat1_lntarget=stat.flnneighbor(stat1_netbin)
 		# Pseudo time
 		stat1_pseudotime=stat.pseudotime(net,pts)
 

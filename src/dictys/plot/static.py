@@ -5,12 +5,12 @@
 Static GRN visualization
 """
 
-from typing import Union,Tuple,Optional
+from typing import Union,Tuple,Optional,Callable
 import pandas as pd
 import dictys
 from dictys.utils.importing import matplotlib
 
-def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut:float=0.4,vmin:float=20,nmax:int=10,sparsity:float=0.01,select_state:Optional[list[str]]=None):
+def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut:float=0.4,vmin:float=20,nmax:int=10,sparsity:float=0.01,weighted=False,select_state:Optional[list[str]]=None):
 	"""
 	Search for regulation (default) or expression marker TFs/genes based on context(/state) specificity computed from out-degree centrality (for regulation markers) and CPM (for expression markers).
 	Context specificity is defined as value in this context / sum across all contexts.
@@ -21,7 +21,7 @@ def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut
 		Input network class
 	base:
 		Base variable to select context specific regulators. Accepts:
-		deg:	out-degree centrality, for regulation marker TFs
+		deg:	weighted or unweighted out-degree centrality, for regulation marker TFs
 		cpm:	CPM, for expression marker genes
 	min_entropy:
 		Context specificity entropy level required (relative to random assignment) to select regulator. Lower means more specific.
@@ -32,7 +32,9 @@ def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut
 	nmax:
 		Maximum marker gene count for each context, selected based on probability
 	sparsity:
-		Network sparsity (proportion of positive edges) when binarized
+		Network sparsity (proportion of positive edges) when binarized. Also used to normalize weighted out-degree centrality.
+	weighted:
+		Whether to use weighted degree centrality
 	select_state:
 		Only compute specificity among given contexts
 
@@ -58,16 +60,25 @@ def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut
 		select_state=np.arange(d0.sn)
 	else:
 		select_state=np.array([d0.sdict[x] for x in select_state])
+	net=stat.net(d0)
 	#Network mask
 	mask=stat.net(d0,varname='mask')
-	#Binary network
-	binnet=stat.fbinarize(stat.net(d0),statmask=mask,sparsity=sparsity)
-	#Target count
-	deg=stat.fcentrality_degree(binnet,roleaxis=0).compute(select_state)
-	#Degree centrality rate
-	dcrate=stat.fcentrality_degree(binnet,statmask=mask,roleaxis=0).compute(select_state)
-	#Degree centrality specificity
-	deg_spec=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
+	if weighted:
+		#Weighted target count
+		deg=stat.fcentrality_degree(net,roleaxis=0,weighted_sparsity=sparsity).compute(select_state)
+		#Weighted degree centrality rate
+		dcrate=stat.fcentrality_degree(net,statmask=mask,roleaxis=0).compute(select_state)
+		#Degree centrality specificity
+		deg_spec=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
+	else:
+		#Binary network
+		binnet=stat.fbinarize(net,statmask=mask,sparsity=sparsity)
+		#Target count
+		deg=stat.fcentrality_degree(binnet,roleaxis=0).compute(select_state)
+		#Degree centrality rate
+		dcrate=stat.fcentrality_degree(binnet,statmask=mask,roleaxis=0).compute(select_state)
+		#Degree centrality specificity
+		deg_spec=(dcrate.T/(dcrate.sum(axis=1)+1E-300)).T
 	#CPM
 	cpm=2**(stat.lcpm(d0,cut=-1,constant=1).compute(select_state))-1
 	#CPM specificity
@@ -321,7 +332,7 @@ def fig_heatmap_top(d0:dictys.net.network,selection:list[Tuple[str,str]],ntop:in
 	
 	return (fig,fig2,net)
 
-def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],cut_cpm:float=1,cut_ntarget:float=5,annotate:Union[str,list[str]]=[],axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={},**ka)->pd.DataFrame:
+def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[str,str],annotate:Union[str,list[str]]=[],weighted:bool=False,sparsity:float=0.01,cut_cpm:float=1,cut_ntarget:float=5,axes_alpha:float=0.4,aspect:float=1,lim:set={'sym','min','max'},ka_adjust_text:Optional[dict]={},**ka)->pd.DataFrame:
 	"""
 	Draw scatter plot for differential regulation and differential expresison logFCs.
 
@@ -335,6 +346,15 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 		Names of two cell contexts/states to compare as (reference,alternative)
 	annotate:
 		Genes to annotate their locations. Use 'all' to indicate all genes.
+	weighted:
+		Whether to use weighted outdegree to compute differential regulation
+	sparsity:
+		For weighted=False, network sparsity to compute differential regulation as proportion of positive edges.
+		For weighted=True, sets the outdegree scale equivalent to that of a binarized network with the given sparsity.
+	cut_cpm:
+		Minimum CPM required in either context to show gene on plot
+	cut_ntarget:
+		Minimum target count required in either context to show gene on plot
 	axes_alpha:
 		Transparency of axis lines drawn. Set to 1 to disable axis lines.
 	aspect:
@@ -366,14 +386,15 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	pts=np.array([d0.sdict[x] for x in states])
 	stat1_lcpm=stat.lcpm(d0,cut=0)
 	stat1_net=stat.net(d0)
-	stat1_netbin=stat.fbinarize(stat1_net)
-	stat1_lntarget=stat.flnneighbor(stat1_netbin)
-	stat1_lntarget_abs=stat.flnneighbor(stat1_netbin)
+	if weighted:
+		stat1_lntarget=stat.flnneighbor(stat1_net,weighted_sparsity=sparsity)
+	else:
+		stat1_netbin=stat.fbinarize(stat1_net,sparsity=sparsity)
+		stat1_lntarget=stat.flnneighbor(stat1_netbin)
 	stat1_lcpm0=stat.finitial(stat1_lcpm,np.array([pts[0]]))
-	stat1_lntarget_abs0=stat.finitial(stat1_lntarget_abs,np.array([pts[0]]))
 	stat1_lntarget0=stat.finitial(stat1_lntarget,np.array([pts[0]]))
 	stat1_dlcpm=stat.fmasked(stat1_lcpm-stat1_lcpm0,(stat1_lcpm0>=cut_lcpm)|(stat1_lcpm>=cut_lcpm),label='Differential expression logFC')
-	stat1_dlntarget=stat.fmasked(stat1_lntarget-stat1_lntarget0,(stat1_lntarget_abs0>=cut_lntarget)|(stat1_lntarget_abs>=cut_lntarget),label='Differential regulation logFC')
+	stat1_dlntarget=stat.fmasked(stat1_lntarget-stat1_lntarget0,(stat1_lntarget0>=cut_lntarget)|(stat1_lntarget>=cut_lntarget),label='Differential regulation logFC')
 	
 	p=panel.statscatter(ax,np.array([pts[1]]),stat1_dlcpm,stat1_dlntarget,annotate=annotate,aspect=aspect,lim=lim,scatterka=ka_default)
 	ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
@@ -460,7 +481,7 @@ def fig_diff_rank(data:pd.DataFrame,figsize:Tuple[float,float]=(0.015,2),annotat
 			adjust_text(t2,**ka_adjust_text_default)
 	return fig
 
-def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulators:Optional[list[str]]=None,targets:Optional[list[str]]=None,annotate:Union[str,list[str]]=[],sparsity:float=0.01,ka_node:dict={},ka_edge:dict={})->Tuple[pd.DataFrame,pd.DataFrame]:
+def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulators:Optional[list[str]]=None,targets:Optional[list[str]]=None,annotate:Union[str,list[str]]=[],sparsity:float=0.01,transformation:Callable=lambda x:x,ka_node:dict={},ka_edge:dict={})->Tuple[pd.DataFrame,pd.DataFrame]:
 	"""
 	Draw subnetwork with graph representation.
 
@@ -480,6 +501,8 @@ def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulator
 		Genes to annotate their locations. Use 'all' to indicate all genes shown.
 	sparsity:
 		Network binarization sparsity (proportion of positive edges)
+	transformation:
+		Transformation of edge strength before passing to forced directed layout.
 	ka_node:
 		Keyword arguments for drawing nodes passed to pyplot.scatter
 	ka_edge:
@@ -510,7 +533,7 @@ def fig_subnet(d0:dictys.net.network,ax:matplotlib.axes.Axes,state:str,regulator
 		stat1_subnet,stat1_subnetbin=[x[regulators] for x in [stat1_subnet,stat1_subnetbin]]
 	if targets is not None:
 		stat1_subnet,stat1_subnetbin=[x[:,targets] for x in [stat1_subnet,stat1_subnetbin]]
-	stat1_subnet_trunc=stat.function(lambda *x:x[0]*x[1],[stat1_subnet,stat1_subnetbin],names=stat1_subnet.names)
+	stat1_subnet_trunc=stat.function(lambda *x:transformation(x[0]*x[1]),[stat1_subnet,stat1_subnetbin],names=stat1_subnet.names)
 	#Spring Layout
 	stat1_layout=stat.flayout_base(stat1_subnet_trunc,partial(_fruchterman_reingold),pts=pts)
 	
