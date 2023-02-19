@@ -10,7 +10,11 @@ inputs:
     required: true
   token:
     description: Anaconda token
-    required: true  
+    required: true
+  serialid:
+    description: Package serial number
+    required: true
+    default: 0
   preproc:
     description: Preprocessing scripts
     required: false
@@ -41,7 +45,7 @@ runs:
       run: |
         cd ${{ inputs.base-dir }}
         ${{ inputs.preproc }}
-        OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_MAX_THREADS=1 NUMEXPR_MAX_THREADS=1 MKL_MAX_THREADS=1 CONDA_NPY=123 conda build --output-folder . -c bioconda -c conda-forge -c pytorch .
+        SERIALID=${{ inputs.serialid }} OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_MAX_THREADS=1 NUMEXPR_MAX_THREADS=1 MKL_MAX_THREADS=1 CONDA_NPY=123 conda build --output-folder . -c bioconda -c conda-forge -c pytorch .
         cd noarch
         pkgfile="$(ls -1 *.tar.bz2)"
         cd ..
@@ -50,6 +54,9 @@ runs:
         s2="$(echo "$pkgfile" | tr "-" "\n" | tail -n 2 | head -n 1 | head -c "-1" | tr "\n" "-")"
         s3="$(echo "$pkgfile" | tr "-" "\n" | tail -n 1 | head -c "-1" | tr "\n" "-")"
         s3="$(echo "${s3%%[.]tar[.]bz2}")"
+        echo "name: $s1"
+        echo "version: $s2"
+        echo "buildstr: $s3"
         echo "name=$s1" >> $GITHUB_OUTPUT
         echo "version=$s2" >> $GITHUB_OUTPUT
         echo "buildstr=$s3" >> $GITHUB_OUTPUT

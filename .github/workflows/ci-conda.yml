@@ -90,7 +90,7 @@ jobs:
           
   build-publish:
     name: Build and publish conda package
-    needs: test-blood1
+    needs: [ build, test-blood1 ]
     if: ( github.ref_name == 'master' ) && ( github.repository == 'pinellolab/dictys' )
     runs-on: ubuntu-latest
     steps:
@@ -104,11 +104,20 @@ jobs:
       - name: Mask token
         shell: bash
         run: echo "::add-mask::${{ secrets.ANACONDA_TOKEN }}"
-      - name: Build and publish pretest version
+      - name: Get serial ID
+        id: serialid
+        shell: bash
+        run: | 
+          version='${{ needs.build.outputs.version }}'
+          version="${version//./[.]}"
+          serialid=$(conda search -c lingfeiwang --override-channels -q dictys | grep '^dictys[[:blank:]]*'"$version" | wc -l)
+          serialid=$(printf "%04u" $serialid)
+          echo "serialid=$serialid" >> $GITHUB_OUTPUT
+      - name: Build and publish release version
         uses: ./.github/actions/conda-build-publish
-        id: publish-pretest
+        id: publish
         with:
           base-dir: utils/conda
           user: lingfeiwang
+          serialid: ${{ steps.serialid.outputs.serialid }}
           token: ${{ secrets.ANACONDA_TOKEN }}
- 
