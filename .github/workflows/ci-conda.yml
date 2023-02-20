@@ -111,7 +111,6 @@ jobs:
           version='${{ needs.build.outputs.version }}'
           version="${version//./[.]}"
           serialid=$(conda search -c lingfeiwang --override-channels -q dictys | grep '^dictys[[:blank:]]*'"$version" | wc -l)
-          serialid=$(printf "%04u" $serialid)
           echo "serialid=$serialid" >> $GITHUB_OUTPUT
       - name: Build and publish release version
         uses: ./.github/actions/conda-build-publish
