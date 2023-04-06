@@ -1,6 +1,5 @@
-# Lingfei Wang, 2022. All rights reserved.
-ARG BASEIMG=ubuntu:20.04
-FROM $BASEIMG
+# Lingfei Wang, 2022-2023. All rights reserved.
+FROM continuumio/miniconda3
 USER root
 SHELL ["/bin/bash", "-c"]
 
@@ -9,21 +8,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 	&& DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -y curl gawk man pkg-config python3 python3-pip git wget zip unzip xzip \
 	&& rm -Rf /var/lib/apt/lists/*
-
-# Install conda
-# Anaconda download URL
-ARG DICTYS_CONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
-# Anaconda install path
-ARG DICTYS_DIR_CONDA="/root/miniconda3"
-RUN mkdir conda \
-	&& cd conda \
-	&& wget -O install_conda.sh "${DICTYS_CONDA_URL}" \
-	&& chmod u+x install_conda.sh \
-	&& ./install_conda.sh -b -f -p "${DICTYS_DIR_CONDA}" \
-	&& ln -s "${DICTYS_DIR_CONDA}"/bin/activate /usr/local/bin/activate \
-	&& ln -s "${DICTYS_DIR_CONDA}"/bin/conda /usr/local/bin/conda \
-	&& cd .. \
-	&& rm -Rf conda
 
 # Install dictys
 # Name of conda environment to create
@@ -50,3 +34,5 @@ RUN echo '#!/bin/bash' > /usr/bin/run_dictys \
 
 #ENTRYPOINT ["/usr/bin/run_dictys"]
 	
+
+CMD ["/bin/bash"]

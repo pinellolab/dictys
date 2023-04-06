@@ -1,0 +1,40 @@
+# Lingfei Wang, 2022, 2023. All rights reserved.
+name: Build and publish dockerhub image
+
+inputs:
+  registry:
+    description: Dockerhub registry
+    required: true
+  image:
+    description: Dockerhub image name
+    required: true
+  cuda:
+    description: CUDA version. Empty for CPU.
+    required: true
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ inputs.registry }}/${{ inputs.image }}
+        tags: |
+          type=raw,value=${{ github.sha }}
+          type=raw,value=latest
+    - name: Copy install script
+      shell: bash
+      run:
+        cp "${{ github.workspace }}"/local/utils/docker/Dockerfile "${{ github.workspace }}"/
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        build-args: |
+          COMMIT_VERSION=
+          CUDAVERSION_CONDA=${{ inputs.cuda }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}

@@ -1,5 +1,5 @@
 # Lingfei Wang, 2022. All rights reserved.
-name: "Build & test conda package"
+name: "Conda package"
 
 on:
   push:
