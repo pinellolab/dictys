@@ -161,6 +161,12 @@ FAQ
   1. To run pytorch on **CPU**, run ``dictys_helper makefile_update.py path/to/config.mk '{"DEVICE": "cpu"}'`` to configure to CPU mode. See `Tutorials`_ to find the right place to run this command.
   2. To run pytorch on **GPU**, reinstall Dictys with the correct options to enable GPU support at `Installation`_.
 
+* **How do I save figures from jupyter notebooks onto the disk?**
+  
+  You can use ``plt.savefig('output.pdf')`` to save the current figure to disk. See `matplotlib.pyplot.savefig <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html#matplotlib.pyplot.savefig>`_.
+  
+  Some visualization functions in Dictys return two or more figures, such as ``figs = net.draw_discover(...)``. You can save them separately with ``figs[0].savefig('output1.pdf'); figs[1].savefig('output2.pdf'); ...``. See `matplotlib.figure.savefig <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure.savefig>`_ and `issue 15 <https://github.com/pinellolab/dictys/issues/15>`_.
+
 Issues
 ==========================
 Please raise an issue on `github <https://github.com/pinellolab/dictys/issues/new/choose>`_.
