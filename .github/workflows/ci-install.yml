@@ -14,7 +14,7 @@ on:
       ref:
         description: 'Commit or branch to run action on'
         required: true
-        default: 'dev2'
+        default: 'dev'
 
 jobs:
   install-script-bash:

@@ -61,16 +61,13 @@ if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 1 ))" != "a0" ]; then
 	. activate $CONDAENV_NAME
 fi
 if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 2 ))" != "a0" ]; then
-	#Install Dictys
+	#Install Dictys and pyDNase with correct matplotlib
 	if [ "a$LOCAL_VERSION" == "a" ]; then
-		pip install $PIP_OPTIONS git+https://github.com/pinellolab/dictys.git@$COMMIT_VERSION
+		pip install $PIP_OPTIONS --no-deps pyDNase git+https://github.com/pinellolab/dictys.git@$COMMIT_VERSION
 	else
-		pip install $PIP_OPTIONS "$LOCAL_VERSION"
+		pip install $PIP_OPTIONS --no-deps pyDNase "$LOCAL_VERSION"
 	fi
-	#Correcting matplotlib version due to pyDNase dependency
-	pip uninstall -y pyDNase
-	pip install -U matplotlib
-	pip install $PIP_OPTIONS --no-deps pyDNase
+	pip install $PIP_OPTIONS $(pip check | grep ', which is not installed[.]$' | awk -F ',' '{print $(NF-1)}' | awk '{print $NF}' | grep -vi '^pyDNase$')
 fi
 if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 4 ))" != "a0" ]; then
 	#Update homer
