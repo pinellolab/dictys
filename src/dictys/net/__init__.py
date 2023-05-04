@@ -69,7 +69,7 @@ class network:
 
 		Parameters
 		-------------
-		ka:		Keyword arguments saved to class
+		ka:			Keyword arguments saved to class
 		"""
 		import numpy as np
 		from collections import defaultdict
@@ -214,16 +214,18 @@ class network:
 		if v==(0,1,0):
 			return cls._from_file_0_1_0(path)
 		raise TypeError('Unknown network version {}'.format('.'.join([str(x) for x in v])))
-	def to_file(self,path:str,compression:str="gzip",**ka)->None:
+	def to_file(self,path:str,compression:str="gzip",links:bool=True,**ka)->None:
 		"""
 		Save class instance to file.
 		
 		Parameters
 		-------------
-		path:	str
+		path:		str
 			Path of file to save to.
 		compression: str
 			Compression used.
+		links:		bool
+			Whether to use HDF5 links to save space.
 		ka:	dict
 			Keyword arguments passed to h5py.File.create_dataset.
 		"""
@@ -235,23 +237,36 @@ class network:
 		params['nids2']=params['nids'][1]
 		del params['nids']
 		logging.info(f'Writing file {path}.')
+		past=[]
 		with h5py.File(path,'w') as f:
 			f.create_dataset('_version_',len(self._version_),dtype='i')[:]=np.array(self._version_)
 			for xi in params:
+				if links:
+					t1=list(filter(lambda x:x[1] is params[xi],past))
+					if len(t1)>0:
+						f[xi]=t1[0][2]
+						continue
 				p=dict(ka)
 				p['compression']=compression
 				p['data']=params[xi]
 				if params[xi].dtype.char=='U':
 					p['data']=p['data'].astype('S')
-				f.create_dataset(xi,**p)
+				entry=f.create_dataset(xi,**p)
+				past.append((xi,params[xi],entry))
 			f.create_group('prop')
 			for xi in self.prop:
 				f['prop'].create_group(xi)
 				for xj in self.prop[xi]:
 					data=self.prop[xi][xj]
+					if links:
+						t1=list(filter(lambda x:x[1] is data,past))
+						if len(t1)>0:
+							f['prop'][xi][xj]=t1[0][2]
+							continue
 					if data.dtype.char=='U':
 						data=data.astype('S')
-					f['prop'][xi].create_dataset(xj,data=data,compression=compression,**ka)
+					entry=f['prop'][xi].create_dataset(xj,data=data,compression=compression,**ka)
+					past.append((xi+'.'+xj,data,entry))
 			if self.traj is not None:
 				t=f.create_group('traj')
 				self.traj.to_fileobj(t)
@@ -312,13 +327,9 @@ class network:
 		nettype:
 			Type of network. Accepts:
 
-			* '':	Unnormalized direct network.
+			* '':	Unnormalized direct & steady-state network.
 
-			* 'n':	Normalized direct network.
-
-			* 'i':	Unnormalized steady-state network.
-
-			* 'in':	Normalized steady-state network.
+			* 'n':	Normalized direct & steady-state networks.
 
 		optional:
 			Optional data to include. Accepts:
@@ -339,6 +350,8 @@ class network:
 		from dictys.traj import trajectory,point
 		from dictys.utils.numpy import dtype_min
 		import numpy as np
+		nettypes=[nettype,'i'+nettype]
+		ntype=len(nettypes)
 
 		optional_allowed={'readcount'}
 		if len(optional-optional_allowed)>0:
@@ -366,24 +379,26 @@ class network:
 		scprop={'w':msc}
 
 		#Network
-		nets=[None]*n
-		success=np.ones(n,dtype=bool)
+		nets=[[] for _ in range(ntype)]
+		success=np.ones((ntype,n),dtype=bool)
 		for xi in range(n):
-			try:
-				fi=pjoin(path_work,sname[xi],f'net_{nettype}weight.tsv.gz')
-				logging.info(f'Reading file {fi}')
-				nets[xi]=pd.read_csv(fi,header=0,index_col=0,sep='\t')
-				if nets[xi].shape[0]==0:
-					success[xi]=False
-			except FileNotFoundError as e:
-				logging.warning('Skipping cell subset {} due to error: {}'.format(sname[xi],repr(e)))
-				success[xi]=False
-				nets[xi]=pd.DataFrame([],index=[],columns=[])
+			for xj in range(ntype):
+				nettype=nettypes[xj]
+				try:
+					fi=pjoin(path_work,sname[xi],f'net_{nettype}weight.tsv.gz')
+					logging.info(f'Reading file {fi}')
+					nets[xj].append(pd.read_csv(fi,header=0,index_col=0,sep='\t'))
+					if nets[xj][xi].shape[0]==0:
+						success[xj,xi]=False
+				except FileNotFoundError as e:
+					logging.warning('Skipping cell subset {} due to error: {}'.format(sname[xi],repr(e)))
+					success[xj,xi]=False
+					nets[xj].append(pd.DataFrame([],index=[],columns=[]))
 		if not success.any():
 			raise RuntimeError('No network found.')
 
 		#Network nodes: source & target
-		nidss=[[x.index,x.columns] for x in nets]
+		nidss=[[x.index,x.columns] for x in itertools.chain.from_iterable(nets)]
 		assert all((x[1][:len(x[0])]==x[0]).all() for x in nidss)
 		nids=[sorted(list(set(itertools.chain.from_iterable(x)))) for x in zip(*nidss)]
 		niddicts=[dict(zip(x,range(len(x)))) for x in nids]
@@ -442,14 +457,18 @@ class network:
 		
 		#Edge-state properties
 		esprop={}
-		#Edge weight
-		esprop['w']=np.zeros(np.r_[nns,ns],dtype=float)
-		#Edge mask
-		esprop['mask']=np.zeros(np.r_[nns,ns],dtype=bool)
-		for xi in np.nonzero(success)[0]:
-			t1=[[niddicts[y][x] for x in nidss[xi][y]] for y in range(2)]
-			esprop['w'][np.ix_(t1[0],t1[1],[xi])]=nets[xi].values.reshape(*nets[xi].shape,1)
-			esprop['mask'][np.ix_(t1[0],t1[1],[xi])]=True
+		for xi in nettypes:
+			#Edge weight
+			esprop['w_'+xi]=np.zeros(np.r_[nns,ns],dtype=float)
+			#Edge mask
+			esprop['mask_'+xi]=np.zeros(np.r_[nns,ns],dtype=bool)
+		for xi,xj in np.array(np.nonzero(success)).T:
+			vsuf='_'+nettypes[xi]
+			t1=[[niddicts[y][x] for x in nidss[xi*n+xj][y]] for y in range(2)]
+			esprop['w'+vsuf][np.ix_(t1[0],t1[1],[xj])]=nets[xi][xj].values.reshape(*nets[xi][xj].shape,1)
+			esprop['mask'+vsuf][np.ix_(t1[0],t1[1],[xj])]=True
+		esprop['w']=esprop['w_'+nettypes[0]]
+		esprop['mask']=esprop['mask_'+nettypes[0]]
 
 		if dynamic:
 			#State-state properties
