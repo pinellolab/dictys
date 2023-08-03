@@ -29,17 +29,25 @@ First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.htm
 
 	conda create -y -n dictys -c conda-forge python=3.9 mamba
 	. activate dictys
-	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cpuonly
+	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys pytorch torchvision torchaudio cpuonly
 
 This will create a conda environment named ``dictys``.
 
-Alternatively, **with GPU computation** (here CUDA 11.3):
+Alternatively, **with GPU computation** (here CUDA 11.7):
 
 .. code-block::
 
 	conda create -y -n dictys -c conda-forge python=3.9 mamba
 	. activate dictys
-	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cudatoolkit=11.3
+	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch -c nvidia dictys pytorch torchvision torchaudio pytorch-cuda=11.7
+
+Or, with earlier versions (here CUDA 11.3, only supported in pytorch 1):
+
+.. code-block::
+
+	conda create -y -n dictys -c conda-forge python=3.9 mamba
+	. activate dictys
+	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch -c nvidia dictys pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3
 
 Option 2: with `bash script <https://tinyurl.com/dictys>`_
 ----------------------------------------------------------
@@ -57,15 +65,30 @@ Alternatively, under a different conda environment name:
 
 	wget https://tinyurl.com/dictys -O - | CONDAENV_NAME=your_favorite_name bash
 
-Alternatively, **with GPU computation** (here CUDA 11.3):
+Alternatively, **with GPU computation** (here CUDA 11.7):
 
 .. code-block::
 
-	wget https://tinyurl.com/dictys -O - | CUDAVERSION_CONDA=11.3 bash
+	wget https://tinyurl.com/dictys -O - | CUDAVERSION_CONDA=11.7 bash
 
 Option 3: with containers
 -------------------------
-TBA
+To pull and run the pre-built docker image for Dictys **with CPU computation**:
+
+.. code-block::
+
+	docker pull lfwa/dictys-cpu
+	#Add public ports with '--expose' or '-p' to serve jupyter notebooks and bind mount with '-v' to transfer input/output data
+	docker run -it lfwa/dictys-cpu
+
+Then, activate conda environment and serve jupyter notebooks from inside the container:
+
+.. code-block::
+
+	. activate dictys
+	jupyter notebook --allow-root
+
+You can then access jupyter notebooks with the exposed or published ports.
 
 Additional notes
 ----------------

@@ -1,4 +1,4 @@
-# Lingfei Wang, 2022. All rights reserved.
+# Lingfei Wang, 2022, 2023. All rights reserved.
 name: Installation script test
 
 on:
@@ -148,7 +148,7 @@ jobs:
         tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2
         s1="$(tail -n +$linestart README.rst | head -n $lineend | tail -n +$linestart2 | head -n $lineend2 | grep '^[[:blank:]]' | sed 's/^[[:space:]]*//g')"
         #If failed here: update this line and the same line in /.github/actions/install-conda/action.yml to match the lines in /README.rst
-        cmp <(echo "$s1") <(echo "conda create -y -n dictys -c conda-forge python=3.9 mamba"; echo ". activate dictys"; echo "mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys cpuonly") || exit 1
+        cmp <(echo "$s1") <(echo "conda create -y -n dictys -c conda-forge python=3.9 mamba"; echo ". activate dictys"; echo "mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch dictys pytorch torchvision torchaudio cpuonly") || exit 1
         echo "run<<EOF" >> $GITHUB_ENV
         echo "$s1" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV

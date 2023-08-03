@@ -16,7 +16,7 @@ on:
       - '.github/actions/dockerhub-build-publish/**'
 
 jobs:
-  build:
+  build-cpu:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -35,9 +35,9 @@ jobs:
           registry: lfwa
           image: dictys-cpu-dev
 
-  test-blood1:
+  test-blood1-cpu:
     name: Blood static network unit tests
-    needs: build
+    needs: build-cpu
     runs-on: ubuntu-latest
     container:
       image: lfwa/dictys-cpu-dev
@@ -62,8 +62,8 @@ jobs:
           makefile-params: '{"ENVMODE": "none", "NTH": "2", "DEVICE": "cpu", "GENOME_MACS2": "hs", "JOINT": "0", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3"}'
           exclusions: 'reads.bam reads.bai net_weight.tsv.gz net_covfactor.tsv.gz net_meanvar.tsv.gz net_loss.tsv.gz net_stats.tsv.gz'
           
-  build-publish:
-    needs: [ build, test-blood1 ]
+  build-publish-cpu:
+    needs: test-blood1-cpu
     if: ( github.ref_name == 'master' ) && ( github.repository == 'pinellolab/dictys' )
     runs-on: ubuntu-latest
     steps:
@@ -82,3 +82,28 @@ jobs:
         with:
           registry: lfwa
           image: dictys-cpu
+
+  build-publish-cuda:
+    needs: test-blood1-cpu
+    if: false && ( github.ref_name == 'master' ) && ( github.repository == 'pinellolab/dictys' )
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cuda: [11.3,11.6,11.7]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          path: local
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and publish
+        uses: ./local/.github/actions/dockerhub-build-publish
+        id: publish
+        with:
+          registry: lfwa
+          cuda: ${{ matrix.cuda }}
+          image: dictys-cuda{{ matrix.cuda }}

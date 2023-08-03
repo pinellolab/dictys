@@ -1,5 +1,5 @@
 #!/bin/bash
-# Lingfei Wang, 2022. All rights reserved.
+# Lingfei Wang, 2022, 2023. All rights reserved.
 
 function usage()
 {
@@ -49,14 +49,24 @@ if [ "a$COMMIT_VERSION" == "a" ]; then
 	COMMIT_VERSION="master"
 fi
 if [ "a$CUDAVERSION_CONDA" == "a" ]; then
-	conda_deps="cpuonly"
+	conda_deps="pytorch torchvision torchaudio cpuonly"
+	conda_channels="-c conda-forge -c pytorch"
+elif [ "a$CUDAVERSION_CONDA" == "a11.3" ]; then
+	conda_deps="pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3"
+	conda_channels="-c pytorch -c conda-forge"
+elif [ "a$CUDAVERSION_CONDA" == "a11.6" ]; then
+	conda_deps="pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.6"
+	conda_channels="-c pytorch -c conda-forge"
+elif [ "a$CUDAVERSION_CONDA" == "a11.7" ]; then
+	conda_deps="pytorch torchvision torchaudio pytorch-cuda=11.7"
+	conda_channels="-c conda-forge -c pytorch -c nvidia"
 else
-	conda_deps="cudatoolkit=$CUDAVERSION_CONDA"
+	echo "This installation script only supports the following CUDA versions: 11.7 (with pytorch 2), 11.6 (with pytorch 1.12.1), 11.3 (with pytorch 1.12.1), and '' (CPU with pytorch 2)"
 fi
 
 if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 1 ))" != "a0" ]; then
 	#Install non-pypi dependencies: pytorch, bedtools, homer, samtools, macs2, ffmpeg
-	conda create -y -n $CONDAENV_NAME -c bioconda -c conda-forge -c pytorch python=$PYTHONVERSION_CONDA pytorch torchvision torchaudio $conda_deps bedtools homer samtools macs2 ffmpeg
+	conda create -y -n $CONDAENV_NAME -c bioconda $conda_channels python=$PYTHONVERSION_CONDA $conda_deps bedtools homer samtools macs2 ffmpeg
 	#You may need "conda activate ..." instead
 	. activate $CONDAENV_NAME
 fi

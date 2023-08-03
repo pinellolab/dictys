@@ -1,4 +1,4 @@
-# Lingfei Wang, 2022. All rights reserved.
+# Lingfei Wang, 2022, 2023. All rights reserved.
 name: Install with anaconda & install checks through conda scripts
 
 inputs:
@@ -21,10 +21,20 @@ runs:
       shell: bash
       run: |
         echo '::group::Installation'
-        if [ "a${{ inputs.cuda-version }}" == "a" ]; then pkgadd="cpuonly"; else pkgadd="cudatoolkit=${{ inputs.cuda-version }}"; fi
+        if [ "a${{ inputs.cuda-version }}" == "a" ]; then
+          channeladd="-c conda-forge -c pytorch"; pkgadd="pytorch torchvision torchaudio cpuonly"
+        elif [ "a${{ inputs.cuda-version }}" == "a11.3" ]; then
+          channeladd="-c pytorch -c conda-forge"; pkgadd="pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3"
+        elif [ "a${{ inputs.cuda-version }}" == "a11.6" ]; then
+          channeladd="-c pytorch -c conda-forge"; pkgadd="pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.6"
+        elif [ "a${{ inputs.cuda-version }}" == "a11.7" ]; then
+          channeladd="-c conda-forge -c pytorch -c nvidia"; pkgadd="pytorch torchvision torchaudio pytorch-cuda=11.7"
+        else
+          echo "Unsupported CUDA version ${{ inputs.cuda-version }}."; exit 1
+        fi
         conda create -y -n dictys -c conda-forge python=${{ inputs.python-version }} mamba
         . activate dictys
-        mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch ${{ inputs.package }} $pkgadd
+        mamba install -y -c lingfeiwang -c bioconda $channeladd ${{ inputs.package }} $pkgadd
         echo '::endgroup::'
     - name: Test python version
       shell: bash

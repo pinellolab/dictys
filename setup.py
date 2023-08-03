@@ -2,7 +2,7 @@
 
 pkgname="dictys"
 pkgnamefull="Context specific and dynamic gene regulatory network reconstruction and analysis"
-version=[0,1,1]
+version=[1,0,0]
 url="https://github.com/pinellolab/"+pkgname
 author="Lingfei Wang, Nikolaos Trasanidis, Luca Pinello"
 author_email="Lingfei.Wang.github@outlook.com, ntrasanidis@mgh.harvard.edu, lpinello@mgh.harvard.edu"
@@ -25,9 +25,11 @@ def pkg_setup():
 		scripts=['bin/dictys','bin/dictys_helper'],
 		install_requires=['numpy','pandas','docutils','h5py','pyro-ppl','scipy','networkx','pybedtools','pyDNase','threadpoolctl','joblib','torch','matplotlib','adjustText','jupyter'],
 		classifiers=[
-			'Development Status :: 4 - Beta ',
+			'Development Status :: 5 - Production/Stable',
 			'Environment :: Console',
-			'Environment :: GPU :: NVIDIA CUDA',
+			'Environment :: GPU :: NVIDIA CUDA :: 11.3',
+			'Environment :: GPU :: NVIDIA CUDA :: 11.6',
+			'Environment :: GPU :: NVIDIA CUDA :: 11.7',
 			'Framework :: Jupyter',
 			'Framework :: Matplotlib',
 			'Intended Audience :: Developers',

@@ -33,10 +33,7 @@ requirements:
   run:
     - python>={{ pythonversion }}
     - pip
-    - pytorch
     - make
-    - torchvision
-    - torchaudio
     - bedtools
     - homer
     - samtools
