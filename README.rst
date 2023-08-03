@@ -196,4 +196,4 @@ Please raise an issue on `github <https://github.com/pinellolab/dictys/issues/ne
 
 References
 ==========================
-`Dictys: dynamic gene regulatory network dissects developmental continuum with single-cell multi-omics <https://www.biorxiv.org/content/10.1101/2022.09.14.508036>`_ bioRxiv (2022)
+`Dictys: dynamic gene regulatory network dissects developmental continuum with single-cell multiomics <https://www.nature.com/articles/s41592-023-01971-3>`_ Nature Methods (2023)
