@@ -23,7 +23,7 @@ Dictys has dependencies not in python. The options below automatically install t
 
 Option 1: with Anaconda
 -----------------------
-First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
+First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys and PyTorch **with CPU computation**:
 
 .. code-block::
 
@@ -33,7 +33,7 @@ First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.htm
 
 This will create a conda environment named ``dictys``.
 
-Alternatively, **with GPU computation** (here CUDA 11.7):
+Alternatively, **with GPU computation** for PyTorch (here CUDA 11.7):
 
 .. code-block::
 
@@ -41,7 +41,7 @@ Alternatively, **with GPU computation** (here CUDA 11.7):
 	. activate dictys
 	mamba install -y -c lingfeiwang -c bioconda -c conda-forge -c pytorch -c nvidia dictys pytorch torchvision torchaudio pytorch-cuda=11.7
 
-Or, with earlier versions (here CUDA 11.3, only supported in pytorch 1):
+Or, with earlier versions (here CUDA 11.3, only supported in PyTorch 1):
 
 .. code-block::
 
@@ -51,7 +51,7 @@ Or, with earlier versions (here CUDA 11.3, only supported in pytorch 1):
 
 Option 2: with `bash script <https://tinyurl.com/dictys>`_
 ----------------------------------------------------------
-First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys **with CPU computation**:
+First install `Anaconda/Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_. Then, install Dictys and PyTorch **with CPU computation**:
 
 .. code-block::
 
@@ -65,7 +65,7 @@ Alternatively, under a different conda environment name:
 
 	wget https://tinyurl.com/dictys -O - | CONDAENV_NAME=your_favorite_name bash
 
-Alternatively, **with GPU computation** (here CUDA 11.7):
+Alternatively, **with GPU computation** for PyTorch (here CUDA 11.7):
 
 .. code-block::
 
@@ -81,14 +81,14 @@ To pull and run the pre-built docker image for Dictys **with CPU computation**:
 	#Add public ports with '--expose' or '-p' to serve jupyter notebooks and bind mount with '-v' to transfer input/output data
 	docker run -it lfwa/dictys-cpu
 
-Then, activate conda environment and serve jupyter notebooks from inside the container:
+Inside the container, activate conda environment and serve jupyter notebooks:
 
 .. code-block::
 
 	. activate dictys
 	jupyter notebook --allow-root
 
-You can then access jupyter notebooks with the exposed or published ports.
+Then, you can access jupyter notebooks with the exposed or published ports.
 
 Additional notes
 ----------------
@@ -100,9 +100,9 @@ If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://ww
 
 Updating Dictys
 ----------------
-If your minor version **is the latest** (e.g. your installed version is **0.1**.0 and the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **0.1**.9), you can update Dictys to the latest github version with ``pip3 install --no-deps git+https://github.com/pinellolab/dictys`` inside your Dictys conda environment.
+If your minor version **is the latest** (e.g. your installed version is **1.0**.0 and the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **1.0**.9), you can update Dictys to the latest github version with ``pip3 install --no-deps git+https://github.com/pinellolab/dictys`` inside your Dictys conda environment.
 
-If your minor version **is not the latest** (e.g. your installed version is **0.1**.0 but the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **0.2**.0), you should reinstall Dictys in a new conda environment with any option above.
+If your minor version **is not the latest** (e.g. your installed version is **1.0**.0 but the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **1.1**.0), you should reinstall Dictys in a new conda environment with any option above.
 
 Tutorials
 =========
