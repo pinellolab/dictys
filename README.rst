@@ -100,7 +100,7 @@ If you need `STREAM <https://github.com/pinellolab/STREAM>`_, `ArchR <https://ww
 
 Updating Dictys
 ----------------
-If your minor version **is the latest** (e.g. your installed version is **1.0**.0 and the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **1.0**.9), you can update Dictys to the latest github version with ``pip3 install --no-deps git+https://github.com/pinellolab/dictys`` inside your Dictys conda environment.
+If your minor version **is the latest** (e.g. your installed version is **1.0**.0 and the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **1.0**.9), you can update Dictys to the latest github version with ``pip3 install --no-deps --force-reinstall git+https://github.com/pinellolab/dictys`` inside your Dictys conda environment.
 
 If your minor version **is not the latest** (e.g. your installed version is **1.0**.0 but the `latest release <https://github.com/pinellolab/dictys/releases>`_ is **1.1**.0), you should reinstall Dictys in a new conda environment with any option above.
 
