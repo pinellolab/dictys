@@ -78,6 +78,7 @@ if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 2 ))" != "a0" ]; then
 		pip install $PIP_OPTIONS --no-deps pyDNase "$LOCAL_VERSION"
 	fi
 	pip install $PIP_OPTIONS $(pip check | grep ', which is not installed[.]$' | awk -F ',' '{print $(NF-1)}' | awk '{print $NF}' | grep -vi '^pyDNase$')
+	pip install $PIP_OPTIONS matplotlib==3.7.1
 fi
 if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 4 ))" != "a0" ]; then
 	#Update homer

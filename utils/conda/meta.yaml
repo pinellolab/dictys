@@ -50,7 +50,7 @@ requirements:
     - pyDNase
     - threadpoolctl
     - joblib
-    - matplotlib
+    - matplotlib ==3.7.1
     - jupyter
     - adjustText
 
