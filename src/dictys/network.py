@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2022. All rights reserved.
+# Lingfei Wang, 2022, 2023. All rights reserved.
 
 """
 Gene regulatory network reconstruction with TF binding network and transcriptome data
@@ -487,7 +487,7 @@ class model_covariance(model_base):
 		npc:
 			Number of low rank off-diagonal degrees of freedom in multivariate normal distribution. See....
 		dcs:
-			Covariates to account for in shape (n_cov,n_cell)
+			Covariates to account for in shape (n_cell,n_cov)
 		covdc_rate:
 			Initial estimate for the ratio of contribution to offdiangonal covariance matrix from covariates v.s. low-dimensional factors. Used for model initialization.
 		ka:
@@ -496,8 +496,10 @@ class model_covariance(model_base):
 		super().__init__(name,**ka)
 		assert dcs.ndim==2
 		self.npc=npc
-		self.dcs=self.tensor(dcs.T)
-		self.nl=dcs.shape[0]
+		self.dcs=self.tensor(dcs)
+		#Remove single-valued covariates
+		self.dcs=self.dcs[:,self.dcs.max(axis=0)!=self.dcs.min(axis=0)]
+		self.nl=self.dcs.shape[1]
 		self.covdc_rate=self.tensor(covdc_rate)
 	def gen_params(self,observations:dict)->None:
 		from pyro.distributions import constraints
@@ -515,7 +517,7 @@ class model_covariance(model_base):
 		if dc.shape[0]>0:
 			#Orthonormalize covariates
 			dc-=dc.mean(axis=0)
-			dc/=(dc**2).mean(axis=0).sqrt()
+			dc/=(dc**2).mean(axis=0).sqrt()+1E-30
 			dc=torch.pca_lowrank(dc,q=self.nl,center=False,niter=50)[0]
 
 		##Initial values
@@ -702,7 +704,7 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 	npc:
 		Number of unknown factors for covariance in multivariate distribution
 	fi_cov:
-		Path of input tsv file of covariate matrix for each cell to be included. Should have covariate x cell shape.
+		Path of input tsv file of covariate matrix for each cell to be included. Should have cell x covariate shape.
 	model:
 		Name of model to train
 	nstep_report:
@@ -759,13 +761,13 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 		logging.info(f'Reading file {fi_cov}.')
 		dc=pd.read_csv(fi_cov,header=0,index_col=0,sep='\t')
 		if dc.shape[0]==0:
-			raise ValueError(f'No covariate found in {fi_cov}. Make sure it is in covariate x cell format.')
-		if len(set(dt0.columns)-set(dc.columns))>0:
-			raise ValueError(f'Found cells not contained in {fi_cov}. Make sure it is in covariate x cell format.')
-		dc=dc[dt0.columns].values
+			raise ValueError(f'No covariate found in {fi_cov}. Make sure it is in cell x covariate format.')
+		if len(set(dt0.columns)-set(dc.index))>0:
+			raise ValueError(f'Found cells not contained in {fi_cov}. Make sure it is in cell x covariate format.')
+		dc=dc.loc[dt0.columns].values
 	else:
-		dc=np.array([],dtype=float).reshape(0,dt0.shape[1])
-	t1=min(nt,ns)-dc.shape[0]
+		dc=np.array([],dtype=float).reshape(dt0.shape[1],0)
+	t1=min(nt,ns)-dc.shape[1]
 	if npc>=t1:
 		raise RuntimeError(f'Insufficient degrees of freedom {t1} compared to off-diagonal factor count {npc} in unexplained variance matrix.')
 

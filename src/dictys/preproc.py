@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, 2020-2022. All rights reserved.
+# Lingfei Wang, 2020-2023. All rights reserved.
 
 """Preprocessing
 """
@@ -60,7 +60,7 @@ def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	ind=linesep.join(ind)+linesep
 	with open(fo_list,'w') as f:
 		f.write(ind)
-	
+
 def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float, n_cell:int, nt_cell:int, ntp_cell:float)->None:		# noqa: C901
 	"""
 	Quality control by bounding read counts.

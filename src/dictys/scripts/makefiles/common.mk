@@ -50,6 +50,9 @@ endif
 ifneq (a$(wildcard $(DIRI)/whitelist.bed),a)
 KPARAMS-CHROMATIN-LINKING+=--fi_whitelist $(DIRI)/whitelist.bed
 endif
+ifneq (a$(wildcard $(DIRI)/covariate.tsv.gz),a)
+KPARAMS-NETWORK-RECONSTRUCT+=--fi_cov $(DIRI)/covariate.tsv.gz
+endif
 
 ############################################################
 # Products by computing mode
@@ -131,7 +134,7 @@ $(DIRTO)/%/names_atac.txt: $(DIRTI)/%/names_atac0.txt
 	cp $< $@
 endif
 
-$(DIRTO)/%/reads.bam $(DIRTO)/%/reads.bai $(DIRTO)/%/peaks.bed : $(DIRTI)/%/names_atac.txt $(DIRI)/bams
+$(DIRTO)/%/reads.bam $(DIRTO)/%/reads.bai $(DIRTO)/%/peaks.bed: $(DIRTI)/%/names_atac.txt $(DIRI)/bams
 	$(FULL_CMD) $(ENV_MAIN) chromatin macs2 $(KPARAMS-CHROMATIN-MACS2) $^ $(DIRTO)/$*/reads.bam $(DIRTO)/$*/reads.bai $(DIRTO)/$*/peaks.bed $(PARAMS-CHROMATIN-MACS2)
 	
 $(DIRTO)/%/footprints.bed: $(DIRTI)/%/reads.bam $(DIRTI)/%/reads.bai $(DIRTI)/%/peaks.bed
@@ -165,7 +168,7 @@ endif
 
 ifeq ($(SHOW_PYRO),1)
 
-$(DIRTO)/%/net_weight.tsv.gz $(DIRTO)/%/net_meanvar.tsv.gz $(DIRTO)/%/net_covfactor.tsv.gz $(DIRTO)/%/net_loss.tsv.gz $(DIRTO)/%/net_stats.tsv.gz : $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/binlinking.tsv.gz
+$(DIRTO)/%/net_weight.tsv.gz $(DIRTO)/%/net_meanvar.tsv.gz $(DIRTO)/%/net_covfactor.tsv.gz $(DIRTO)/%/net_loss.tsv.gz $(DIRTO)/%/net_stats.tsv.gz: $(DIRTI)/%/expression.tsv.gz $(DIRTI)/%/binlinking.tsv.gz
 	$(FULL_CMD) $(ENV_PYRO) network reconstruct $(KPARAMS-NETWORK-RECONSTRUCT) $^ $(DIRTO)/$*/net_weight.tsv.gz $(DIRTO)/$*/net_meanvar.tsv.gz $(DIRTO)/$*/net_covfactor.tsv.gz $(DIRTO)/$*/net_loss.tsv.gz $(DIRTO)/$*/net_stats.tsv.gz
 
 endif

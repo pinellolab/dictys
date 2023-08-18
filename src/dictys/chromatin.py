@@ -398,8 +398,6 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,n
 	else:
 		signed=True
 	#Simplify to bed file
-	# genes=genes[[0,3,4,6,2]].copy()
-	# genes.rename({genes.columns[x]:x for x in range(len(genes.columns))},axis=1,inplace=True)
 	assert genes[5].isin({'+','-'}).all()
 	genes=genes.copy()
 	t1=genes.apply(lambda x:x[1] if x[5]=='+' else x[2],axis=1)
@@ -411,7 +409,7 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,n
 	genes=BedTool(genes,from_string=True)
 
 	#Filter pairs
-	ans=genes.window(peaks,w=cut)
+	ans=genes.window(peaks,w=cut)		# pylint: disable=E1123
 	try:
 		ans2=ans.to_dataframe(header=None,disable_auto_names=True)
 	except pd.errors.EmptyDataError:

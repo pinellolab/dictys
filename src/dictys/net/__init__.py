@@ -242,7 +242,7 @@ class network:
 			f.create_dataset('_version_',len(self._version_),dtype='i')[:]=np.array(self._version_)
 			for xi in params:
 				if links:
-					t1=list(filter(lambda x:x[1] is params[xi],past))
+					t1=list(filter(lambda x:x[1] is params[xi],past))		# pylint: disable=W0640
 					if len(t1)>0:
 						f[xi]=t1[0][2]
 						continue
@@ -259,7 +259,7 @@ class network:
 				for xj in self.prop[xi]:
 					data=self.prop[xi][xj]
 					if links:
-						t1=list(filter(lambda x:x[1] is data,past))
+						t1=list(filter(lambda x:x[1] is data,past))		# pylint: disable=W0640
 						if len(t1)>0:
 							f['prop'][xi][xj]=t1[0][2]
 							continue

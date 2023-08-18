@@ -122,6 +122,21 @@ if pexists(pjoin(dirdata,'blacklist.bed')):
 	if len(snamechr_bl-set(namechr_bl))>0:
 		logging.warning('Blacklist chromosomes in blacklist.bed not found in reference genome: '+', '.join(sorted(snamechr_bl-namechr_bl)))
 
+#Covariates
+if pexists(pjoin(dirdata,'covariate.tsv.gz')):
+	dcov=pd.read_csv(pjoin(dirdata,'covariate.tsv.gz'),header=0,index_col=0,sep='\t')
+	ncov=dcov.shape[1]
+	print('Found {} covariates'.format(ncov))
+	t1=[x[0] for x in dict(Counter(dcov.columns)).items() if x[1]>1][:3]
+	if len(t1)>0:
+		raise ValueError('Duplicate covariate names found in covariate.tsv.gz. First three duplicate covariate names: '+', '.join(t1))
+	t1=[x[0] for x in dict(Counter(dcov.index)).items() if x[1]>1][:3]
+	if len(t1)>0:
+		raise ValueError('Duplicate cell names found in covariate.tsv.gz. First three duplicate cell names: '+', '.join(t1))
+	t1=list(snamec_rna-set(dcov.index))[:3]
+	if len(t1)>0:
+		raise ValueError('Covariate information cannot be found in covariate.tsv.gz for cells from expression.tsv.gz. First three missing cells: '+', '.join(t1))
+
 #############################################
 # Context specific GRN inference checks
 #############################################
