@@ -58,9 +58,6 @@ def recover_num_threads(d:dict[str,str])->None:
 	if len(t1) > 0:
 		logging.warning('Environmental variables not found: ' + ','.join(t1))
 	t1 = list(filter(lambda x: x in os.environ, d))
-	t2 = set(d[x] for x in t1)
-	if len(t2) > 1:
-		logging.warning('Environmental variables have different values.')
 	for xi in t1:
 		if d[xi] is None:
 			del os.environ[xi]

@@ -498,7 +498,8 @@ class model_covariance(model_base):
 		self.npc=npc
 		self.dcs=self.tensor(dcs)
 		#Remove single-valued covariates
-		self.dcs=self.dcs[:,self.dcs.max(axis=0)!=self.dcs.min(axis=0)]
+		if self.dcs.shape[1]>0:
+			self.dcs=self.dcs[:,self.dcs.max(axis=0)!=self.dcs.min(axis=0)]
 		self.nl=self.dcs.shape[1]
 		self.covdc_rate=self.tensor(covdc_rate)
 	def gen_params(self,observations:dict)->None:
