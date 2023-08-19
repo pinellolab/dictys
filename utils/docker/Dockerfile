@@ -22,7 +22,7 @@ COPY local /dictys/local
 RUN cd /dictys \
 	&& if [ "a${COMMIT_VERSION}" != "a" ]; then wget -O install.sh https://raw.githubusercontent.com/pinellolab/dictys/"${COMMIT_VERSION}"/doc/scripts/install.sh; localpath=""; else cp local/doc/scripts/install.sh ./; localpath="/dictys/local"; fi \
 	&& chmod u+x install.sh \
-	&& COMMIT_VERSION="${COMMIT_VERSION}" CONDAENV_NAME="${CONDAENV_NAME}" PYTHONVERSION_CONDA="${PYTHONVERSION_CONDA}" CUDAVERSION_CONDA="${CUDAVERSION_CONDA}" LOCAL_PATH="$localpath" ./install.sh \
+	&& COMMIT_VERSION="${COMMIT_VERSION}" CONDAENV_NAME="${CONDAENV_NAME}" PYTHONVERSION_CONDA="${PYTHONVERSION_CONDA}" CUDAVERSION_CONDA="${CUDAVERSION_CONDA}" LOCAL_VERSION="$localpath" ./install.sh \
 	&& cd / \
 	&& rm -Rf /dictys
 

@@ -69,7 +69,11 @@ nameg_motif=[x.split('\t')[1] for x in nameg_motif if x.startswith('>')]
 if len(nameg_motif)!=len(set(nameg_motif)):
 	raise ValueError('Duplicate motif names found. Please check your motifs.motif file.')
 print(f'Found {len(nameg_motif)} motifs')
-nameg_motif=set([x.split('_')[0] for x in nameg_motif])
+if len(nameg_motif)>10000:
+	logging.warning('Found >10000 motifs. That is 1/3 of all 8-mers. Expect very slow GRN inference. If possible, refine motif file with your species and tissue type. If you have multiple TFs sharing the same motif, merge them to one under name format "GATA1,GATA2,GATA3_..." instead of "GATA1_...", "GATA2_...", and "GATA3_...".')
+nameg_motif=set(itertools.chain.from_iterable([x.split('_')[0].split(',') for x in nameg_motif]))
+if '' in nameg_motif:
+	raise ValueError('TF name "" found in motif file. Please check motif name format in motifs.motif.')
 print(f'Found {len(nameg_motif)} TFs')
 nameg_motif_notfound=sorted(nameg_motif-set(nameg))
 nameg_motif=sorted(nameg_motif&set(nameg))

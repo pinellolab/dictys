@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Lingfei Wang, Nikolaos Trasanidis, 2022. All rights reserved.
+# Lingfei Wang, Nikolaos Trasanidis, 2022, 2023. All rights reserved.
 """Chromatin accessibility analyses
 """
 
@@ -179,11 +179,17 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	dw,dh=[x.values.astype(float) for x in [dw,dh]]
 	dw[t1]=0
 	dh[t1]=0
-	#Remove motifs not mapped to TF
+	#Remove TFs in motifs not found in current dataset
 	t1=set(namet)
-	t1=np.array([x.split('_')[0] in t1 for x in namem])
+	namem=[x.split('_') for x in namem]
+	namem=['_'.join([','.join(list(filter(lambda y:y in t1,x[0].split(','))))]+x[1:]) for x in namem]
+	namem=np.array(namem)
+	#Remove motifs having no TF in current dataset
+	t1=[not x.startswith('_') for x in namem]
 	dw,dh=[x[:,t1] for x in [dw,dh]]
 	namem,=[x[t1] for x in [namem]]
+	if len(namem)!=len(set(namem)):
+		raise ValueError('Found non-unique motif name suffices. Each motif name is recommended to contain a unique suffix.')
 	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
 	assert np.isfinite(dw).all() and np.isfinite(dh).all()
 	assert (dw>=0).all() and (dh>=0).all()
@@ -514,7 +520,12 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]
 		dd=dd.loc[ans]
 
 	#Chain linking
-	links=[[db['TF'].values,db['loc'].values,db['score'].values],[dd['region'].values,dd['target'].values,_linking_score(None,None,dd['dist'].values,mode=mode&4) if mode&4 else np.zeros(len(dd))]]
+	#TF-TFBS links: processing multi-TF motifs such as in GATA1,GATA2,GATA3 format
+	links=list(zip(db['TF'].values,db['loc'].values,db['score'].values))
+	links=list(itertools.chain.from_iterable([[(y,x[1],x[2]) for y in x[0].split(',')] for x in links]))
+	links=[np.array(x) for x in zip(*links)]
+	#TFBS-target gene links by distance
+	links=[links,[dd['region'].values,dd['target'].values,_linking_score(None,None,dd['dist'].values,mode=mode&4) if mode&4 else np.zeros(len(dd))]]
 	#Compute regulator mask matrix using links
 	t1=[groupby(x[1]) for x in links]
 	#{target:[(source,strength),...]}
