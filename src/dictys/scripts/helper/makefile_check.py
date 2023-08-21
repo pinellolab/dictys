@@ -42,12 +42,18 @@ print(f'Joint profile: {isjoint}')
 #Gene & cell names from RNA
 namec_rna=pd.read_csv(pjoin(dirdata,'expression.tsv.gz'),header=0,index_col=0,sep='\t',nrows=1)
 namec_rna=np.array(namec_rna.columns)
+t1=[x[0] for x in dict(Counter(namec_rna)).items() if x[1]>1][:3]
+if len(t1)>0:
+	raise ValueError('Duplicate cell names found in expression.tsv.gz. First three duplicate cell names: '+', '.join(t1))
 snamec_rna=set(namec_rna)
 print(f'Found {len(namec_rna)} cells with RNA profile')
 if len(namec_rna)<100:
 	raise ValueError('<100 cells found with RNA profile in expression.tsv.gz')
 nameg=pd.read_csv(pjoin(dirdata,'expression.tsv.gz'),header=0,index_col=0,sep='\t',usecols=[0,1])
 nameg=np.array(nameg.index)
+t1=[x[0] for x in dict(Counter(nameg)).items() if x[1]>1][:3]
+if len(t1)>0:
+	raise ValueError('Duplicate gene names found in expression.tsv.gz. First three duplicate gene names: '+', '.join(t1))
 snameg=set(nameg)
 print(f'Found {len(nameg)} genes with RNA profile')
 if len(nameg)<100:
@@ -177,7 +183,7 @@ else:
 	if len(t2)>0:
 		t2=[(x,list(itertools.chain.from_iterable([[names[y]]*snamec_srna[y][x] for y in range(len(names))]))) for x in t2]
 		t2='; '.join(['{}: {}'.format(x[0],','.join(x[1])) for x in t2])
-		raise ValueError('Found RNA cells in appearing multiple times in subsets at subsets/*/names_rna.txt. First three cells and their assigned subsets: '+t2)
+		logging.warning('Found RNA cells in appearing multiple times in subsets at subsets/*/names_rna.txt. First three cells and their assigned subsets: '+t2)
 	t2=list(set(t1)-snamec_rna)[:3]
 	if len(t2)>0:
 		raise ValueError('Subset RNA cells in subsets/*/names_rna.txt could not be found in expression.tsv.gz. First three missing cells: '+', '.join(t2))
@@ -194,7 +200,7 @@ else:
 		if len(t2)>0:
 			t2=[(x,list(itertools.chain.from_iterable([[names[y]]*snamec_satac[y][x] for y in range(len(names))]))) for x in t2]
 			t2='; '.join(['{}: {}'.format(x[0],','.join(x[1])) for x in t2])
-			raise ValueError('Found ATAC cells appearing multiple times in subsets at subsets/*/names_atac.txt. First three cells and their assigned subsets: '+t2)
+			logging.warning('Found ATAC cells appearing multiple times in subsets at subsets/*/names_atac.txt. First three cells and their assigned subsets: '+t2)
 		t2=list(set(t1)-snamec_atac)[:3]
 		if len(t2)>0:
 			raise ValueError('Subset ATAC cells in subsets/*/names_atac.txt could not be found in bams folder. First three missing cells: '+', '.join(t2))

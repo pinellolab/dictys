@@ -103,8 +103,16 @@ class network:
 		"""
 		import numpy as np
 		from dictys.traj import trajectory
-		if not all(x[0]>0 and x[1].shape==(x[0],) and len(np.unique(x[1]))==x[0] and len(x[2])==x[0] and all(y in x[2] for y in x[1]) for x in [[self.cn,self.cname,self.cdict],[self.sn,self.sname,self.sdict],[self.nn,self.nname,self.ndict]]):
-			raise ValueError('Cell/state/node names must be non-empty, unique, and matching their counts exactly.')
+		for xi in [[self.cn,self.cname,self.cdict,'cell','c'],[self.sn,self.sname,self.sdict,'state','s'],[self.nn,self.nname,self.ndict,'gene','n']]:
+			if xi[0]==0:
+				raise ValueError(f'No {xi[3]} included.')
+			if xi[1].shape!=(xi[0],):
+				raise ValueError('Expecting {} {} names, actual count: {}'.format(xi[0],xi[3],xi[1].shape[0]))
+			if len(xi[2])!=xi[0]:
+				t1=[x[0] for x in dict(Counter(xi[1])).items() if x[1]>1][:3]
+				assert len(t1)>0
+				raise ValueError('Found duplicate {} names. First three: {}'.format(xi[3],', '.join(t1)))
+			assert all(x in xi[2] for x in xi[1])
 		for xi in self.prop:
 			t1=tuple(np.concatenate([self._get_prop_shape_(x) for x in xi]))
 			t2=list(filter(lambda x:self.prop[xi][x].shape[-len(t1):]!=t1,self.prop[xi]))		# pylint: disable=W0640
