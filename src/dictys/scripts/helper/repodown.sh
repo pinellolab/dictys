@@ -79,5 +79,5 @@ fi
 if [ "a$decompress" == "a1" ]; then
 	#Decompress
 	tar xf "$fname"
+	rm -f "$fname"
 fi
-rm -f "$fname"

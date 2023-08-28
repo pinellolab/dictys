@@ -112,7 +112,7 @@ We provide several tutorials for different data types. Please download each tuto
 
 2. `full-multiome <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-multiome>`_: an extended version of the above tutorial with detailed usage.
 
-3. `full-skin <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-skin>`_: a short tutorial for the inference and analysis of dynamic networks on SHARE-seq data for mouse skin.
+3. `full-skin <https://www.github.com/pinellolab/dictys/blob/master/doc/tutorials/full-skin>`_: a short tutorial for the inference and analysis of dynamic networks on SHARE-seq data for mouse skin. Contains a simple demonstration to account for covariates.
 
 The network analysis tutorials below use the same reconstructed networks as in the paper and are designed to fully replicate the results.
 
@@ -183,6 +183,10 @@ FAQ
   
   1. To run pytorch on **CPU**, run ``dictys_helper makefile_update.py path/to/config.mk '{"DEVICE": "cpu"}'`` to configure to CPU mode. See `Tutorials`_ to find the right place to run this command.
   2. To run pytorch on **GPU**, reinstall Dictys with the correct options to enable GPU support at `Installation`_.
+
+* **How do I use a large motif database where each motif can map to multiple TFs, such as from SCENIC+?**
+  
+  You need to first convert the motif database into a ``.motif`` file in `HOMER format <http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html>`_. Each motif should be named as ``TFNAME_unique-suffix`` where TFNAME should match the gene name in your dataset including capitalization. For multi-TF motifs, merge them as ``TFNAME1,TFNAME2,TFNAME3_unique-suffix`` for best speed, instead of duplicating them under each TF. See ``motifs.motif`` in tutorial inputs to understand file format. **Important**: the `log odds detection threshold <http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html>`_ column needs to be filled properly.
 
 * **How do I save figures from jupyter notebooks onto the disk?**
   
