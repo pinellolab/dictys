@@ -499,13 +499,14 @@ class network:
 		if dynamic:
 			params.update({'ssprop':ssprop,'traj':traj,'point':points})
 
+		success=success.any(axis=0)
 		if success.all():
 			return cls(**params)
 		if not success.any():
 			raise RuntimeError('All subsets failed.')
 		
 		#Remove failed states
-		# logging.warning('Removing {}/{} failed subsets.'.format((~success).sum(),len(success)))
+		logging.warning('Removing {}/{} failed subsets.'.format((~success).sum(),len(success)))
 		success=np.nonzero(success)[0]
 		params['sname']=params['sname'][success]
 		if 'point' in params:
