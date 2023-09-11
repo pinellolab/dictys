@@ -24,7 +24,7 @@ jobs:
       matrix:
         python-version: ["3.9","3.10"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install
       uses: ./.github/actions/install-bash
       with:
@@ -54,7 +54,7 @@ jobs:
       matrix:
         python-version: ["3.9","3.10"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install
       uses: ./.github/actions/install-bash
       with:
@@ -84,7 +84,7 @@ jobs:
       matrix:
         python-version: ["3.9","3.10"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install
       uses: ./.github/actions/install-bash
       with:
