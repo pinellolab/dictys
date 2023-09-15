@@ -102,6 +102,7 @@ class network:
 		Validate self.
 		"""
 		import numpy as np
+		from collections import Counter
 		from dictys.traj import trajectory
 		for xi in [[self.cn,self.cname,self.cdict,'cell','c'],[self.sn,self.sname,self.sdict,'state','s'],[self.nn,self.nname,self.ndict,'gene','n']]:
 			if xi[0]==0:
