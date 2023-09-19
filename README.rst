@@ -188,6 +188,12 @@ FAQ
   
   You need to first convert the motif database into a ``.motif`` file in `HOMER format <http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html>`_. Each motif should be named as ``TFNAME_unique-suffix`` where TFNAME should match the gene name in your dataset including capitalization. For multi-TF motifs, merge them as ``TFNAME1,TFNAME2,TFNAME3_unique-suffix`` for best speed, instead of duplicating them under each TF. See ``motifs.motif`` in tutorial inputs to understand file format. **Important**: the `log odds detection threshold <http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html>`_ column needs to be filled properly.
 
+* **How do I use Dictys on multiple samples?**
+  
+  We used Dictys on multiple samples in the human blood dataset in `our paper <https://www.nature.com/articles/s41592-023-01971-3>`_ (Figs 2&5). However, we did not need to integrate multiple samples because the published dataset already did that. To check that on your own dataset, please see if samples display unintended separation in the low dimensions. If so, you may want to integrate them properly with any existing software before cell clustering or trajectory inference. These clusters or trajectories are inputs for GRN inference. In addition, you should try both including sample IDs as covariates in Dictys and not including them. We have not comprehensively tested covariate inclusion, so we suggest to choose the option that gives better biology for downstream analysis. See the `Optional: Prepare covariates <https://nbviewer.org/github/pinellolab/dictys/blob/master/doc/tutorials/full-skin/notebooks/main2.ipynb?flush_cache=true#Optional:-Prepare-covariates>`_ section in the full-skin tutorial on how to include covariates.
+
+  To prepare input files for Dictys, please make sure each cell has a unique name across samples in the read count matrix and in the bam file. For read count matrices, you can append sample names to cell names before merging these matrices. For bam files, you can split each of them by cells using the script provided by Dictys in a separate folder for each sample, append sample names to the file names, and then move all the bam files into a single folder.
+
 * **How do I save figures from jupyter notebooks onto the disk?**
   
   You can use ``plt.savefig('output.pdf')`` to save the current figure to disk. See `matplotlib.pyplot.savefig <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html#matplotlib.pyplot.savefig>`_.
