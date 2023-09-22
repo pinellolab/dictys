@@ -164,7 +164,7 @@ FAQ
 
   1. Get a GPU, such as:
   
-     - `Google Colaboratory <https://colab.research.google.com/>`_ offers free GPU access with zero/minimal setup. You can run Dictys on very small datasets for free, or larger datasets with paid membership. See `our tutorial <https://colab.research.google.com/drive/1XJFpmAKzub-41QyoD6N_OGUgtbaGtU8g?usp=sharing>`_.
+     - `Google Colaboratory <https://colab.research.google.com/>`_ offers free GPU access with zero/minimal setup. You can run Dictys on very small datasets for free, or larger datasets with paid membership.
      - Major cloud computing service providers offer GPU access that is orders of magnitude cheaper than a scRNA-seq experiment.
      - High-performance computing cluster with GPU access at institution or other levels. Dedicated computing server. Personal computer with high-end consumer level GPU.
      - People or labs with the above access.
