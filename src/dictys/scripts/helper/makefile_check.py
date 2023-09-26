@@ -89,7 +89,7 @@ except FileNotFoundError as e:
 	if nerr is None:
 		raise e
 	else:
-		logging.error(e.args[0])
+		logging.error(str(e))
 		nerr+=1
 		logging.warning('Using RNA cell names for ATAC cell names for validations below.')
 		namec_atac=namec_rna
