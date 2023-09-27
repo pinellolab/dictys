@@ -160,6 +160,10 @@ Dynamic GRN analysis
 
 FAQ
 ==========================
+* **Can I use fragments files instead of bam files for chromatin accessibility**?
+
+  Dictys uses wellington (pyDNase) which does not accept fragments files. Most journals require raw data for publication so *in theory* you should be able to obtain the bam files or something equivalent. If you really cannot obtain bam files, there are ways that may circumvent this requirement: (i) fork and patch `pyDNase <https://github.com/jpiper/pyDNase>`_ to accept fragments files or (ii) convert fragments files to bams. Note that they are outside the scope of Dictys and we have not tried them. We do not support, endorse, or guarantee the validity of these approaches which are highly experimental in nature.
+
 * **How do I perform network inference faster**?
 
   1. Get a GPU, such as:
