@@ -187,9 +187,11 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	#Remove motifs having no TF in current dataset
 	t1=[not x.startswith('_') for x in namem]
 	dw,dh=[x[:,t1] for x in [dw,dh]]
-	namem,=[x[t1] for x in [namem]]
+	namem,=namem[t1]
 	if len(namem)!=len(set(namem)):
-		raise ValueError('Found non-unique motif name suffices. Each motif name is recommended to contain a unique suffix.')
+		from collections import Counter
+		t1=[x[0] for x in Counter(namem).items() if x[1]>1][:3]
+		raise ValueError('Found non-unique motif name suffices. Each motif name is recommended to contain a unique suffix. First three non-unique motif names: {}'.format(', '.join(t1)))
 	assert dw.shape==(len(namep),len(namem)) and dh.shape==(len(namep),len(namem))
 	assert np.isfinite(dw).all() and np.isfinite(dh).all()
 	assert (dw>=0).all() and (dh>=0).all()
