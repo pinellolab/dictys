@@ -1,4 +1,4 @@
-# Lingfei Wang, 2022. All rights reserved.
+# Lingfei Wang, 2022, 2023. All rights reserved.
 name: Translate Zenodo URL to follow the latest DOI version 
 
 inputs:
@@ -20,8 +20,10 @@ runs:
       run: |
         set -eo pipefail
         s0='${{ inputs.url }}'
-        s1="$(curl -Ls -o /dev/null -w %{url_effective} "$s0")"
-        s2="$s1/${s0#http[s]*://zenodo.org/record/[^/]*/}"
+        s2="${s0#http[s]*://zenodo.org/records/[^/]*/}"
+        s1="${s0%/$s2}"
+        s1="$(curl -Ls -o /dev/null -w %{url_effective} "$s1")"
+        s2="$s1/$s2"
         echo "Old URL: $s0"
         echo "New URL: $s2"
         echo "url=$s2" >> $GITHUB_OUTPUT

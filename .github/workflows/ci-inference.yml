@@ -33,7 +33,7 @@ jobs:
       id: zenodo-url-translate
       uses: ./.github/actions/zenodo-url-translate
       with:
-        url: https://zenodo.org/record/6858494/files/inference-skin1.tar.xz?download=1
+        url: https://zenodo.org/records/6858494/files/inference-skin1.tar.xz?download=1
     - name: Test dataset
       uses: ./.github/actions/inference-test-dataset
       with:
@@ -63,7 +63,7 @@ jobs:
       id: zenodo-url-translate
       uses: ./.github/actions/zenodo-url-translate
       with:
-        url: https://zenodo.org/record/6858494/files/inference-blood1.tar.xz?download=1
+        url: https://zenodo.org/records/6858494/files/inference-blood1.tar.xz?download=1
     - name: Test dataset
       uses: ./.github/actions/inference-test-dataset
       with:
@@ -93,7 +93,7 @@ jobs:
       id: zenodo-url-translate
       uses: ./.github/actions/zenodo-url-translate
       with:
-        url: https://zenodo.org/record/6858494/files/inference-blood2.tar.xz?download=1
+        url: https://zenodo.org/records/6858494/files/inference-blood2.tar.xz?download=1
     - name: Test dataset
       uses: ./.github/actions/inference-test-dataset
       with:

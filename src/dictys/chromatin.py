@@ -187,7 +187,7 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	#Remove motifs having no TF in current dataset
 	t1=[not x.startswith('_') for x in namem]
 	dw,dh=[x[:,t1] for x in [dw,dh]]
-	namem,=namem[t1]
+	namem=namem[t1]
 	if len(namem)!=len(set(namem)):
 		from collections import Counter
 		t1=[x[0] for x in Counter(namem).items() if x[1]>1][:3]
