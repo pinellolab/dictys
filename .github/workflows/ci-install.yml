@@ -156,7 +156,7 @@ jobs:
         echo "$s1" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
     - id: runscript
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           core.setOutput("run", `${{ env.run }}`);
