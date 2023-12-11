@@ -2,7 +2,7 @@
 
 pkgname="dictys"
 pkgnamefull="Context specific and dynamic gene regulatory network reconstruction and analysis"
-version=[1,0,0]
+version=[1,1,0]
 url="https://github.com/pinellolab/"+pkgname
 author="Lingfei Wang, Nikolaos Trasanidis, Luca Pinello"
 author_email="Lingfei.Wang.github@outlook.com, ntrasanidis@mgh.harvard.edu, lpinello@mgh.harvard.edu"
