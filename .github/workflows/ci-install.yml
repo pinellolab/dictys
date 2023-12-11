@@ -43,7 +43,7 @@ jobs:
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
     - name: Obtain install script
@@ -84,7 +84,7 @@ jobs:
     needs: install-script-bash
     steps:
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
     - name: Add conda to system path
@@ -120,7 +120,7 @@ jobs:
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
     - name: Obtain install script
@@ -166,7 +166,7 @@ jobs:
     needs: install-script-conda
     steps:
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
     - name: Add conda to system path
