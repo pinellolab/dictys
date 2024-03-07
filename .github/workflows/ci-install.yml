@@ -184,7 +184,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9","3.10",""]
-        cuda-version: ["11.3","11.6","11.7",""]
+        cuda-version: ["11.7",""]
     steps:
     - name: Show version
       id: version
