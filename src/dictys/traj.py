@@ -179,7 +179,7 @@ class trajectory:
 			Point object converted.
 		"""
 		return point.fromnodes(self)
-	def conform_locs(self,locs:NDArray[float],edges:NDArray[int],abs_err:float=1E-7,rel_err:float=1E-7)->NDArray:
+	def conform_locs(self,locs:NDArray[float],edges:NDArray[int],abs_err:float=1E-6,rel_err:float=1E-6)->NDArray:
 		"""
 		Conform point locations by clipping small deviations under float precision. An error will be trigger if the relative and absolute errors both exceed the given bounds.
 
