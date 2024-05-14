@@ -24,14 +24,20 @@ genome_size=$6
 cutoff=$7
 nodes=$8
 
+if [ "a$nodes" == "a1" ]; then
+  nodes2=""
+else
+  nodes2="-@ $nodes"
+fi
+
 #Create bam file for custom cells list, filter out chrM/chrUn/chrRandom, sort and index
 awk '{printf("%s\n","'$cells_dir/'"$1)}' "$cells_list" > "00-cells.txt"
-( samtools view -h -@ "$nodes" "$(head -n 1 "00-cells.txt" )" | grep -v '^@HD' | grep -v '^@PG' ; tail -n +2 "00-cells.txt" | while read l; do samtools view -@ "$nodes" "$l"; done ) | awk '$3!="chrM"' |  grep -v chrUn_ | grep -v GL00 | grep -v -e "random" | samtools view -1 -@ "$nodes" -o "02-filtered.bam" -
+( samtools view -h $nodes2 "$(head -n 1 "00-cells.txt" )" | grep -v '^@HD' | grep -v '^@PG' ; tail -n +2 "00-cells.txt" | while read l; do samtools view $nodes2 "$l"; done ) | awk '$3!="chrM"' |  grep -v chrUn_ | grep -v GL00 | grep -v -e "random" | samtools view -1 $nodes2 -o "02-filtered.bam" -
 
 #filter, sort and index bam file.
-samtools sort -o "$output_bam" -@ "$nodes" -l 1 02-filtered.bam
+samtools sort -o "$output_bam" $nodes2 -l 1 02-filtered.bam
 rm 02-filtered.bam
-samtools index -@ "$nodes" "$output_bam" "$output_bai"
+samtools index $nodes2 "$output_bam" "$output_bai"
 
 #Step3A. Peak calling on aggregate population [Keep only significant peaks]
 OMP_NUM_THREADS=$nodes MKL_NUM_THREADS=$nodes NUMEXPR_NUM_THREADS=$nodes OPENBLAS_NUM_THREADS=$nodes OMP_MAX_THREADS=$nodes MKL_MAX_THREADS=$nodes NUMEXPR_MAX_THREADS=$nodes OPENBLAS_MAX_THREADS=$nodes VECLIB_MAXIMUM_THREADS=$nodes macs2 callpeak -t "$output_bam" -n 04 -g $genome_size --nomodel --shift -75 --extsize 150 --keep-dup all --verbose 4 --call-summits -q $cutoff
