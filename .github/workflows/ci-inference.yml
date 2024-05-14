@@ -1,4 +1,4 @@
-# Lingfei Wang, 2022. All rights reserved.
+# Lingfei Wang, 2022, 2024. All rights reserved.
 name: Network inference tests
 
 on:
@@ -23,6 +23,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9","3.10"]
+        nth: ["2"]
     steps:
     - uses: actions/checkout@v4
     - name: Install
@@ -44,7 +45,7 @@ jobs:
         actual-folder: tmp_static
         expected-h5: test/output/static_expected.h5
         actual-h5: output/static.h5
-        makefile-params: '{"ENVMODE": "none", "NTH": "2", "DEVICE": "cpu", "GENOME_MACS2": "mm", "JOINT": "1", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3"}'
+        makefile-params: '{"ENVMODE": "none", "NTH": "${{ matrix.nth }}", "DEVICE": "cpu", "GENOME_MACS2": "mm", "JOINT": "1", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3"}'
         exclusions: 'footprints.bed net_weight.tsv.gz net_covfactor.tsv.gz net_meanvar.tsv.gz net_loss.tsv.gz net_stats.tsv.gz net_nweight.tsv.gz net_iweight.tsv.gz net_inweight.tsv.gz'
 
   test-blood1:
@@ -53,6 +54,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9","3.10"]
+        nth: ["1","2"]
     steps:
     - uses: actions/checkout@v4
     - name: Install
@@ -74,7 +76,7 @@ jobs:
         actual-folder: test/tmp_static
         expected-h5: test/output/static_expected.h5
         actual-h5: test/output/static.h5
-        makefile-params: '{"ENVMODE": "none", "NTH": "2", "DEVICE": "cpu", "GENOME_MACS2": "hs", "JOINT": "0", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3"}'
+        makefile-params: '{"ENVMODE": "none", "NTH": "${{ matrix.nth }}", "DEVICE": "cpu", "GENOME_MACS2": "hs", "JOINT": "0", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3"}'
         exclusions: 'reads.bam reads.bai net_weight.tsv.gz net_covfactor.tsv.gz net_meanvar.tsv.gz net_loss.tsv.gz net_stats.tsv.gz'
         
   test-blood2:
@@ -83,6 +85,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9","3.10"]
+        nth: ["2"]
     steps:
     - uses: actions/checkout@v4
     - name: Install
@@ -104,5 +107,5 @@ jobs:
         actual-folder: test/tmp_dynamic
         expected-h5: test/output/dynamic_expected.h5
         actual-h5: test/output/dynamic.h5
-        makefile-params: '{"ENVMODE": "none", "NTH": "2", "DEVICE": "cpu", "GENOME_MACS2": "hs", "JOINT": "0", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3", "PARAMS-DYNAMIC-SUBSETS_RNA": "1000 10 10"}'
+        makefile-params: '{"ENVMODE": "none", "NTH": "${{ matrix.nth }}", "DEVICE": "cpu", "GENOME_MACS2": "hs", "JOINT": "0", "KPARAMS-NETWORK-RECONSTRUCT+": " --nstep 10 --nstep_report 3", "PARAMS-DYNAMIC-SUBSETS_RNA": "1000 10 10"}'
         exclusions: 'reads.bam reads.bai net_weight.tsv.gz net_covfactor.tsv.gz net_meanvar.tsv.gz net_loss.tsv.gz net_stats.tsv.gz'
