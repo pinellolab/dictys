@@ -204,6 +204,10 @@ FAQ
   
   Some visualization functions in Dictys return two or more figures, such as ``figs = net.draw_discover(...)``. You can save them separately with ``figs[0].savefig('output1.pdf'); figs[1].savefig('output2.pdf'); ...``. See `matplotlib.figure.savefig <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure.savefig>`_ and `issue 15 <https://github.com/pinellolab/dictys/issues/15>`_.
 
+* **How should I deal with the error ``index: invalid option -- '@'``?**
+  
+  You see this error because your machine setup does not allow to install Dictys with the latest samtools version. The ``-@`` option allows parallel core usage to improve speed but is only recognized by a recent samtools version. If you cannot install a recent samtools version, you can add ``"NTH": "1"`` in the dictionary in the line ``dictys_helper makefile_update.py ../makefiles/config.mk...`` This will enforce single-thread samtools and avoid the ``-@`` option.
+
 Issues
 ==========================
 Please raise an issue on `github <https://github.com/pinellolab/dictys/issues/new/choose>`_.
