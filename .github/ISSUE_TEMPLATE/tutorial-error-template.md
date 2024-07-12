@@ -16,7 +16,7 @@ assignees: ''
 **Describe the error**
 * How did you install Dictys (which option)?
 * Which tutorial?
-* What and where was the error?
+* What (full message) and where (cell and notebook being executed) was the error?
 * Did you deviate from any of the tutorial instructions?
 
 **Optional steps (may accelerate troubleshooting)**
