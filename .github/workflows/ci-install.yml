@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/ci-install.yml'
       - '.github/actions/install-bash/**'
+      - 'doc/scripts/install.sh'
       - README.rst
     branches:
       - master
