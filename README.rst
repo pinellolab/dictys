@@ -188,6 +188,24 @@ FAQ
   1. To run pytorch on **CPU**, run ``dictys_helper makefile_update.py path/to/config.mk '{"DEVICE": "cpu"}'`` to configure to CPU mode. See `Tutorials`_ to find the right place to run this command.
   2. To run pytorch on **GPU**, reinstall Dictys with the correct options to enable GPU support at `Installation`_.
 
+* **How do I use Dictys on scRNA-seq + bulk ATAC-seq samples?**
+
+  This is definitely possible although it is not the intended function:
+
+  1. Follow any tutorial (e.g. https://github.com/pinellolab/dictys/blob/master/doc/tutorials/short-multiome/notebooks/main.ipynb) and adapt it to your dataset and machine. Do not put in your ATAC-seq data yet.
+  2. Expect failures in "Validate input data" step because of that. Continue running the notebook and stop before "Network inference" step.
+  3. Create folders tmp_static/$celltype for each $celltype in data/subsets.txt.
+  4. Copy your ATAC-seq peak _peaks.narrowPeak bed file to each tmp_static/$celltype/peaks.bed. Copy your bam and bai files to each tmp_static/$celltype/reads.bam or tmp_static/$celltype/reads.bai. They can be different for each folder depending on the granuality of cell-type specificity of your bulk ATAC-seq data.
+  5. In each tmp_static/$celltype folder, run ``touch names_atac0.txt; touch names_atac.txt; touch reads.bai reads.bam peaks.bed`` to trick make with modification dates.
+  6. Continue running the notebook from the "Network inference" step.
+
+  **Note**:
+
+  * The provided bam and bed files should be sorted. Or you may see errors like "Error: Sorted input specified, but the file has the following out of order record".
+  * You should choose the number of parallel threads (with ``make -j`` option) wisely. Make sure you have enough CPU cores and memory. If not, you can try different values in separate runs but remember to remove all intermediate files of each run. Otherwise you may encounter incomplete files with errors like "unexpected end of file".
+
+  Many thanks to @kamisama0101 in `issue 62 <https://github.com/pinellolab/dictys/issues/62>`_ from `Di Chen <https://scholar.google.com/citations?user=U9qYnRAAAAAJ&hl=en>`_'s Lab for sharing their successful notes!
+
 * **How do I use a large motif database where each motif can map to multiple TFs, such as from SCENIC+?**
   
   You need to first convert the motif database into a ``.motif`` file in `HOMER format <http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html>`_. Each motif should be named as ``TFNAME_unique-suffix`` where TFNAME should match the gene name in your dataset including capitalization. For multi-TF motifs, merge them as ``TFNAME1,TFNAME2,TFNAME3_unique-suffix`` for best speed, instead of duplicating them under each TF. See ``motifs.motif`` in tutorial inputs to understand file format. **Important**: the `log odds detection threshold <http://homer.ucsd.edu/homer/motif/creatingCustomMotifs.html>`_ column needs to be filled properly.
