@@ -83,6 +83,7 @@ if [ "a$STEPS" == "a" ] || [ "a$(( STEPS & 4 ))" != "a0" ]; then
 	#Update homer
 	pushd . &> /dev/null
 	cd "$(dirname "$(dirname "$(realpath "$(which homer)")")")"
+	chmod u+x configureHomer.pl
 	./configureHomer.pl -update
 	chmod u+x configureHomer.pl
 	popd &> /dev/null
