@@ -1,12 +1,5 @@
 #!/bin/bash
-# Lingfei Wang, 2022. All rights reserved.
-
-function detect_basedir()
-{
-	b="$(which homer)"
-	if [ "a$b" == "a" ]; then printf '%s' 'Failed: check if you have homer installed'; return; fi
-	echo "$(dirname "$(dirname "$(realpath "$b")")")"
-}
+# Lingfei Wang, 2022, 2025. All rights reserved.
 
 function usage()
 {
@@ -47,7 +40,7 @@ paste "$fbed".step3 "$fbed".step2 | awk '{print $1"\t"$2"\t"$3"\t"$6"\t"$4"\t"$5
 sort "$fbed".step2 | uniq -c | awk '$1!="1"{print "\t"$2"\t"}' > "$fbed".step5
 grep -vf "$fbed".step5 -F "$fbed".step4 > "$fbed".step6
 #Then add back the first entry for each duplicate value in designated field
-grep -f "$fbed".step5 -F "$fbed".step4 > "$fbed".step7
+grep -f "$fbed".step5 -F "$fbed".step4 > "$fbed".step7 || true
 cat "$fbed".step5 | while read l; do grep -F -m 1 "$l" "$fbed".step7 >> "$fbed".step6; done
 #Remove duplicate genes
 t1="$(awk '{print $4}' "$fbed".step6 | uniq -c | grep -v '^[[:blank:]]*1[[:blank:]]' | awk '{print $2}' || true )"
