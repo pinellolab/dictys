@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: local
       - name: Log in to Docker Hub
@@ -43,7 +43,7 @@ jobs:
       image: lfwa/dictys-cpu-dev
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Get dataset URL
         id: zenodo-url-translate
         uses: ./.github/actions/zenodo-url-translate
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: local
       - name: Log in to Docker Hub
@@ -92,7 +92,7 @@ jobs:
         cuda: [11.3,11.6,11.7]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: local
       - name: Log in to Docker Hub

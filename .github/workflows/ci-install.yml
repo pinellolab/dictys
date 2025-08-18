@@ -40,7 +40,7 @@ jobs:
         fi
         echo "$v"
         echo "version=$v" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
@@ -117,7 +117,7 @@ jobs:
         fi
         echo "$v"
         echo "version=$v" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
@@ -201,7 +201,7 @@ jobs:
         fi
         echo "$v"
         echo "version=$v" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Install
