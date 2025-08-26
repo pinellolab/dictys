@@ -216,6 +216,10 @@ FAQ
 
   To prepare input files for Dictys, please make sure each cell has a unique name across samples in the read count matrix and in the bam file. For read count matrices, you can append sample names to cell names before merging these matrices. For bam files, you can split each of them by cells using the script provided by Dictys in a separate folder for each sample, append sample names to the file names, and then move all the bam files into a single folder.
 
+* **How do I change the parameters for some steps of Dictys?**
+  
+  The default parameters for each step are listed in `config.mk <https://github.com/pinellolab/dictys/blob/master/src/dictys/scripts/makefiles/config.mk>`_. You can look up the definition of each parameter according to the instructions in config.mk and change them in place. You should change the parameters first before running the pipeline e.g. with ``dictys_helper network_inference.sh ...``. If in doubt, always start in a new folder.
+
 * **How do I save figures from jupyter notebooks onto the disk?**
   
   You can use ``plt.savefig('output.pdf')`` to save the current figure to disk. See `matplotlib.pyplot.savefig <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html#matplotlib.pyplot.savefig>`_.

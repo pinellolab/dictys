@@ -27,6 +27,9 @@ JOINT=1
 #######################################################################################
 # Parameters of individual steps shared by cell-type specific and dynamic GRN inference
 #######################################################################################
+# Required non-file parameters (PARAMS-...) and optional/keyword parameters (KPARAMS-...) for each step are defined here.
+# You can find the meaning of each parameter from the command line interface.
+# For example, `dictys preproc qc_reads -h` or `python3 -m dictys preproc qc_reads -h` will give the list of parameters in order.
 
 PARAMS-PREPROC-QC_READS:=50 10 0 200 100 0
 PARAMS-CHROMATIN-MACS2:=$(GENOME_MACS2)
