@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.8
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Mask token
@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           echo $CONDA/bin >> $GITHUB_PATH
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install package
         uses: ./.github/actions/install-conda
         with:
@@ -98,7 +98,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.8
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Mask token

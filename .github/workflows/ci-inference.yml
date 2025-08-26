@@ -25,7 +25,7 @@ jobs:
         python-version: ["3.9","3.10"]
         nth: ["2"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install
       uses: ./.github/actions/install-bash
       with:
@@ -56,7 +56,7 @@ jobs:
         python-version: ["3.9","3.10"]
         nth: ["1","2"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install
       uses: ./.github/actions/install-bash
       with:
@@ -87,7 +87,7 @@ jobs:
         python-version: ["3.9","3.10"]
         nth: ["2"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install
       uses: ./.github/actions/install-bash
       with:
