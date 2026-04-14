@@ -40,11 +40,11 @@ jobs:
         fi
         echo "$v"
         echo "version=$v" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
     - name: Obtain install script
@@ -85,7 +85,7 @@ jobs:
     needs: install-script-bash
     steps:
     - name: Set up Python 3.8
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
     - name: Add conda to system path
@@ -117,11 +117,11 @@ jobs:
         fi
         echo "$v"
         echo "version=$v" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Set up Python 3.8
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
     - name: Obtain install script
@@ -157,7 +157,7 @@ jobs:
         echo "$s1" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
     - id: runscript
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         script: |
           core.setOutput("run", `${{ env.run }}`);
@@ -167,7 +167,7 @@ jobs:
     needs: install-script-conda
     steps:
     - name: Set up Python 3.8
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
     - name: Add conda to system path
@@ -201,7 +201,7 @@ jobs:
         fi
         echo "$v"
         echo "version=$v" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         ref: ${{ steps.version.outputs.version }}
     - name: Install

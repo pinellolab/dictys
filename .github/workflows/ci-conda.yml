@@ -29,10 +29,10 @@ jobs:
       buildstr: ${{ steps.publish-pretest.outputs.buildstr }}
     steps:
       - name: Set up Python 3.8
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.8
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Mask token
@@ -57,14 +57,14 @@ jobs:
         python-version: ["3.9","3.10"]
     steps:
       - name: Set up Python 3.8
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.8
       - name: Add conda to system path
         shell: bash
         run: |
           echo $CONDA/bin >> $GITHUB_PATH
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install package
         uses: ./.github/actions/install-conda
         with:
@@ -95,10 +95,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python 3.8
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.8
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Mask token
