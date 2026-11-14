@@ -559,6 +559,40 @@ class model_covariance(model_base):
 		self.a=(n_read,obs_G_obs,dc)
 		self.nrand=dx.shape[0]*dx.shape[1]
 		
+	_binom_cls=None
+	def _binomial_cached(self,n_read,obs_G_obs,logits):
+		"""
+		Binomial over the full cell plate whose log_prob reuses the data-only log binomial coefficient, computed once on first use.
+		Arithmetic order follows pyro.distributions.Binomial.log_prob (approx_log_prob_tol=0).
+		"""
+		import torch
+		import pyro.distributions as dist
+		if dist.Binomial.approx_log_prob_tol>=0.02:
+			return dist.Binomial(n_read,logits=logits)
+		cache=getattr(self,'_binom_cache',None)
+		if cache is None or cache.shape!=logits.shape or cache.dtype!=logits.dtype:
+			with torch.no_grad():
+				n=dist.Binomial(n_read,logits=logits).total_count
+				k=obs_G_obs.T
+				n_plus_1=n+1
+				cache=n_plus_1.lgamma()-(k+1).lgamma()-(n_plus_1-k).lgamma()
+			self._binom_cache=cache
+		cls=self._binom_cls
+		if cls is None:
+			class cls(dist.Binomial):
+				def log_prob(self,value):
+					if self._validate_args:
+						self._validate_sample(value)
+					n=self.total_count
+					k=value
+					x=self.logits
+					# Same as pyro's _clamp_by_zero
+					clamp=(x.clamp(min=0)+x-x.clamp(max=0))/2
+					normalize_term=n*(clamp+x.abs().neg().exp().log1p())
+					return k*x-normalize_term+type(self)._cache
+			self._binom_cls=cls
+		cls._cache=cache
+		return cls(n_read,logits=logits)
 	def model(self)->None:
 		import pyro.distributions as dist
 		n_read,obs_G_obs,dc=self.a
@@ -577,7 +611,10 @@ class model_covariance(model_base):
 			else:
 				G_1=G_0
 			with self.plate('lv2',self.ng,dim=-2) as ind_g:
-				t1=dist.Binomial(n_read[ind_c],logits=G_1.T)
+				if len(ind_c)==self.nc:
+					t1=self._binomial_cached(n_read,obs_G_obs,G_1.T)
+				else:
+					t1=dist.Binomial(n_read[ind_c],logits=G_1.T)
 				G_obs=self.sample("G_obs",t1,obs=obs_G_obs[ind_c].T)
 				assert G_0.shape in {(len(ind_c),len(ind_g)),(self.nc,len(ind_g))}
 				assert G_obs.shape==(len(ind_g),len(ind_c))
