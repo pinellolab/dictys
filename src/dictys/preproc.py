@@ -4,6 +4,8 @@
 """Preprocessing
 """
 
+from dictys.utils.file import csv_compression
+
 def selects_rna(fi_reads:str,fi_names:str,fo_reads:str)->None:
 	"""
 	Select samples/cells based on external table for RNA data.
@@ -33,7 +35,7 @@ def selects_rna(fi_reads:str,fi_names:str,fo_reads:str)->None:
 	t1=(d.values!=0).any(axis=1)
 	d=d[t1]
 	logging.info(f'Writing file {fo_reads}.')
-	d.to_csv(fo_reads,index=True,header=True,sep='\t')
+	d.to_csv(fo_reads,index=True,header=True,sep='\t',compression=csv_compression(fo_reads))
 
 def selects_atac(fi_exp:str,fi_list:str,fo_list:str)->None:
 	"""
@@ -145,7 +147,7 @@ def qc_reads(fi_reads:str,fo_reads:str, n_gene:int, nc_gene:int, ncp_gene:float,
 		reads.shape[1]))
 	reads0=reads0.iloc[st,ss]
 	logging.info(f'Writing file {fo_reads}.')
-	reads0.to_csv(fo_reads,header=True,index=True,sep='\t')
+	reads0.to_csv(fo_reads,header=True,index=True,sep='\t',compression=csv_compression(fo_reads))
 	
 
 

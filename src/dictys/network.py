@@ -7,6 +7,7 @@ Gene regulatory network reconstruction with TF binding network and transcriptome
 
 import abc
 from typing import Optional,Tuple,Callable,Union
+from dictys.utils.file import csv_compression
 
 _docstring2argparse_ignore_=['Trace_ELBO_site','SVI_multiloss','model_base','model_covariance','model_ou']
 
@@ -204,19 +205,19 @@ def reconstruct(fi_exp:str,fi_mask:str,fo_weight:str,fo_meanvar:str,fo_covfactor
 
 	#Write output
 	logging.info(f'Writing file {fo_weight}')
-	ans_weight.to_csv(fo_weight,header=True,index=True,sep='\t')
+	ans_weight.to_csv(fo_weight,header=True,index=True,sep='\t',compression=csv_compression(fo_weight))
 	logging.info(f'Writing file {fo_meanvar}')
-	ans_meanvar.to_csv(fo_meanvar,header=True,index=True,sep='\t')
+	ans_meanvar.to_csv(fo_meanvar,header=True,index=True,sep='\t',compression=csv_compression(fo_meanvar))
 	logging.info(f'Writing file {fo_covfactor}')
-	ans_nd.to_csv(fo_covfactor,header=True,index=True,sep='\t')
+	ans_nd.to_csv(fo_covfactor,header=True,index=True,sep='\t',compression=csv_compression(fo_covfactor))
 	logging.info(f'Writing file {fo_loss}')
-	ans_loss.to_csv(fo_loss,header=True,index=True,sep='\t')
+	ans_loss.to_csv(fo_loss,header=True,index=True,sep='\t',compression=csv_compression(fo_loss))
 	logging.info(f'Writing file {fo_stats}')
-	ans_stats.to_csv(fo_stats,header=True,index=True,sep='\t')
+	ans_stats.to_csv(fo_stats,header=True,index=True,sep='\t',compression=csv_compression(fo_stats))
 	if varstd is not None:
 		ans_weightz=pd.DataFrame(ans_z,index=namereg,columns=namet)
 		logging.info(f'Writing file {fo_weightz}')
-		ans_weightz.to_csv(fo_weightz,header=True,index=True,sep='\t')
+		ans_weightz.to_csv(fo_weightz,header=True,index=True,sep='\t',compression=csv_compression(fo_weightz))
 
 ###########################################################################
 # Network post processing
@@ -313,7 +314,7 @@ def indirect(fi_weight:str,fi_covfactor:str,fo_iweight:str,norm:int=3,fi_meanvar
 	#Convert to output
 	net1=pd.DataFrame(net1[:ns[0]],index=dw.index,columns=dw.columns)
 	logging.info(f'Writing file {fo_iweight}.')
-	net1.to_csv(fo_iweight,header=True,index=True,sep='\t')
+	net1.to_csv(fo_iweight,header=True,index=True,sep='\t',compression=csv_compression(fo_iweight))
 
 def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:int=3,nth:float=1)->None:
 	"""
@@ -377,7 +378,7 @@ def normalize(fi_weight:str,fi_meanvar:str,fi_covfactor:str,fo_nweight:str,norm:
 	d=pd.DataFrame(d,index=dw.index,columns=dw.columns)
 	#Saving data
 	logging.info(f'Writing file {fo_nweight}')
-	d.to_csv(fo_nweight,header=True,index=True,sep='\t')
+	d.to_csv(fo_nweight,header=True,index=True,sep='\t',compression=csv_compression(fo_nweight))
 
 ###########################################################################
 # Network storage
