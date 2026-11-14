@@ -40,15 +40,65 @@ def xrange_from_string(s):
 		raise ValueError('shoulder and footprint sizes must be supplied as from,to,step')
 
 
-def calculate(fp):
-	"""Score one region without the FDR null (worker side)."""
+def make_handler(pyDNase, reads_path, atac):
+	"""BAMHandler whose per-region cut counts are built with numpy a dict lookup per base (WellingtonC takes lists)."""
+	import numpy as np
+
+	class Handler(pyDNase.BAMHandler):
+		def get_cut_values(self, vals):
+			if isinstance(vals, str):
+				return super().get_cut_values(vals)
+			chrom, startbp, endbp, flip = vals.chromosome, vals.startbp, vals.endbp, vals.strand
+			fw = []
+			rv = []
+			for r in self.samfile.fetch(chrom, max(startbp, 0), endbp):
+				if not r.is_unmapped:
+					if r.is_reverse:
+						a = int(r.reference_end)
+						if a <= endbp + 1:
+							rv.append(a)
+					else:
+						a = int(r.reference_start) - 1
+						if a >= startbp:
+							fw.append(a)
+			out = {}
+			for key, pos, off in (('+', fw, self.loffset), ('-', rv, self.roffset)):
+				arr = np.zeros(endbp - startbp, dtype=np.int64)
+				if pos:
+					idx = np.array(pos, dtype=np.int64) - (startbp + off)
+					idx = idx[(idx >= 0) & (idx < arr.size)]
+					arr += np.bincount(idx, minlength=arr.size)
+				out[key] = arr.tolist()
+			if flip == '-':
+				out['+'], out['-'] = out['-'][::-1], out['+'][::-1]
+			return out
+
+	return Handler(reads_path, caching=False, ATAC=atac)
+
+
+_worker = {}
+
+
+def init_worker(reads_path, atac, cls_name, shoulders, footprints, fdr_cutoff, fdr_iterations, bonferroni):
+	import pyDNase
+	from pyDNase import footprinting
+	_worker['reads'] = make_handler(pyDNase, reads_path, atac)
+	_worker['args'] = (getattr(footprinting, cls_name), shoulders, footprints, fdr_cutoff, fdr_iterations, bonferroni)
+
+
+def calculate(region):
+	"""Fetch the reads of one region and score it without the FDR null (worker side)."""
+	import pyDNase
+	chrom, start, end, strand = region
+	cls, shoulders, footprints, fdr_cutoff, fdr_iterations, bonferroni = _worker['args']
+	fp = cls(pyDNase.GenomicInterval(chrom, start, end, strand=strand), _worker['reads'], shoulder_sizes=shoulders, footprint_sizes=footprints, FDR_cutoff=fdr_cutoff, FDR_iterations=fdr_iterations, bonferroni=bonferroni)
 	fp.storedscore, fp.storedlengths = fp.calculate()
+	fp.reads = None
 	return fp
 
 
 def main(argv=None):
 	import pyDNase
-	from pyDNase import footprinting
 	args = parse_args(argv)
 	shoulders = xrange_from_string(args.shoulder_sizes)
 	footprints = xrange_from_string(args.footprint_sizes)
@@ -56,7 +106,6 @@ def main(argv=None):
 	prefix = args.output_prefix or os.path.basename(args.reads) + '.' + os.path.basename(args.regions)
 
 	regions = pyDNase.GenomicIntervalSet(args.regions)
-	reads = pyDNase.BAMHandler(args.reads, caching=False, ATAC=args.A)
 	pvdir = os.path.join(args.outputdir, 'p value cutoffs')
 	os.makedirs(pvdir)
 	ofiles = {x: open(os.path.join(pvdir, prefix + '.WellingtonFootprints.{}.bed'.format(x)), 'a') for x in args.pv_cutoffs}
@@ -66,18 +115,13 @@ def main(argv=None):
 			for footprint in fp.footprints(withCutoff=x):
 				print(footprint, file=f)
 
-	ordered = [x for y in sorted(regions.intervals.values()) for x in y]
+	ordered = [(i.chromosome, i.startbp, i.endbp, i.strand) for y in sorted(regions.intervals.values()) for i in y]
 	ncpu = args.p if args.p else mp.cpu_count()
-	cached = 10 * ncpu
-	cls = footprinting.wellington1D if args.one_dimension else footprinting.wellington
-	pool = mp.Pool(ncpu)
-	for i in ordered:
-		fp = cls(i, reads, shoulder_sizes=shoulders, footprint_sizes=footprints, FDR_cutoff=args.FDR_cutoff, FDR_iterations=args.FDR_iterations, bonferroni=args.bonferroni)
-		pool.apply_async(calculate, (fp,), callback=write)
-		while pool._taskqueue.qsize() > cached:
-			pass
-	pool.close()
-	pool.join()
+	cls_name = 'wellington1D' if args.one_dimension else 'wellington'
+	initargs = (args.reads, args.A, cls_name, shoulders, footprints, args.FDR_cutoff, args.FDR_iterations, args.bonferroni)
+	with mp.Pool(ncpu, init_worker, initargs) as pool:
+		for fp in pool.imap(calculate, ordered, chunksize=16):
+			write(fp)
 	for f in ofiles.values():
 		f.close()
 
