@@ -13,7 +13,6 @@ import pandas as pd
 __all__=['stat']
 
 import dictys
-from dictys.utils.importing import matplotlib
 from . import *
 
 class network:

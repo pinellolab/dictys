@@ -5,10 +5,10 @@
 Static GRN visualization
 """
 
+from __future__ import annotations
 from typing import Union,Tuple,Optional,Callable
 import pandas as pd
 import dictys
-from dictys.utils.importing import matplotlib
 
 def compute_spec(d0:dictys.net.network,base:str='deg',min_entropy:float=0.5,ncut:float=0.4,vmin:float=20,nmax:int=10,sparsity:float=0.01,weighted=False,select_state:Optional[list[str]]=None):
 	"""
@@ -371,6 +371,7 @@ def fig_diff_scatter(d0:dictys.net.network,ax:matplotlib.axes.Axes,states:Tuple[
 	LogFCs of differential expression
 	"""
 	import numpy as np
+	import matplotlib,matplotlib.pyplot,matplotlib.text
 	from matplotlib import ticker
 	from adjustText import adjust_text
 	from dictys.net import stat
