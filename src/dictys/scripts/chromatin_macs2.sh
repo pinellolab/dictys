@@ -35,19 +35,24 @@ awk '{printf("%s\n","'$cells_dir/'"$1)}' "$cells_list" > "00-cells.txt"
 # Each contiguous chunk of the list is decoded and filtered to SAM text in its own pipeline.
 # The chunks are concatenated in list order, so the header (first file's) and the record order match the serial pipeline.
 ncells=$(wc -l < "00-cells.txt")
-chunk_size=$(( (ncells + nodes - 1) / nodes ))
+# nodes=0 (as in the serial script) runs one chunk; samtools still gets -@ 0
+nchunks=$nodes
+[ "$nchunks" -ge 1 ] || nchunks=1
+chunk_size=$(( (ncells + nchunks - 1) / nchunks ))
 [ "$chunk_size" -ge 1 ] || chunk_size=1
 split -l "$chunk_size" "00-cells.txt" "00-chunk_"
+# grep -v exits 1 when a chunk's reads are all removed; that is not an error
+filter() { grep -v "$@" || [ $? -eq 1 ]; }
 first="$(head -n 1 "00-cells.txt")"
 chunks=(00-chunk_*)
 pids=()
 for chunk in "${chunks[@]}"; do
   (
     if [ "$chunk" == "${chunks[0]}" ]; then
-      samtools view -h $nodes2 "$first" | grep -v '^@HD' | grep -v '^@PG' ; tail -n +2 "$chunk" | while read l; do samtools view $nodes2 "$l"; done
+      samtools view -h $nodes2 "$first" | filter '^@HD' | filter '^@PG' ; tail -n +2 "$chunk" | while read l; do samtools view $nodes2 "$l"; done
     else
       while read l; do samtools view $nodes2 "$l"; done < "$chunk"
-    fi | awk '$3!="chrM"' | grep -v chrUn_ | grep -v GL00 | grep -v -e "random" > "$chunk.sam"
+    fi | awk '$3!="chrM"' | filter chrUn_ | filter GL00 | filter -e "random" > "$chunk.sam"
   ) &
   pids+=($!)
 done
