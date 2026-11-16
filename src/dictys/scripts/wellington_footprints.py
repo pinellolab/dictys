@@ -98,13 +98,19 @@ _worker = {}
 def init_worker(reads_path, atac, cls_name, shoulders, footprints, fdr_cutoff, fdr_iterations, bonferroni):
 	import pyDNase
 	from pyDNase import footprinting
-	_worker['reads'] = make_handler(pyDNase, reads_path, atac)
+	try:
+		_worker['reads'] = make_handler(pyDNase, reads_path, atac)
+	except Exception as e:
+		# An initializer that raises makes Pool respawn workers forever; report the error from calculate instead
+		_worker['error'] = e
 	_worker['args'] = (getattr(footprinting, cls_name), shoulders, footprints, fdr_cutoff, fdr_iterations, bonferroni)
 
 
 def calculate(region):
 	"""Fetch the reads of one region and score it without the FDR null (worker side)."""
 	import pyDNase
+	if 'error' in _worker:
+		raise _worker['error']
 	chrom, start, end, strand = region
 	cls, shoulders, footprints, fdr_cutoff, fdr_iterations, bonferroni = _worker['args']
 	fp = cls(pyDNase.GenomicInterval(chrom, start, end, strand=strand), _worker['reads'], shoulder_sizes=shoulders, footprint_sizes=footprints, FDR_cutoff=fdr_cutoff, FDR_iterations=fdr_iterations, bonferroni=bonferroni)
@@ -135,9 +141,12 @@ def main(argv=None):
 	ncpu = args.p if args.p else mp.cpu_count()
 	cls_name = 'wellington1D' if args.one_dimension else 'wellington'
 	initargs = (args.reads, args.A, cls_name, shoulders, footprints, args.FDR_cutoff, args.FDR_iterations, args.bonferroni)
-	with mp.Pool(ncpu, init_worker, initargs) as pool:
-		for fp in pool.imap(calculate, ordered, chunksize=16):
-			write(fp)
+	try:
+		with mp.Pool(ncpu, init_worker, initargs) as pool:
+			for fp in pool.imap(calculate, ordered, chunksize=16):
+				write(fp)
+	except Exception as e:
+		sys.exit('wellington_footprints.py: cannot process {}: {}: {}'.format(args.reads, type(e).__name__, e))
 	for f in ofiles.values():
 		f.close()
 
