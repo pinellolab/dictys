@@ -564,6 +564,10 @@ class model_covariance(model_base):
 		"""
 		Binomial over the full cell plate whose log_prob reuses the data-only log binomial coefficient, computed once on first use.
 		Arithmetic order follows pyro.distributions.Binomial.log_prob (approx_log_prob_tol=0).
+
+		Derived from Binomial.log_prob in Pyro 1.9.2 (pyro/distributions/torch.py), Copyright (c) 2017-2019 Uber Technologies, Inc., licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0; the license text is in Pyro's LICENSE.md). Pyro 1.9.2 ships no NOTICE file.
+		Changed from the original: the log binomial coefficient is computed once from the data and cached instead of on every call, and log_prob is defined on a subclass built on first use.
+		Unless required by applicable law or agreed to in writing, Pyro is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		"""
 		import torch
 		import pyro.distributions as dist

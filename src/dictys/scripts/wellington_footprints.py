@@ -4,6 +4,22 @@
 # wellington_footprints.py, minus what dictys never reads: the null
 # randomisations of the FDR cutoff (-fdr, -fdrlimit and -fdriter are accepted
 # and ignored), the WIG of all scores and the FDR bed.
+#
+# Adapted from pyDNase 0.3.0 (https://github.com/jpiper/pyDNase), under the MIT license
+# below. Adapted parts: the command line (parse_args), xrange_from_string, the loop over
+# regions and the output of footprints in main follow pyDNase's
+# scripts/wellington_footprints.py; get_cut_values in make_handler repeats the read loop of
+# BAMHandler.__lookupReadsWithoutCache in pyDNase/__init__.py. The changes are the removal
+# of the FDR null, the WIG and the FDR bed, and per-region cut counts built with numpy in
+# pool workers.
+#
+# Copyright 2018 Jason Piper
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import argparse
 import multiprocessing as mp
 import os
