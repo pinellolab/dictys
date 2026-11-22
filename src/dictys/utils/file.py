@@ -2,6 +2,24 @@
 """
 File I/O
 """
+from typing import Union
+
+def csv_compression(path)->Union[str,dict]:
+	"""
+	Compression argument for pandas to_csv: gzip at level 1 for a path ending in .gz, otherwise pandas' default inference.
+
+	Parameters
+	----------
+	path:
+		Output path
+
+	Returns
+	-------
+	Argument for the compression parameter of pandas DataFrame.to_csv.
+	"""
+	if isinstance(path,str) and path.endswith('.gz'):
+		return {'method':'gzip','compresslevel':1}
+	return 'infer'
 
 def read_txt(fi:str,unique:bool=False)->list[str]:
 	"""

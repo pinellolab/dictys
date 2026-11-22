@@ -35,7 +35,24 @@ rm -f 11-merged.bed
 
 #Wellington
 mkdir -p 13-wellington
-wellington_footprints.py 12-sorted.bed "$bamfile" 13-wellington -fdr 0.999 -fdrlimit -5 -pv -$Wellington_cutoff -A -p $(( nodes>1 ? $nodes - 1 : 1 ))
+# pyDNase's own wellington_footprints.py also runs the FDR null and writes files this script never reads.
+# Use the dictys driver, which skips them, in place of it; any other program of that name is called as is.
+wellington_cmd=(wellington_footprints.py)
+wellington_path="$(command -v wellington_footprints.py || true)"
+if [ -n "$wellington_path" ] && grep -q 'import pyDNase' "$wellington_path"; then
+	read -r -a wellington_shebang <<< "$(head -n 1 "$wellington_path" | sed -e 's/^#![[:space:]]*//')"
+	wellington_python="${wellington_shebang[0]:-}"
+	if [ "${wellington_python##*/}" = env ]; then
+		# '#!/usr/bin/env python3': the interpreter is the first word of env's command, not env itself
+		wellington_python=
+		for wellington_word in "${wellington_shebang[@]:1}"; do
+			case "$wellington_word" in -*|*=*) ;; *) wellington_python="$(command -v "$wellington_word" || true)"; break;; esac
+		done
+	fi
+	[ -x "$wellington_python" ] || wellington_python=python3
+	wellington_cmd=("$wellington_python" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/wellington_footprints.py")
+fi
+"${wellington_cmd[@]}" 12-sorted.bed "$bamfile" 13-wellington -fdr 0.999 -fdrlimit -5 -pv -$Wellington_cutoff -A -p $(( nodes>1 ? $nodes - 1 : 1 ))
 rm -f 12-sorted.bed
 
 #Reformat output bed file

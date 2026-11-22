@@ -32,7 +32,33 @@ fi
 
 #Create bam file for custom cells list, filter out chrM/chrUn/chrRandom, sort and index
 awk '{printf("%s\n","'$cells_dir/'"$1)}' "$cells_list" > "00-cells.txt"
-( samtools view -h $nodes2 "$(head -n 1 "00-cells.txt" )" | grep -v '^@HD' | grep -v '^@PG' ; tail -n +2 "00-cells.txt" | while read l; do samtools view $nodes2 "$l"; done ) | awk '$3!="chrM"' |  grep -v chrUn_ | grep -v GL00 | grep -v -e "random" | samtools view -1 $nodes2 -o "02-filtered.bam" -
+# Each contiguous chunk of the list is decoded and filtered to SAM text in its own pipeline.
+# The chunks are concatenated in list order, so the header (first file's) and the record order match the serial pipeline.
+ncells=$(wc -l < "00-cells.txt")
+# nodes=0 (as in the serial script) runs one chunk; samtools still gets -@ 0
+nchunks=$nodes
+[ "$nchunks" -ge 1 ] || nchunks=1
+chunk_size=$(( (ncells + nchunks - 1) / nchunks ))
+[ "$chunk_size" -ge 1 ] || chunk_size=1
+split -l "$chunk_size" "00-cells.txt" "00-chunk_"
+# grep -v exits 1 when a chunk's reads are all removed; that is not an error
+filter() { grep -v "$@" || [ $? -eq 1 ]; }
+first="$(head -n 1 "00-cells.txt")"
+chunks=(00-chunk_*)
+pids=()
+for chunk in "${chunks[@]}"; do
+  (
+    if [ "$chunk" == "${chunks[0]}" ]; then
+      samtools view -h $nodes2 "$first" | filter '^@HD' | filter '^@PG' ; tail -n +2 "$chunk" | while read l; do samtools view $nodes2 "$l"; done
+    else
+      while read l; do samtools view $nodes2 "$l"; done < "$chunk"
+    fi | awk '$3!="chrM"' | filter chrUn_ | filter GL00 | filter -e "random" > "$chunk.sam"
+  ) &
+  pids+=($!)
+done
+for pid in "${pids[@]}"; do wait "$pid"; done
+cat 00-chunk_*.sam | samtools view -1 $nodes2 -o "02-filtered.bam" -
+rm 00-chunk_*
 
 #filter, sort and index bam file.
 samtools sort -o "$output_bam" $nodes2 -l 1 02-filtered.bam

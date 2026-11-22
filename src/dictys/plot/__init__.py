@@ -5,10 +5,11 @@
 Network visualization
 """
 
+from __future__ import annotations
+
 __all__=['dynamic','layout','panel','static']
 
 from typing import Tuple,Optional,Union
-from dictys.utils.importing import matplotlib
 from . import *
 
 def get_cmap(cmap,n):
@@ -64,6 +65,7 @@ def colorbar(cmap:Union[str,matplotlib.cm.ScalarMappable],vmin:Optional[float]=N
 	ax:
 		Axes of colorbar
 	"""
+	import matplotlib,matplotlib.pyplot,matplotlib.figure
 	import matplotlib.pyplot as plt
 	if isinstance(cmap,matplotlib.cm.ScalarMappable):
 		if vmax is not None or vmin is not None:
@@ -360,6 +362,7 @@ def dotplot(ds,dc,fig=None,figsize=0.2,size_transform=lambda x:x,sizes=None,vran
 	ax:				matplotlib.axes._subplots.AxesSubplot drawn on
 	"""
 	import numpy as np
+	import matplotlib,matplotlib.pyplot,matplotlib.figure
 	import matplotlib.pyplot as plt
 	assert ds.shape==dc.shape
 	assert (ds.index==dc.index).all()

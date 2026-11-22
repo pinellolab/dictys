@@ -5,10 +5,10 @@
 Dynamic network visualizations
 """
 
+from __future__ import annotations
 from typing import Union,Tuple,Optional
 import pandas as pd
 import dictys
-from dictys.utils.importing import matplotlib
 from dictys.utils.numpy import NDArray
 
 ########################################################################
@@ -184,6 +184,7 @@ def draw_discover1(dcurve:pd.DataFrame,dchar:pd.DataFrame,dtime:Optional[pd.Seri
 	cmap:
 		Dictionary of colormap by characteristic name used
 	"""
+	import matplotlib,matplotlib.pyplot
 	import matplotlib.pyplot as plt
 	import numpy as np
 	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -358,6 +359,7 @@ def fig_discover(dcurve:pd.DataFrame,dtime:pd.DataFrame,ntops:Tuple[int,int,int,
 	Tuple of returns from dictys.plot.dynamic.draw_dynamic1 for each of the patterns drawn
 	"""
 	import itertools
+	import matplotlib,matplotlib.pyplot
 	import numpy as np
 
 	#Compute curve characteristics
@@ -452,6 +454,7 @@ def fig_regulation_heatmap(network:dictys.net.dynamic_network,start:int,stop:int
 	"""
 	import numpy as np
 	import matplotlib.pyplot as plt
+	import matplotlib,matplotlib.pyplot
 	from dictys.net import stat
 	#Get dynamic network edge strength
 	pts,fsmooth=network.linspace(start,stop,num,dist)

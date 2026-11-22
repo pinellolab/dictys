@@ -5,6 +5,7 @@
 
 from typing import Optional,Union
 from dictys.utils.numpy import NDArray
+from dictys.utils.file import csv_compression
 
 ################################################################
 # Peak calling
@@ -203,10 +204,10 @@ def _motif_postproc(dret,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str)->
 	dmotif.to_csv(fo_bed,header=False,index=False,sep='\t')
 	dw=pd.DataFrame(dw,index=namep,columns=namem)
 	logging.info(f'Writing file {fo_wellington}')
-	dw.to_csv(fo_wellington,header=True,index=True,sep='\t')
+	dw.to_csv(fo_wellington,header=True,index=True,sep='\t',compression=csv_compression(fo_wellington))
 	dh=pd.DataFrame(dh,index=namep,columns=namem)
 	logging.info(f'Writing file {fo_homer}')
-	dh.to_csv(fo_homer,header=True,index=True,sep='\t')
+	dh.to_csv(fo_homer,header=True,index=True,sep='\t',compression=csv_compression(fo_homer))
 
 def homer(fi_bed:str,fi_motif:str,dirio_genome:str,fi_exp:str,fo_bed:str,fo_wellington:str,fo_homer:str,nth:int=1)->None:
 	"""
@@ -353,7 +354,7 @@ def binding(fi_wellington:str,fi_homer:str,fo_bind:str,cuth:float=0,cutw:float=0
 	ans['loc']=homer_df.index[binds[1]]
 	ans['score']=binds[2]
 	logging.info(f'Writing file {fo_bind}')
-	ans.to_csv(fo_bind,index=False,header=True,sep='\t')
+	ans.to_csv(fo_bind,index=False,header=True,sep='\t',compression=csv_compression(fo_bind))
 
 def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,nmin:int=1,nmax:int=10000000)->None:
 	"""
@@ -440,7 +441,7 @@ def tssdist(fi_exp:str,fi_wellington:str,fi_tss:str,fo_dist:str,cut:int=500000,n
 	ans2['dist']=-t2
 	ans2=ans2[['region','target','dist']].copy()
 	logging.info(f'Writing file {fo_dist}')
-	ans2.to_csv(fo_dist,header=True,index=False,sep='\t')
+	ans2.to_csv(fo_dist,header=True,index=False,sep='\t',compression=csv_compression(fo_dist))
 
 def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]=None,whitelist_mode:str='intersect',combine:str='max',mode:int=4)->None:
 	"""
@@ -573,7 +574,7 @@ def linking(fi_binding:str,fi_dist:str,fo_linking:str,fi_whitelist:Optional[str]
 		ans=pd.DataFrame(np.concatenate([ans.values,np.ones((ans.shape[0],len(t1)),dtype=ans.values.dtype)*(-np.inf)],axis=1),index=ans.index,columns=list(ans.columns)+t1)
 	#Output	
 	logging.info(f'Writing file {fo_linking}')
-	ans.to_csv(fo_linking,index=True,header=True,sep='\t')
+	ans.to_csv(fo_linking,index=True,header=True,sep='\t',compression=csv_compression(fo_linking))
 
 def _binlinking_func(data:NDArray,n:int,inf:str='never')->NDArray:
 	"""
@@ -675,7 +676,7 @@ def binlinking(fi_linking:str,fo_binlinking:str,n:int,axis:Optional[int]=1,selfr
 	namelink[1]=sorted(list(set(namelink[0])|set(namelink[1])))
 	links=links.loc[namelink[0]][namelink[1]]
 	logging.info(f'Writing file {fo_binlinking}')
-	links.to_csv(fo_binlinking,header=True,index=True,sep='\t')
+	links.to_csv(fo_binlinking,header=True,index=True,sep='\t',compression=csv_compression(fo_binlinking))
 	
 
 

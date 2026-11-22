@@ -5,9 +5,9 @@
 Dynamic network visualization layouts
 """
 
+from __future__ import annotations
 import abc
 from typing import Optional,Tuple
-import matplotlib
 import dictys
 
 class base(metaclass=abc.ABCMeta):
