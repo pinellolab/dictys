@@ -141,12 +141,22 @@ def main(argv=None):
 	ncpu = args.p if args.p else mp.cpu_count()
 	cls_name = 'wellington1D' if args.one_dimension else 'wellington'
 	initargs = (args.reads, args.A, cls_name, shoulders, footprints, args.FDR_cutoff, args.FDR_iterations, args.bonferroni)
+	pool = mp.Pool(ncpu, init_worker, initargs)
 	try:
-		with mp.Pool(ncpu, init_worker, initargs) as pool:
-			for fp in pool.imap(calculate, ordered, chunksize=16):
-				write(fp)
+		for fp in pool.imap(calculate, ordered, chunksize=16):
+			write(fp)
 	except Exception as e:
-		sys.exit('wellington_footprints.py: cannot process {}: {}: {}'.format(args.reads, type(e).__name__, e))
+		# Pool.terminate() (also Pool's exit handler) can wait forever for its result handler once a task has failed
+		# with results still due, so kill the workers and leave without it.
+		for child in mp.active_children():
+			child.kill()
+		for f in ofiles.values():
+			f.close()
+		sys.stderr.write('wellington_footprints.py: cannot process {}: {}: {}\n'.format(args.reads, type(e).__name__, e))
+		sys.stderr.flush()
+		os._exit(1)
+	pool.close()
+	pool.join()
 	for f in ofiles.values():
 		f.close()
 
